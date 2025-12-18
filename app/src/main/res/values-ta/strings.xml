@@ -1,0 +1,268 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">RES-B  Billing Software</string>
+
+    <!-- Common -->
+    <string name="ok">சரி</string>
+    <string name="save">சேமி</string>>
+    <string name="add">சேர்</string>
+    <string name="search">தேடு</string>
+    <string name="loading">ஏற்றுகிறது…</string>
+    <string name="error">பிழை</string>
+    <string name="success">வெற்றி</string>
+    <string name="screen">திரைகள்</string>
+
+    <!-- Navigation -->
+    <string name="dashboard">முதன்மை பலகை</string>
+    <string name="orders">ஆர்டர்கள்</string>
+    <string name="menu">மெனு</string>
+    <string name="tables">மேசைகள்</string>
+    <string name="settings">அமைப்புகள்</string>
+    <string name="logout">வெளியேறு</string>
+
+    <!-- Settings -->
+    <string name="language_settings">மொழி அமைப்புகள்</string>
+    <string name="select_language">மொழியைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="english">ஆங்கிலம்</string>
+    <string name="tamil">தமிழ்</string>
+
+    <!-- Role Settings -->
+    <string name="role_settings">பணி அமைப்புகள்</string>
+    <string name="add_role">பணி சேர்க்கவும்</string>
+    <string name="edit_role">பணி திருத்தவும்</string>
+    <string name="role">பணி</string>
+    <string name="permissions">அனுமதிகள்</string>
+
+    <!-- Printer Settings -->
+    <string name="printer_settings">அச்சுப்பொறி அமைப்புகள்</string>
+    <string name="add_printer">அச்சுப்பொறி சேர்க்கவும்</string>
+    <string name="edit_printer">அச்சுப்பொறி திருத்தவும்</string>
+    <string name="printer">அச்சுப்பொறி</string>
+    <string name="ip_address">ஐபி முகவரி</string>
+    <string name="port">போர்ட்</string>
+    <string name="printer_type">அச்சுப்பொறி வகை</string>
+
+    <!-- Counter Settings -->
+    <string name="counter_settings">கணக்கீட்டாளர் அமைப்புகள்</string>
+    <string name="add_counter">கணக்கீட்டாளர் சேர்க்கவும்</string>
+    <string name="edit_counter">கணக்கீட்டாளர் திருத்தவும்</string>
+    <string name="counter">கணக்கீட்டாளர்</string>
+    <string name="current_value">தற்போதைய மதிப்பு</string>
+    <string name="prefix">முன்னொட்டு</string>
+    <string name="suffix">பின்னொட்டு</string>
+
+    <!-- Voucher Settings -->
+    <string name="voucher_settings">வவுச்சர் அமைப்புகள்</string>
+    <string name="add_voucher">வவுச்சர் சேர்க்கவும்</string>
+    <string name="edit_voucher">வவுச்சர் திருத்தவும்</string>
+    <string name="voucher">வவுச்சர்</string>
+    <string name="code">குறியீடு</string>
+    <string name="value">மதிப்பு</string>
+    <string name="min_amount">குறைந்தபட்ச தொகை</string>
+    <string name="max_discount">அதிகபட்ச தள்ளுபடி</string>
+    <string name="valid_from">செல்லுபடியாகும் தேதி</string>
+    <string name="valid_to">செல்லுபடியாகும் கடைசி தேதி</string>
+
+    <!-- Tax Settings -->
+    <string name="tax_settings">வரி அமைப்புகள்</string>
+    <string name="add_tax">வரி சேர்க்கவும்</string>
+    <string name="edit_tax">வரி திருத்தவும்</string>
+    <string name="tax">வரி</string>
+    <string name="rate">விகிதம்</string>
+    <string name="tax_type">வரி வகை</string>
+    <string name="inclusive">உள்ளடக்கம்</string>
+
+    <!-- Tax Split Settings -->
+    <string name="tax_split_settings">வரி பிரிப்பு அமைப்புகள்</string>
+    <string name="add_tax_split">வரி பிரிப்பு சேர்க்கவும்</string>
+    <string name="edit_tax_split">வரி பிரிப்பு திருத்தவும்</string>
+    <string name="tax_split">வரி பிரிப்பு</string>
+    <string name="split_type">பிரிப்பு வகை</string>
+    <string name="percentage">சதவீதம்</string>
+    <string name="amount">தொகை</string>
+
+    <!-- Restaurant Profile -->
+    <string name="restaurant_profile">உணவகம் விவரங்கள்</string>
+    <string name="restaurant_name">உணவகம் பெயர்</string>
+    <string name="address">முகவரி</string>
+    <string name="phone">தொலைபேசி</string>
+    <string name="email">மின்னஞ்சல்</string>
+    <string name="website">இணையதளம்</string>
+    <string name="gst_number">ஜிஎஸ்டி எண்</string>
+    <string name="fssai_number">எஃப்எஸ்எஸ்ஏஐ எண்</string>
+
+    <!-- General Settings -->
+    <string name="general_settings">பொது அமைப்புகள்</string>
+    <string name="date_format">தேதி வடிவம்</string>
+    <string name="time_format">நேர வடிவம்</string>
+    <string name="currency">நாணயம்</string>
+    <string name="decimal_places">தசம இடங்கள்</string>
+    <string name="tax_calculation">வரி கணக்கீடு</string>
+    <string name="auto_backup">தானியங்கு காப்புப்பிரதி</string>
+    <string name="backup_frequency">காப்புப்பிரதி அதிர்வெண்</string>
+    <string name="print_receipt">ரசீது அச்சிடவும்</string>
+    <string name="print_kot">கேஓடி அச்சிடவும்</string>
+
+    <!-- Settings Modules -->
+    <string name="area_settings">பகுதி அமைப்புகள்</string>
+    <string name="table_settings">மேசை அமைப்புகள்</string>
+    <string name="menu_settings">மெனு அமைப்புகள்</string>
+    <string name="menu_category_settings">மெனு வகை அமைப்புகள்</string>
+    <string name="menu_item_settings">மெனு உருப்படி அமைப்புகள்</string>
+    <string name="customer_settings">வாடிக்கையாளர் அமைப்புகள்</string>
+    <string name="staff_settings">ஊழியர் அமைப்புகள்</string>
+    <string name="settings_table">அட்டவணை அமைப்புகள்</string>
+    <string name="settings_menu">மெனு அமைப்புகள்</string>
+    <string name="settings_menu_category">மெனு வகை அமைப்புகள்</string>
+    <string name="settings_menu_item">மெனு பொருள் அமைப்புகள்</string>
+    <string name="settings_customer">வாடிக்கையாளர் அமைப்புகள்</string>
+    <string name="settings_staff">ஊழியர் அமைப்புகள்</string>
+    <string name="settings_language">மொழி அமைப்புகள்</string>
+
+    <!-- Area -->
+    <string name="area_name">பகுதி பெயர்</string>
+    <string name="area_description">பகுதி விளக்கம்</string>
+    <string name="add_area">பகுதி சேர்</string>
+    <string name="edit_area">பகுதி திருத்து</string>
+    <string name="delete_area">பகுதி நீக்கு</string>
+
+    <!-- Table -->
+    <string name="table_number">மேசை எண்</string>
+    <string name="table_capacity">மேசை கொள்ளளவு</string>
+    <string name="table_status">மேசை நிலை</string>
+    <string name="add_table">மேசை சேர்</string>
+    <string name="edit_table">மேசை திருத்து</string>
+    <string name="delete_table">மேசை நீக்கு</string>
+
+    <!-- Menu -->
+    <string name="menu_name">மெனு பெயர்</string>
+    <string name="menu_description">மெனு விளக்கம்</string>
+    <string name="menu_price">விலை</string>
+    <string name="add_menu">மெனு சேர்</string>
+    <string name="edit_menu">மெனு திருத்து</string>
+    <string name="delete_menu">மெனு நீக்கு</string>
+
+    <!-- Menu Category -->
+    <string name="category_name">வகை பெயர்</string>
+    <string name="category_description">வகை விளக்கம்</string>
+    <string name="add_category">வகை சேர்</string>
+    <string name="edit_category">வகை திருத்து</string>
+    <string name="delete_category">வகை நீக்கு</string>
+
+    <!-- Menu Item -->
+    <string name="item_name">உருப்படி பெயர்</string>
+    <string name="item_description">உருப்படி விளக்கம்</string>
+    <string name="item_price">உருப்படி விலை</string>
+    <string name="add_item">உருப்படி சேர்</string>
+    <string name="edit_item">உருப்படி திருத்து</string>
+    <string name="delete_item">உருப்படி நீக்கு</string>
+
+    <!-- Customer -->
+    <string name="customer_name">வாடிக்கையாளர் பெயர்</string>
+    <string name="customer_phone">தொலைபேசி எண்</string>
+    <string name="customer_email">மின்னஞ்சல்</string>
+    <string name="add_customer">வாடிக்கையாளர் சேர்</string>
+    <string name="edit_customer">வாடிக்கையாளர் திருத்து</string>
+    <string name="delete_customer">வாடிக்கையாளர் நீக்கு</string>
+
+    <!-- Staff -->
+    <string name="staff_name">ஊழியர் பெயர்</string>
+    <string name="staff_role">பாத்திரம்</string>
+    <string name="staff_phone">தொலைபேசி எண்</string>
+    <string name="add_staff">ஊழியர் சேர்</string>
+    <string name="edit_staff">ஊழியர் திருத்து</string>
+    <string name="delete_staff">ஊழியர் நீக்கு</string>
+
+    <!-- Counter Screen -->
+    <string name="counter_title">கவுண்டர்</string>
+    <string name="counter_value">எண்ணிக்கை: %d</string>
+    <string name="increase">அதிகரி</string>
+    <string name="decrease">குறை</string>
+    <string name="reset">மீட்டமை</string>
+
+    <!-- Menu Screen -->
+    <string name="menu_title">மெனு</string>
+    <string name="price_format">₹%.2f</string>
+
+    <!-- Selection Screen -->
+    <string name="selection_title">பொருட்களைத் தேர்ந்தெடு</string>
+    <string name="selected_items_count">தேர்ந்தெடுக்கப்பட்டது: %d பொருட்கள்</string>
+    <string name="continue_text">தொடர்</string>
+    <string name="selected" tools:ignore="PrivateResource">தேர்ந்தெடுக்கப்பட்டது</string>
+
+    <!-- Payment Screen -->
+    <string name="payment_title">பணம் செலுத்துதல்</string>
+    <string name="order_summary">ஆர்டர் சுருக்கம்</string>
+    <string name="total_amount_format">மொத்தம்: ₹%.2f</string>
+    <string name="payment_method">பணம் செலுத்தும் முறை</string>
+    <string name="payment_cash">பணம்</string>
+    <string name="payment_card">கார்டு</string>
+    <string name="payment_digital">டிஜிட்டல் பணம் செலுத்துதல்</string>
+    <string name="processing_payment">செயலாக்கம்…</string>
+    <string name="payment_successful">பணம் செலுத்துதல் வெற்றிகரமானது</string>
+    <string name="payment_failed">பணம் செலுத்துதல் தோல்வியடைந்தது</string>
+
+    <!-- Common UI strings -->
+
+    <string name="retry">மீண்டும் முயற்சிக்கவும்</string>
+    <string name="confirm">உறுதிப்படுத்து</string>
+    <string name="filter">வடிகட்டு</string>
+    <string name="sort">வரிசைப்படுத்து</string>
+    <string name="refresh">புதுப்பிக்கவும்</string>
+    <string name="next">அடுத்து</string>
+    <string name="previous">முந்தைய</string>
+    <string name="close">மூடு</string>
+    <string name="open">திற</string>
+    <string name="yes">ஆம்</string>
+    <string name="no">இல்லை</string>
+
+    <!-- Login Screen -->
+    <string name="app_logo">ஆப் லோகோ</string>
+    <string name="welcome_message">RESB-ல் வரவேற்கிறோம்</string>
+    <string name="login_subtitle">தொடர உள்நுழையவும்</string>
+    <string name="username">பயனர்பெயர்</string>
+    <string name="password">கடவுச்சொல்</string>
+    <string name="toggle_password_visibility">கடவுச்சொல் தெரிவுநிலையை மாற்று</string>
+    <string name="logging_in">உள்நுழைகிறது…</string>
+    <string name="login">உள்நுழை</string>
+    <string name="forgot_password">கடவுச்சொல் மறந்துவிட்டதா?</string>
+
+    <!-- Common -->
+    <string name="back">பின்</string>
+
+    <!-- Paid Bills -->
+    <string name="paid_bills">செலுத்தப்பட்ட பில்கள்</string>
+    <string name="no_paid_bills">செலுத்தப்பட்ட பில்கள் எதுவும் கிடைக்கவில்லை</string>
+    <string name="no_bills_found">உங்கள் தேடலுக்கு பொருந்தும் பில்கள் எதுவும் கிடைக்கவில்லை</string>
+    <string name="search_bills">எண், வாடிக்கையாளர் அல்லது பணம் செலுத்தும் முறை மூலம் பில்களைத் தேடுங்கள்</string>
+    <string name="view">பார்</string>
+    <string name="edit">திருத்து</string>
+    <string name="refund">திரும்ப</string>
+    <string name="delete">நீக்கு</string>
+    <string name="cancel">ரத்து</string>
+    <string name="delete_bill">பில் நீக்கு</string>
+    <string name="delete_bill_confirmation">பில் %1$s ஐ நீக்க நீங்கள் உறுதியாக இருக்கிறீர்களா? இந்த செயலை மீளமுடியாது.</string>
+    <string name="refund_bill">பில் திரும்பல்</string>
+    <string name="refund_bill_info">பில் %1$s க்கான திரும்பல்</string>
+    <string name="refund_amount">திரும்பல் தொகை</string>
+    <string name="reason">காரணம்</string>
+    <string name="edit_bill">பில் திருத்து</string>
+    <string name="bill_not_found">பில் கிடைக்கவில்லை</string>
+    <string name="bill_information">பில் தகவல்</string>
+    <string name="bill_number">பில் எண்</string>
+    <string name="order_id">ஆர்டர் ஐடி</string>
+    <string name="payment_date">பணம் செலுத்திய தேதி</string>
+    <string name="status">நிலை</string>
+    <string name="customer_information">வாடிக்கையாளர் தகவல்</string>
+    <string name="bill_items">பில் பொருட்கள்</string>
+    <string name="subtotal">துணை மொத்தம்</string>
+    <string name="discount">தள்ளுபடி</string>
+    <string name="total">மொத்தம்</string>
+    <string name="notes">குறிப்புகள்</string>
+    <string name="add_notes">குறிப்புகள் சேர்</string>
+    <string name="save_changes">மாற்றங்களைச் சேமிக்கவும்</string>
+    <string name="edit_paid_bill">பணம் செலுத்திய பில் திருத்து</string>
+    <string name="delete_paid_bill">பணம் செலுத்திய பில் நீக்கு</string>
+    <string name="reports">அறிக்கைகள்</string>
+    <string name="register">பதிவு செய்யுங்கள்</string>
+    <string name="no_vouchers_found">No Vouchers Found\n</string>
+</resources>

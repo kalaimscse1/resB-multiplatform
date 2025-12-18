@@ -1,0 +1,268 @@
+<resources>
+    <string name="app_name">RES-B  Billing Software</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="save">Save</string>
+    <string name="add">Add</string>
+    <string name="search">Search</string>
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="success">Success</string>
+    <string name="screen">Screens</string>
+
+
+    <!-- Navigation -->
+    <string name="dashboard">Dashboard</string>
+    <string name="orders">Orders</string>
+    <string name="menu">Menu</string>
+    <string name="tables">Tables</string>
+    <string name="settings">Settings</string>
+    <string name="logout">Logout</string>
+
+    <!-- Settings -->
+    <string name="language_settings">Language Settings</string>
+    <string name="select_language">Select Language</string>
+    <string name="english">English</string>
+    <string name="tamil">Tamil</string>
+
+    <!-- Role Settings -->
+    <string name="role_settings">Role Settings</string>
+    <string name="add_role">Add Role</string>
+    <string name="edit_role">Edit Role</string>
+    <string name="role">Role</string>
+    <string name="permissions">Permissions</string>
+
+    <!-- Printer Settings -->
+    <string name="printer_settings">Printer Settings</string>
+    <string name="add_printer">Add Printer</string>
+    <string name="edit_printer">Edit Printer</string>
+    <string name="printer">Printer</string>
+    <string name="ip_address">IP Address</string>
+    <string name="port">Port</string>
+    <string name="printer_type">Printer Type</string>
+
+    <!-- Counter Settings -->
+    <string name="counter_settings">Counter Settings</string>
+    <string name="add_counter">Add Counter</string>
+    <string name="edit_counter">Edit Counter</string>
+    <string name="counter">Counter</string>
+    <string name="current_value">Current Value</string>
+    <string name="prefix">Prefix</string>
+    <string name="suffix">Suffix</string>
+
+    <!-- Voucher Settings -->
+    <string name="voucher_settings">Voucher Settings</string>
+    <string name="add_voucher">Add Voucher</string>
+    <string name="edit_voucher">Edit Voucher</string>
+    <string name="voucher">Voucher</string>
+    <string name="code">Code</string>
+    <string name="value">Value</string>
+    <string name="min_amount">Minimum Amount</string>
+    <string name="max_discount">Maximum Discount</string>
+    <string name="valid_from">Valid From</string>
+    <string name="valid_to">Valid To</string>
+
+    <!-- Tax Settings -->
+    <string name="tax_settings">Tax Settings</string>
+    <string name="add_tax">Add Tax</string>
+    <string name="edit_tax">Edit Tax</string>
+    <string name="rate">Rate</string>
+    <string name="tax_type">Tax Type</string>
+    <string name="inclusive">Inclusive</string>
+
+    <!-- Tax Split Settings -->
+    <string name="tax_split_settings">Tax Split Settings</string>
+    <string name="add_tax_split">Add Tax Split</string>
+    <string name="edit_tax_split">Edit Tax Split</string>
+    <string name="tax_split">Tax Split</string>
+    <string name="split_type">Split Type</string>
+    <string name="percentage">Percentage</string>
+    <string name="amount">Amount</string>
+
+    <!-- Restaurant Profile -->
+    <string name="restaurant_profile">Restaurant Profile</string>
+    <string name="restaurant_name">Restaurant Name</string>
+    <string name="address">Address</string>
+    <string name="phone">Phone</string>
+    <string name="email">Email</string>
+    <string name="website">Website</string>
+    <string name="gst_number">GST Number</string>
+    <string name="fssai_number">FSSAI Number</string>
+
+    <!-- General Settings -->
+    <string name="general_settings">General Settings</string>
+    <string name="date_format">Date Format</string>
+    <string name="time_format">Time Format</string>
+    <string name="currency">Currency</string>
+    <string name="decimal_places">Decimal Places</string>
+    <string name="tax_calculation">Tax Calculation</string>
+    <string name="auto_backup">Auto Backup</string>
+    <string name="backup_frequency">Backup Frequency</string>
+    <string name="print_receipt">Print Receipt</string>
+    <string name="print_kot">Print KOT</string>
+
+    <string name="area_settings">Area Settings</string>
+    <string name="table_settings">Table Settings</string>
+    <string name="menu_settings">Menu Settings</string>
+    <string name="menu_category_settings">Menu Category Settings</string>
+    <string name="menu_item_settings">Menu Item Settings</string>
+    <string name="customer_settings">Customer Settings</string>
+    <string name="staff_settings">Staff Settings</string>
+
+    <!-- Area -->
+    <string name="area_name">Area Name</string>
+    <string name="area_description">Area Description</string>
+    <string name="add_area">Add Area</string>
+    <string name="edit_area">Edit Area</string>
+    <string name="delete_area">Delete Area</string>
+
+    <!-- Table -->
+    <string name="table_capacity">Table Capacity</string>
+    <string name="table_status">Table Status</string>
+    <string name="add_table">Add Table</string>
+    <string name="edit_table">Edit Table</string>
+    <string name="delete_table">Delete Table</string>
+
+    <!-- Menu -->
+    <string name="menu_name">Menu Name</string>
+    <string name="menu_description">Menu Description</string>
+    <string name="menu_price">Price</string>
+    <string name="add_menu">Add Menu</string>
+    <string name="edit_menu">Edit Menu</string>
+    <string name="delete_menu">Delete Menu</string>
+
+    <!-- Menu Category -->
+    <string name="category_name">Category Name</string>
+    <string name="category_description">Category Description</string>
+    <string name="add_category">Add Category</string>
+    <string name="edit_category">Edit Category</string>
+    <string name="delete_category">Delete Category</string>
+
+    <!-- Menu Item -->
+    <string name="item_name">Item Name</string>
+    <string name="item_description">Item Description</string>
+    <string name="item_price">Item Price</string>
+    <string name="add_item">Add Item</string>
+    <string name="edit_item">Edit Item</string>
+    <string name="delete_item">Delete Item</string>
+
+    <!-- Customer -->
+    <string name="customer_email">Email</string>
+    <string name="add_customer">Add Customer</string>
+    <string name="edit_customer">Edit Customer</string>
+    <string name="delete_customer">Delete Customer</string>
+
+    <!-- Staff -->
+    <string name="staff_name">Staff Name</string>
+    <string name="staff_role">Role</string>
+    <string name="staff_phone">Phone Number</string>
+    <string name="add_staff">Add Staff</string>
+    <string name="edit_staff">Edit Staff</string>
+    <string name="delete_staff">Delete Staff</string>
+
+    <string name="settings_table">Table Settings</string>
+    <string name="settings_menu">Menu Settings</string>
+    <string name="settings_menu_category">Menu Category Settings</string>
+    <string name="settings_menu_item">Menu Item Settings</string>
+    <string name="settings_customer">Customer Settings</string>
+    <string name="settings_staff">Staff Settings</string>
+    <string name="settings_language">Language Settings</string>
+
+    <!-- Counter Screen -->
+    <string name="counter_title">Counter</string>
+    <string name="counter_value">Count: %d</string>
+    <string name="increase">Increase</string>
+    <string name="decrease">Decrease</string>
+    <string name="reset">Reset</string>
+
+    <!-- Menu Screen -->
+    <string name="menu_title">Menu</string>
+    <string name="price_format">₹%.2f</string>
+
+    <!-- Selection Screen -->
+    <string name="selection_title">Select Items</string>
+    <string name="selected_items_count">Selected: %d items</string>
+    <string name="continue_text">Continue</string>
+    <string name="selected">Selected</string>
+
+    <!-- Payment Screen -->
+    <string name="payment_title">Payment</string>
+    <string name="order_summary">Order Summary</string>
+    <string name="total_amount_format">Total: ₹%.2f</string>
+    <string name="payment_cash">Cash</string>
+    <string name="payment_card">Card</string>
+    <string name="payment_digital">Digital Payment</string>
+    <string name="payment_successful">Payment Successful</string>
+    <string name="payment_failed">Payment Failed</string>
+    <string name="processing_payment">Processing Payment...</string>
+
+    <!-- Login Screen -->
+    <string name="app_logo">App Logo</string>
+    <string name="welcome_message">Welcome to RESB</string>
+    <string name="login_subtitle">Please sign in to continue</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="toggle_password_visibility">Toggle password visibility</string>
+    <string name="logging_in">Logging in…</string>
+    <string name="login">Login</string>
+    <string name="forgot_password">Forgot Password?</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+
+    <!-- Common UI strings -->
+    <string name="retry">Retry</string>
+    <string name="confirm">Confirm</string>
+    <string name="filter">Filter</string>
+    <string name="sort">Sort</string>
+    <string name="refresh">Refresh</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="close">Close</string>
+    <string name="open">Open</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+    <!-- Paid Bills -->
+    <string name="paid_bills">Paid Bills</string>
+    <string name="no_paid_bills">No paid bills found</string>
+    <string name="no_bills_found">No bills found matching your search</string>
+    <string name="search_bills">Search bills by number, customer, or payment method</string>
+    <string name="view">View</string>
+    <string name="edit">Edit</string>
+    <string name="refund">Refund</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete_bill">Delete Bill</string>
+    <string name="delete_bill_confirmation">Are you sure you want to delete bill %1$s? This action cannot be undone.</string>
+    <string name="refund_bill">Refund Bill</string>
+    <string name="refund_bill_info">Refund for bill %1$s</string>
+    <string name="refund_amount">Refund Amount</string>
+    <string name="reason">Reason</string>
+    <string name="edit_bill">Edit Bill</string>
+    <string name="bill_not_found">Bill not found</string>
+    <string name="bill_information">Bill Information</string>
+    <string name="bill_number">Bill Number</string>
+    <string name="order_id">Order ID</string>
+    <string name="table_number">Table Number</string>
+    <string name="payment_date">Payment Date</string>
+    <string name="payment_method">Payment Method</string>
+    <string name="status">Status</string>
+    <string name="customer_information">Customer Information</string>
+    <string name="customer_name">Customer Name</string>
+    <string name="customer_phone">Customer Phone</string>
+    <string name="bill_items">Bill Items</string>
+    <string name="subtotal">Subtotal</string>
+    <string name="tax">Tax</string>
+    <string name="discount">Discount</string>
+    <string name="total">Total</string>
+    <string name="notes">Notes</string>
+    <string name="add_notes">Add notes</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="edit_paid_bill">Edit Paid Bill</string>
+    <string name="delete_paid_bill">Delete Paid Bill</string>
+    <string name="reports">Reports</string>
+    <string name="register">Register</string>
+    <string name="no_vouchers_found">No Vouchers Found\n</string>
+</resources>

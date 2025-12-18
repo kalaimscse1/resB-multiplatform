@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="110dp"
+    android:height="110dp"
+    android:viewportWidth="110"
+    android:viewportHeight="110">
+    <path
+        android:fillColor="#0F4C81"
+        android:pathData="M50,50m-50,0a50,50 0,1 1,110 0a50,50 0,0 1,-110 0"/>
+    <path android:fillColor="#FFFFFF" android:name="@string/app_name" android:pathData="M50,50m-30,0a30,30 0,1 1,70 0a30,30 0,1 1,-70 0"/>
+    <text android:pathData="RESB"/>
+</vector>

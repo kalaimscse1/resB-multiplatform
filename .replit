@@ -1,0 +1,60 @@
+modules = ["bash", "java-graalvm22.3"]
+[nix]
+channel = "stable-25_05"
+packages = ["android-tools", "unzip"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Android Build"
+mode = "parallel"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash ./android_setup.sh && echo \"Validating Android project configuration...\" && export ANDROID_HOME=$HOME/android-sdk && export ANDROID_SDK_ROOT=$ANDROID_HOME && export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools && ./gradlew --no-daemon --dry-run assembleDebug && echo \"Project configuration is valid! To build the APK locally, use Android Studio or run './gradlew assembleDebug'\""
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Android Build"
+
+[[workflows.workflow]]
+name = "Build APK"
+author = 42434329
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash ./android_setup.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export ANDROID_HOME=$HOME/android-sdk"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export ANDROID_SDK_ROOT=$ANDROID_HOME"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./gradlew clean"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./gradlew assembleDebug"
+
+[agent]
+expertMode = true
