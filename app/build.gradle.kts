@@ -49,24 +49,6 @@ android {
     buildFeatures {
         compose = true
     }
-    
-    defaultConfig {
-        applicationId = "com.warriortech.resb"
-        minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments["room.schemaLocation"] = "$projectDir/schemas"
-                arguments["room.incremental"] = "true"
-                arguments["room.expandProjection"] = "true"
-            }
-        }
-    }
-
     packaging {
         resources {
             excludes += setOf(
