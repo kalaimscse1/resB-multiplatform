@@ -51,6 +51,7 @@ import com.warriortech.resb.ui.theme.TextPrimary
 import kotlinx.coroutines.launch
 import com.warriortech.resb.ui.components.MobileOptimizedButton
 import com.warriortech.resb.ui.components.ModernDivider
+import com.warriortech.resb.ui.components.BarcodeScannerButton
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SecondaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -109,6 +110,7 @@ fun MenuScreen(
     var sucess by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var alert by remember { mutableStateOf(false) }
+    var barcodeError by remember { mutableStateOf<String?>(null) }
 
     val effectiveStatus = remember(isTakeaway, tableStatusFromVM) {
         when (isTakeaway) {
@@ -207,6 +209,17 @@ fun MenuScreen(
                     }
                 },
                 actions = {
+                    BarcodeScannerButton(
+                        onBarcodeScanned = { barcode ->
+                            viewModel.findAndAddItemByBarcode(barcode)
+                        },
+                        onError = { error ->
+                            barcodeError = error
+                            scope.launch {
+                                snackbarHostState.showSnackbar(error)
+                            }
+                        }
+                    )
                     if (tableStatusFromVM != "TAKEAWAY" && tableStatusFromVM != "DELIVERY") {
                         IconButton(onClick = {
                             navController.navigate("selects") {

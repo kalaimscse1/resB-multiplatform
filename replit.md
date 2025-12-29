@@ -6,7 +6,17 @@ A comprehensive Android restaurant billing system built with Kotlin, Jetpack Com
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (Latest: December 16, 2025)
+## Recent Changes (Latest: December 29, 2025)
+- **BARCODE SCANNER FEATURE**: Added barcode scanning capability to Quick Bill and Menu screens
+  - Integrated MLKit barcode scanner for multiple barcode formats (QR Code, Code 128, EAN-13, UPC, etc.)
+  - Added barcode scanner button to QuickBillScreen top app bar for quick item addition to bills
+  - Added barcode scanner button to MenuScreen top app bar for quick item addition to orders
+  - Implemented barcode search in BillingViewModel to find items by menu_item_code
+  - Implemented barcode search in MenuViewModel to find items by menu_item_code
+  - Displays error messages when barcode is not found or scanning fails
+  - Seamlessly adds items to the bill/order when barcode is successfully scanned
+
+## Previous Changes (December 16, 2025)
 - **UI/UX FIXES**: Fixed 6 reported issues in the billing system
   - **Bill Discount/Charges**: Made discount and other charges fields editable in BillingScreen with proper TextField inputs and ViewModel integration
   - **Enter Key Behavior**: Added singleLine=true to dialog text fields in MenuCategorySettingsScreen, TableSettingsScreen, and AreaSettingsScreen to prevent unwanted newlines

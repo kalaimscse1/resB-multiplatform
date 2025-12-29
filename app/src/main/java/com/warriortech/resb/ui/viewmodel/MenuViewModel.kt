@@ -519,5 +519,39 @@ class MenuViewModel @Inject constructor(
         _selectedModifiers.value = currentSelection
     }
 
+    fun findAndAddItemByBarcode(barcode: String) {
+        viewModelScope.launch {
+            try {
+                val currentState = _menuState.value
+                if (currentState is MenuUiState.Success) {
+                    val foundItem = currentState.menuItems.firstOrNull { item ->
+                        item.menu_item_code == barcode || item.menu_item_code.contains(barcode) || barcode.contains(item.menu_item_code)
+                    }
+                    
+                    if (foundItem != null) {
+                        addItemToOrder(foundItem)
+                    } else {
+                        _orderState.value = OrderUiState.Error("Item not found with barcode: $barcode")
+                    }
+                }
+            } catch (e: Exception) {
+                _orderState.value = OrderUiState.Error("Error scanning: ${e.message}")
+            }
+        }
+    }
 
 }
+    fun findAndAddItemByBarcode(barcode: String) {
+        val menuState = _menuState.value
+        if (menuState is MenuUiState.Success) {
+            val foundItem = menuState.menuItems.firstOrNull { 
+                it.menu_item_code == barcode 
+            }
+            
+            if (foundItem != null) {
+                addItemToOrder(foundItem)
+            } else {
+                Timber.w("No menu item found for barcode: $barcode")
+            }
+        }
+    }

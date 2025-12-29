@@ -813,6 +813,31 @@ class BillingViewModel @Inject constructor(
             _preview.value = bmp
         }
     }
+
+    fun findAndAddItemByBarcode(barcode: String) {
+        viewModelScope.launch {
+            try {
+                val currentItems = _selectedItems.value.toMutableMap()
+                val menuItems = _selectedItems.value.keys.toList()
+                
+                val foundItem = menuItems.firstOrNull { item ->
+                    item.menu_item_code == barcode || item.menu_item_code.contains(barcode) || barcode.contains(item.menu_item_code)
+                }
+                
+                if (foundItem != null) {
+                    val newQuantity = (currentItems[foundItem] ?: 0) + 1
+                    currentItems[foundItem] = newQuantity
+                    _selectedItems.value = currentItems
+                    updateTotal()
+                    _uiState.update { it.copy(errorMessage = "Added: ${foundItem.menu_item_name}") }
+                } else {
+                    _uiState.update { it.copy(errorMessage = "Item not found with barcode: $barcode") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Error scanning: ${e.message}") }
+            }
+        }
+    }
 }
 
 data class PaidOrder(
@@ -827,3 +852,58 @@ data class PaidOrder(
     val transactionId: String,
     val timestamp: Long
 )
+    fun findAndAddItemByBarcode(barcode: String) {
+        viewModelScope.launch {
+            try {
+                val currentState = _uiState.value
+                val allOrderDetails = currentState.orderDetails
+                
+                val foundItem = allOrderDetails.firstOrNull { 
+                    it.menu_item_code == barcode 
+                }
+                
+                if (foundItem != null) {
+                    val menuItem = TblMenuItemResponse(
+                        menu_item_id = foundItem.menu_item_id,
+                        menu_item_code = foundItem.menu_item_code,
+                        menu_item_name = foundItem.menu_item_name,
+                        menu_item_name_tamil = "",
+                        menu_id = foundItem.menu_id,
+                        menu_name = "",
+                        item_cat_id = foundItem.item_cat_id,
+                        item_cat_name = "",
+                        image = "",
+                        rate = foundItem.actual_rate,
+                        ac_rate = foundItem.actual_rate,
+                        parcel_rate = foundItem.actual_rate,
+                        parcel_charge = 0.0,
+                        tax_id = foundItem.tax_id,
+                        tax_name = "",
+                        tax_percentage = "0",
+                        kitchen_cat_id = 0L,
+                        kitchen_cat_name = "",
+                        is_available = "Y",
+                        preparation_time = 0L,
+                        is_favourite = false,
+                        stock_maintain = "N",
+                        rate_lock = "N",
+                        unit_id = 0L,
+                        unit_name = "",
+                        min_stock = 0L,
+                        hsn_code = "",
+                        order_by = 0L,
+                        is_inventory = 0L,
+                        is_raw = "N",
+                        cess_per = "0",
+                        cess_specific = 0.0,
+                        is_active = 1L
+                    )
+                    addItem(menuItem)
+                } else {
+                    _uiState.update { it.copy(errorMessage = "Item not found for barcode: $barcode") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Error scanning barcode: ${e.message}") }
+            }
+        }
+    }
