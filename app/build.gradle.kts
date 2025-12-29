@@ -139,6 +139,7 @@ dependencies {
     implementation(libs.androidx.hilt.common)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.play.services.code.scanner)
 //    implementation(libs.play.services.cast.framework)
 //    implementation(libs.androidx.room.compiler)
     annotationProcessor(libs.androidx.room.compiler)

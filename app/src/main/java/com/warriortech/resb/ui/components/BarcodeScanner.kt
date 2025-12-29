@@ -1,22 +1,16 @@
 package com.warriortech.resb.ui.components
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun BarcodeScannerButton(
@@ -41,7 +35,7 @@ fun BarcodeScannerButton(
         )
         .build()
 
-    val scanner = GmsBarcodeScanning.getClient(options)
+    val scanner = GmsBarcodeScanning.getClient(LocalContext.current, options)
 
     IconButton(
         onClick = {

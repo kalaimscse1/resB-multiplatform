@@ -35,6 +35,7 @@ hiltWork = "1.2.0"
 firebaseFunctionsKtx = "22.0.0"
 firebaseMlModeldownloaderKtx = "26.0.0"
 foundation = "1.9.2"
+playServicesCodeScanner = "16.1.0"
 
 [libraries]
 hilt-android-core = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
@@ -83,6 +84,7 @@ androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref 
 firebase-functions-ktx = { group = "com.google.firebase", name = "firebase-functions-ktx", version.ref = "firebaseFunctionsKtx" }
 firebase-ml-modeldownloader-ktx = { group = "com.google.firebase", name = "firebase-ml-modeldownloader-ktx", version.ref = "firebaseMlModeldownloaderKtx" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+play-services-code-scanner = { group = "com.google.android.gms", name = "play-services-code-scanner", version.ref = "playServicesCodeScanner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -523,13 +523,20 @@ class MenuViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val currentState = _menuState.value
+                val foundItem = MutableStateFlow<TblMenuItemResponse?>(null)
                 if (currentState is MenuUiState.Success) {
-                    val foundItem = currentState.menuItems.firstOrNull { item ->
-                        item.menu_item_code == barcode || item.menu_item_code.contains(barcode) || barcode.contains(item.menu_item_code)
+                    currentState.menuItems.forEach {
+                      if( it.menu_item_code == barcode || it.menu_item_code.contains(barcode) || barcode.contains(it.menu_item_code)) {
+                          foundItem.value = it
+                          return@forEach
+                      }
                     }
-                    
-                    if (foundItem != null) {
-                        addItemToOrder(foundItem)
+//                    val foundItem = currentState.menuItems.firstOrNull { item ->
+//                        item.menu_item_code == barcode || item.menu_item_code.contains(barcode) || barcode.contains(item.menu_item_code)
+//                    }
+//
+                    if (foundItem.value != null) {
+                        addItemToOrder(foundItem.value!!)
                     } else {
                         _orderState.value = OrderUiState.Error("Item not found with barcode: $barcode")
                     }
@@ -541,17 +548,3 @@ class MenuViewModel @Inject constructor(
     }
 
 }
-    fun findAndAddItemByBarcode(barcode: String) {
-        val menuState = _menuState.value
-        if (menuState is MenuUiState.Success) {
-            val foundItem = menuState.menuItems.firstOrNull { 
-                it.menu_item_code == barcode 
-            }
-            
-            if (foundItem != null) {
-                addItemToOrder(foundItem)
-            } else {
-                Timber.w("No menu item found for barcode: $barcode")
-            }
-        }
-    }
