@@ -1,23 +1,23 @@
 package com.warriortech.resb.ui.viewmodel
 
 import android.annotation.SuppressLint
-import androidx.collection.emptyLongSet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.warriortech.resb.model.MenuItem
-import com.warriortech.resb.model.Order
-import com.warriortech.resb.model.OrderItem
 import com.warriortech.resb.data.repository.MenuItemRepository
 import com.warriortech.resb.data.repository.ModifierRepository
 import com.warriortech.resb.data.repository.OrderRepository
 import com.warriortech.resb.data.repository.TableRepository
 import com.warriortech.resb.model.KOTItem
 import com.warriortech.resb.model.KOTRequest
+import com.warriortech.resb.model.MenuItem
 import com.warriortech.resb.model.Modifiers
+import com.warriortech.resb.model.Order
+import com.warriortech.resb.model.OrderItem
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.model.TblOrderDetailsResponse
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.CurrencySettings
+import com.warriortech.resb.util.getCurrentTimeAsFloat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
-import com.warriortech.resb.util.getCurrentTimeAsFloat
 
 @HiltViewModel
 class MenuViewModel @Inject constructor(
@@ -526,15 +525,10 @@ class MenuViewModel @Inject constructor(
                 val foundItem = MutableStateFlow<TblMenuItemResponse?>(null)
                 if (currentState is MenuUiState.Success) {
                     currentState.menuItems.forEach {
-                      if( it.menu_item_code == barcode || it.menu_item_code.contains(barcode) || barcode.contains(it.menu_item_code)) {
+                      if( it.menu_item_code == barcode) {
                           foundItem.value = it
-                          return@forEach
                       }
                     }
-//                    val foundItem = currentState.menuItems.firstOrNull { item ->
-//                        item.menu_item_code == barcode || item.menu_item_code.contains(barcode) || barcode.contains(item.menu_item_code)
-//                    }
-//
                     if (foundItem.value != null) {
                         addItemToOrder(foundItem.value!!)
                     } else {

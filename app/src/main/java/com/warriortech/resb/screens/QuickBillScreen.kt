@@ -67,7 +67,7 @@ fun QuickBillScreen(
     val scope = rememberCoroutineScope()
     var isOrderPlaced by remember { mutableStateOf(false) }
     val orderDetailsResponse1 by viewModel.orderDetailsResponse1.collectAsStateWithLifecycle()
-    var barcodeError by remember { mutableStateOf<String?>(null) }
+
 
 
     LaunchedEffect(uiState.errorMessage) {
@@ -113,19 +113,6 @@ fun QuickBillScreen(
                             tint = SurfaceLight
                         )
                     }
-                },
-                actions = {
-                    BarcodeScannerButton(
-                        onBarcodeScanned = { barcode ->
-                            viewModel.findAndAddItemByBarcode(barcode)
-                        },
-                        onError = { error ->
-                            barcodeError = error
-                            scope.launch {
-                                snackbarHostState.showSnackbar(error)
-                            }
-                        }
-                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = PrimaryGreen

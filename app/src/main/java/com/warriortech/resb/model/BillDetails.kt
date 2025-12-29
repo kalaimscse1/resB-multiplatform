@@ -1,7 +1,5 @@
 package com.warriortech.resb.model
 
-import java.time.LocalDate
-
 data class TblBillingRequest(
     var bill_no: String,
     var bill_date: String,

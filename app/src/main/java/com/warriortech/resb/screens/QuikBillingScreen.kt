@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblMenuItemResponse
+import com.warriortech.resb.ui.components.BarcodeScannerButton
 import com.warriortech.resb.ui.components.MobileOptimizedButton
 import com.warriortech.resb.ui.components.MobileOptimizedButtonColor
 import com.warriortech.resb.ui.theme.*
@@ -84,6 +85,7 @@ fun ItemWiseBillScreen(
     var isClearClicked by remember { mutableStateOf(false) }
     var isSaveClicked by remember { mutableStateOf(false) }
     var isOtherClicked by remember { mutableStateOf(false) }
+    var barcodeError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { viewModel.loadMenuItems() }
 
@@ -103,9 +105,23 @@ fun ItemWiseBillScreen(
                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
                         Icon(Icons.Default.Menu, contentDescription = "Menu", tint = SurfaceLight)
                     }
+                },
+                actions = {
+                    BarcodeScannerButton(
+                        onBarcodeScanned = { barcode ->
+                            viewModel.findAndAddItemByBarcode(barcode)
+                        },
+                        onError = { error ->
+                            barcodeError = error
+                            scope.launch {
+                                snackbarHostState.showSnackbar(error)
+                            }
+                        }
+                    )
                 }
             )
         },
+
         bottomBar = {
             BottomAppBar(
                 modifier = Modifier

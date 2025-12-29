@@ -814,30 +814,7 @@ class BillingViewModel @Inject constructor(
         }
     }
 
-    fun findAndAddItemByBarcode(barcode: String) {
-        viewModelScope.launch {
-            try {
-                val currentItems = _selectedItems.value.toMutableMap()
-                val menuItems = _selectedItems.value.keys.toList()
-                
-                val foundItem = menuItems.firstOrNull { item ->
-                    item.menu_item_code == barcode || item.menu_item_code.contains(barcode) || barcode.contains(item.menu_item_code)
-                }
-                
-                if (foundItem != null) {
-                    val newQuantity = (currentItems[foundItem] ?: 0) + 1
-                    currentItems[foundItem] = newQuantity
-                    _selectedItems.value = currentItems
-                    updateTotal()
-                    _uiState.update { it.copy(errorMessage = "Added: ${foundItem.menu_item_name}") }
-                } else {
-                    _uiState.update { it.copy(errorMessage = "Item not found with barcode: $barcode") }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Error scanning: ${e.message}") }
-            }
-        }
-    }
+
 }
 
 data class PaidOrder(

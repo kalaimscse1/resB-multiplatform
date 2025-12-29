@@ -52,7 +52,6 @@ class CounterViewModel @Inject constructor(
     private val _currentCounter = MutableStateFlow<Counters?>(null)
     val currentCounter: StateFlow<Counters?> = _currentCounter.asStateFlow()
 
-
     private val _selectedMenuItemForModifier = MutableStateFlow<TblMenuItemResponse?>(null)
     val selectedMenuItemForModifier: StateFlow<TblMenuItemResponse?> =
         _selectedMenuItemForModifier.asStateFlow()
@@ -66,7 +65,6 @@ class CounterViewModel @Inject constructor(
     val orderDetailsResponse = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
     val orderId = MutableStateFlow<String?>(null)
 
-
     sealed class MenuUiState {
         object Loading : MenuUiState()
         data class Success(val menuItems: List<TblMenuItemResponse>) : MenuUiState()
@@ -78,7 +76,6 @@ class CounterViewModel @Inject constructor(
             symbol = sessionManager.getRestaurantProfile()?.currency ?: "",
             decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
         )
-
     }
 
     fun loadMenuItems(category: String? = null) {
@@ -129,10 +126,8 @@ class CounterViewModel @Inject constructor(
             } catch (e: Exception) {
                 MenuUiState.Error(e.message ?: "Failed to load menu items")
             }
-
         }
     }
-
 
     fun showModifierDialog(menuItem: TblMenuItemResponse) {
         _selectedMenuItemForModifier.value = menuItem
@@ -393,6 +388,30 @@ class CounterViewModel @Inject constructor(
                 }
             } else {
                 Log.d("Payment", "Payment successful")
+            }
+        }
+    }
+    fun findAndAddItemByBarcode(barcode: String) {
+        viewModelScope.launch {
+            try {
+                val currentState = _menuState.value
+                val foundItem = MutableStateFlow<TblMenuItemResponse?>(null)
+                if (currentState is MenuUiState.Success) {
+                    currentState.menuItems.forEach {
+                        if( it.menu_item_code == barcode) {
+                            foundItem.value = it
+                        }
+                    }
+
+                    if (foundItem.value != null) {
+                        addItemToOrder(foundItem.value!!)
+                    } else {
+                        _menuState.value = MenuUiState.Error("Item not found with barcode: $barcode")
+                    }
+                }
+            } catch (e: Exception) {
+                _menuState.value =
+                    MenuUiState.Error("Error scanning: ${e.message}")
             }
         }
     }

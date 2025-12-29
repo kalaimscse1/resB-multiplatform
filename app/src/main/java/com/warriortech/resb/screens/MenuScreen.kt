@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.warriortech.resb.ui.viewmodel.MenuViewModel
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -657,11 +656,15 @@ fun MenuItemCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            if (tableStatus == "AC") CurrencySettings.format(
-                                menuItem.ac_rate
-                            ) else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY") CurrencySettings.format(
-                                menuItem.parcel_rate
-                            ) else CurrencySettings.format(menuItem.rate),
+                            when (tableStatus) {
+                                "AC" -> CurrencySettings.format(
+                                    menuItem.ac_rate
+                                )
+                                "TAKEAWAY", "DELIVERY" -> CurrencySettings.format(
+                                    menuItem.parcel_rate
+                                )
+                                else -> CurrencySettings.format(menuItem.rate)
+                            },
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = textColor
