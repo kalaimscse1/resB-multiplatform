@@ -178,7 +178,7 @@ class OrderRepository @Inject constructor(
             val orderDetailsList = itemsToPlace.map { item ->
                 val pricePerUnit = when (tableStatus) {
                     "AC" -> item.menuItem.ac_rate
-                    "PARCEL", "DELIVERY" -> item.menuItem.parcel_rate
+                    "TAKEAWAY", "DELIVERY" -> item.menuItem.parcel_rate
                     else -> item.menuItem.rate
                 }
                 val tax = apiService.getTaxSplit(

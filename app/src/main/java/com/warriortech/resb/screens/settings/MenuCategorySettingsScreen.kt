@@ -3,6 +3,7 @@ package com.warriortech.resb.screens.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -265,11 +269,15 @@ fun CategoryDialog(
     category: MenuCategory?,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Boolean) -> Unit,
-    order : String
+    order: String
 ) {
     var name by remember { mutableStateOf(category?.item_cat_name ?: "") }
     var orderBy by remember { mutableStateOf(category?.order_by ?: order) }
     var isActive by remember { mutableStateOf(category?.is_active != false) }
+
+    val nameFocus = remember { FocusRequester() }
+    val orderFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     ReusableBottomSheet(
         onDismiss = onDismiss,
@@ -278,33 +286,52 @@ fun CategoryDialog(
         isSaveEnabled = name.isNotBlank(),
         buttonText = if (category == null) "Add" else "Update"
     ) {
-        Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+        ) {
+
+            // NAME
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it.uppercase() },
                 label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(nameFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { orderFocus.requestFocus() } // 🔥 REQUIRED
+                )
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(Modifier.height(8.dp))
+
+            // ORDER
             OutlinedTextField(
                 value = orderBy,
                 onValueChange = { orderBy = it },
                 label = { Text("Order") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(orderFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() } // 🔥 REQUIRED
+                )
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(
                     checked = isActive,
                     onCheckedChange = { isActive = it }
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(Modifier.width(8.dp))
                 Text("Active")
             }
         }

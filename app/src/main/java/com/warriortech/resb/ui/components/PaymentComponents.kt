@@ -20,6 +20,7 @@ import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.ui.viewmodel.payment.BillingViewModel
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.CustomerDropdown
+import kotlin.toString
 
 @Composable
 fun PaymentSummaryCard(uiState: BillingPaymentUiState) {
@@ -364,9 +365,18 @@ fun PaymentMethodCard(
                 }
 
                 "OTHERS" -> {
+                    val cashValue = remember(uiState.cashAmount) {
+                        if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString()
+                    }
+                    val cardValue = remember(uiState.cardAmount) {
+                        if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString()
+                    }
+                    val upiValue = remember(uiState.upiAmount) {
+                        if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString()
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = "",
+                        value = cashValue,
                         onValueChange = {
                             viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0)
                         },
@@ -376,7 +386,7 @@ fun PaymentMethodCard(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value =  "",
+                        value =  cardValue,
                         onValueChange = {
                             viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0)
                         },
@@ -386,7 +396,7 @@ fun PaymentMethodCard(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value ="",
+                        value =upiValue,
                         onValueChange = {
                             viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0)
                         },

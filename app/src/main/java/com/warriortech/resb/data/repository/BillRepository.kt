@@ -106,30 +106,6 @@ class BillRepository @Inject constructor(
 
             val tenant = sessionManager.getCompanyCode() ?: ""
 
-            val ledgerDetail = apiService.findByContactNo(
-                bill?.customer?.contact_no ?: customer.contact_no,
-                tenant
-            ).body()
-            val ledger: TblLedgerDetails? = if (paymentMethod.name == "DUE") {
-                val req = TblLedgerRequest(
-                    ledger_name = customer.customer_name,
-                    ledger_fullname = customer.customer_name,
-                    group_id = 17,
-                    address = customer.address,
-                    contact_no = customer.contact_no,
-                    email = customer.email_address,
-                    gst_no = customer.gst_no,
-                    igst_status = if (customer.igst_status) "YES" else "NO",
-                    due_date = getCurrentDateModern(),
-                    order_by = 0, address1 = "", place = "", pincode = 0, country = "", pan_no = "",
-                    state_code = "", state_name = "", sac_code = "", opening_balance = "",
-                    bank_details = "NO", tamil_text = "", distance = 0.0, is_default = false
-                )
-                if (ledgerDetail?.contact_no != customer.contact_no)
-                    apiService.createLedger(req, tenant).body()
-                else
-                    null
-            } else null
 
             val billNumber = when {
                 paymentMethod.name == "DUE" || voucherType == "DUE" || receivedAmt < total-> apiService.getBillNoByCounterId(
@@ -182,16 +158,7 @@ class BillRepository @Inject constructor(
                 change = 0.0
             )
 
-            val ledgerEntries = LedgerEntryBuilder.build(
-                paymentMethod,
-                voucherType,
-                voucher,
-                ledgerDetail,
-                ledger,
-                billNumber["bill_no"] ?: "",
-                receivedAmt,
-                totals
-            )
+
 
             val check = apiService.checkBillExists(orderMasterId, tenant)
             if (check.body()?.data != true) return@flow emit(Result.failure(Exception("Order already billed or invalid")))
@@ -207,8 +174,44 @@ class BillRepository @Inject constructor(
                 apiService.updateIgstForOrderDetails(orderMasterId, tenant)
             else
                 apiService.updateGstForOrderDetails(orderMasterId, tenant)
+            if (sessionManager.getGeneralSetting()?.is_accounts==true){
+                val ledgerDetail = apiService.findByContactNo(
+                    bill?.customer?.contact_no ?: customer.contact_no,
+                    tenant
+                ).body()
+                val ledger: TblLedgerDetails? = if (paymentMethod.name == "DUE") {
+                    val req = TblLedgerRequest(
+                        ledger_name = customer.customer_name,
+                        ledger_fullname = customer.customer_name,
+                        group_id = 17,
+                        address = customer.address,
+                        contact_no = customer.contact_no,
+                        email = customer.email_address,
+                        gst_no = customer.gst_no,
+                        igst_status = if (customer.igst_status) "YES" else "NO",
+                        due_date = getCurrentDateModern(),
+                        order_by = 0, address1 = "", place = "", pincode = 0, country = "", pan_no = "",
+                        state_code = "", state_name = "", sac_code = "", opening_balance = "",
+                        bank_details = "NO", tamil_text = "", distance = 0.0, is_default = false
+                    )
+                    if (ledgerDetail?.contact_no != customer.contact_no)
+                        apiService.createLedger(req, tenant).body()
+                    else
+                        null
+                } else null
+                val ledgerEntries = LedgerEntryBuilder.build(
+                    paymentMethod,
+                    voucherType,
+                    voucher,
+                    ledgerDetail,
+                    ledger,
+                    billNumber["bill_no"] ?: "",
+                    receivedAmt,
+                    totals
+                )
+                apiService.insertSingleLedgerDetails(ledgerEntries, tenant)
+            }
 
-            apiService.insertSingleLedgerDetails(ledgerEntries, tenant)
             emit(Result.success(result))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -293,26 +296,28 @@ class BillRepository @Inject constructor(
             note = "",
             is_active = 1L
         )
-        val ledgerDetails = apiService.getLedgerDetailsByEntryNo(
-            billNo, sessionManager.getCompanyCode() ?: ""
-        ).body()!!.filter { it.ledger_details_id.toInt() % 2 != 0 }
-        val ledgerRequest = ledgerDetails.map {
-            TblLedgerDetailIdRequest(
-                ledger_details_id = it.ledger_details_id,
-                id = it.ledger.ledger_id.toLong(),
-                bill_no = billNo,
-                date = it.date,
-                time = it.time,
-                party_member = it.party_member,
-                party_id = it.party.ledger_id.toLong(),
-                member = it.member,
-                member_id = it.member_id,
-                purpose = it.purpose,
-                amount_in = request.grand_total,
-                amount_out = 0.0
-            )
+        if (sessionManager.getGeneralSetting()?.is_accounts == true){
+            val ledgerDetails = apiService.getLedgerDetailsByEntryNo(
+                billNo, sessionManager.getCompanyCode() ?: ""
+            ).body()!!.filter { it.ledger_details_id.toInt() % 2 != 0 }
+            val ledgerRequest = ledgerDetails.map {
+                TblLedgerDetailIdRequest(
+                    ledger_details_id = it.ledger_details_id,
+                    id = it.ledger.ledger_id.toLong(),
+                    bill_no = billNo,
+                    date = it.date,
+                    time = it.time,
+                    party_member = it.party_member,
+                    party_id = it.party.ledger_id.toLong(),
+                    member = it.member,
+                    member_id = it.member_id,
+                    purpose = it.purpose,
+                    amount_in = request.grand_total,
+                    amount_out = 0.0
+                )
+            }
+            apiService.updateAllLedgerDetails(ledgerRequest, sessionManager.getCompanyCode() ?: "")
         }
-        apiService.updateAllLedgerDetails(ledgerRequest, sessionManager.getCompanyCode() ?: "")
         apiService.updateByBillNo(billNo, request, sessionManager.getCompanyCode() ?: "")
 
     }

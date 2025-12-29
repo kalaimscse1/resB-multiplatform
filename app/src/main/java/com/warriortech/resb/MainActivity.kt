@@ -1131,6 +1131,7 @@ fun DrawerContent(
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                     colors = subMenuColors
                                 )
+                            }
                                 if (sessionManager.getGeneralSetting()?.is_accounts == true) {
                                     NavigationDrawerItem(
                                         label = { if (!isCollapsed) Text("Ledger") else Text("") },
@@ -1162,13 +1163,13 @@ fun DrawerContent(
                                         colors = subMenuColors
                                     )
                                 }
-                            }
+
                         }
                     }
                 }
 
                 // 🔹 Orders
-                if (sessionManager.getGeneralSetting()?.is_table_allowed == true) {
+
                     if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CASHIER")) {
                         NavigationDrawerItem(
                             label = { if (!isCollapsed) Text("Orders") else Text("") },
@@ -1191,20 +1192,22 @@ fun DrawerContent(
                         )
                         AnimatedVisibility(expandedMenu == ExpandedMenu.ORDERS) {
                             Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                                NavigationDrawerItem(
-                                    label = { if (!isCollapsed) Text("Dine In") else Text("") },
-                                    icon = {
-                                        DrawerIcon(
-                                            Icons.Default.Restaurant,
-                                            contentDescription = null,
-                                            isCollapsed
-                                        )
-                                    },
-                                    selected = currentDestination?.route == "selects",
-                                    onClick = { onDestinationClicked("selects") },
-                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                                    colors = subMenuColors
-                                )
+                                if (sessionManager.getGeneralSetting()?.is_table_allowed == true) {
+                                    NavigationDrawerItem(
+                                        label = { if (!isCollapsed) Text("Dine In") else Text("") },
+                                        icon = {
+                                            DrawerIcon(
+                                                Icons.Default.Restaurant,
+                                                contentDescription = null,
+                                                isCollapsed
+                                            )
+                                        },
+                                        selected = currentDestination?.route == "selects",
+                                        onClick = { onDestinationClicked("selects") },
+                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                        colors = subMenuColors
+                                    )
+                                }
                                 NavigationDrawerItem(
                                     label = { if (!isCollapsed) Text("Takeaway") else Text("") },
                                     icon = {
@@ -1223,13 +1226,13 @@ fun DrawerContent(
                             }
                         }
                     }
-                }
+
 
 
                 // 🔹 Billing
 
                 if (role in listOf("RESBADMIN", "ADMIN", "CASHIER")) {
-                    if(sessionManager.getGeneralSetting()?.is_table_allowed == true){
+                    if(sessionManager.getGeneralSetting()?.is_accounts == true){
                         NavigationDrawerItem(
                             label = { if (!isCollapsed) Text("Accounts Entry") else Text("") },
                             icon = {

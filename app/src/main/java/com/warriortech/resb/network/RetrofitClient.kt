@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
  */
 object RetrofitClient {
     const val BASE_URL = "http://72.61.172.248:5055/api/" // Replace with your actual API URL
-//    const val BASE_URL = "http://154.210.206.184:5050/api/"
+//    const val BASE_URL = "http://72.61.172.248:5050/api/"
     // Create OkHttpClient with logging and timeout settings
 
 
