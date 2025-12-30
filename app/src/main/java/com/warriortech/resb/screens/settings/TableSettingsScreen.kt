@@ -278,18 +278,24 @@ fun TableDialog(
         )
     }
     var isActive by remember { mutableStateOf(table?.is_active ?: true) }
+    val focusManager = LocalFocusManager.current
+    val capacityFocus = remember { FocusRequester() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (table != null) "Edit Table" else "Add Table") },
         text = {
-            Column {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 OutlinedTextField(
                     value = tableNumber,
                     onValueChange = { tableNumber = it.uppercase() },
                     label = { Text("Table Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(
+                        onNext = { capacityFocus.requestFocus() }
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 AreaDropdown(
@@ -306,9 +312,14 @@ fun TableDialog(
                     value = capacity,
                     onValueChange = { capacity = it },
                     label = { Text("Capacity") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(capacityFocus),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = { focusManager.clearFocus() }
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 StringDropdown(

@@ -312,7 +312,7 @@ fun CategoryDialog(
             // ORDER
             OutlinedTextField(
                 value = orderBy,
-                onValueChange = { orderBy = it },
+                onValueChange = { orderBy = it.uppercase() },
                 label = { Text("Order") },
                 modifier = Modifier
                     .fillMaxWidth()

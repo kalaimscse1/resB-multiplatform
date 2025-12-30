@@ -249,6 +249,7 @@ fun AddAreaDialog(
     onAdd: (String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
@@ -282,7 +283,9 @@ fun AddAreaDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp)
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Title
@@ -299,7 +302,11 @@ fun AddAreaDialog(
                 label = { Text("Area Name") },
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                )
             )
 
             // Buttons
@@ -341,6 +348,7 @@ fun EditAreaDialog(
 ) {
     var name by remember { mutableStateOf(area.area_name) }
     var isActive by remember { mutableStateOf(area.isActvice) }
+    val focusManager = LocalFocusManager.current
 
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
@@ -373,7 +381,9 @@ fun EditAreaDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp)
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Title
@@ -390,7 +400,11 @@ fun EditAreaDialog(
                 label = { Text("Area Name") },
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                )
             )
 
             // Active checkbox
