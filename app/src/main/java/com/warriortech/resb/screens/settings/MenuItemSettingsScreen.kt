@@ -497,6 +497,7 @@ fun MenuItemDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(nameFocus),
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { nameTamilFocus.requestFocus() }
@@ -511,6 +512,7 @@ fun MenuItemDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(nameTamilFocus),
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { rateFocus.requestFocus() }
@@ -525,7 +527,8 @@ fun MenuItemDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(rateFocus),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { acRateFocus.requestFocus() }
                 )
@@ -539,7 +542,8 @@ fun MenuItemDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(acRateFocus),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { parcelRateFocus.requestFocus() }
                 )
@@ -553,13 +557,87 @@ fun MenuItemDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(parcelRateFocus),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { parcelChargeFocus.requestFocus() }
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            OutlinedTextField(
+                value = parcelCharge,
+                onValueChange = { parcelCharge = it },
+                label = { Text("Parcel Charge") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(parcelChargeFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { preparationTimeFocus.requestFocus() }
+                )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = preparationTime.toString(),
+                onValueChange = { preparationTime = it.toIntOrNull() ?: 0 },
+                label = { Text("Preparation Time (min)") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(preparationTimeFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { hsnCodeFocus.requestFocus() }
+                )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = hsnCode,
+                onValueChange = { hsnCode = it },
+                label = { Text("HSN Code") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(hsnCodeFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { minStockFocus.requestFocus() }
+                )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = minStock.toString(),
+                onValueChange = { minStock = it.toIntOrNull() ?: 0 },
+                label = { Text("Min Stock") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(minStockFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { orderByFocus.requestFocus() }
+                )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = orderBy.toString(),
+                onValueChange = { orderBy = it.toIntOrNull() ?: 0 },
+                label = { Text("Order By") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(orderByFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { LocalFocusManager.current.clearFocus() }
+                )
+            )
 
             // Dropdowns
             StringDropdown(
