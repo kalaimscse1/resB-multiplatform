@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.AreaRepository
 import com.warriortech.resb.model.Area
+import com.warriortech.resb.util.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +20,11 @@ data class AreaUiState(
     val successMessage: String? = null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class AreaViewModel @Inject constructor(
-    private val areaRepository: AreaRepository
+    private val areaRepository: AreaRepository,
+    private val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AreaUiState())

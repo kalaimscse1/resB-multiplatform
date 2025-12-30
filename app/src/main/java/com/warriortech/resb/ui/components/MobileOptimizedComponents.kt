@@ -1,7 +1,13 @@
 package com.warriortech.resb.ui.components
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.graphics.Color
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,9 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -29,6 +39,28 @@ import androidx.compose.ui.unit.sp
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.util.getDeviceInfo
 import com.warriortech.resb.util.getScreenSizeInfo
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
+import java.util.concurrent.Executors
+import com.google.accompanist.permissions.rememberPermissionState
 
 @Composable
 fun MobileOptimizedCard(
@@ -555,5 +587,135 @@ fun MobileOptimizedButtonColor(
             screenWidthDp >= 800 -> 16.sp
             else -> 12.sp},
             color = textColor,fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun BarcodeInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onBarcodeScanned: (String) -> Unit,
+    onCameraClick: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text("Barcode") },
+        singleLine = true,
+        trailingIcon = {
+            IconButton(onClick = onCameraClick) {
+                Icon(Icons.Default.CameraAlt, contentDescription = "Scan")
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onPreviewKeyEvent {
+                if (it.type == KeyEventType.KeyUp && it.key == Key.Enter) {
+                    if (value.isNotBlank()) onBarcodeScanned(value.trim())
+                    true
+                } else false
+            },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Ascii,
+            imeAction = ImeAction.None
+        )
+    )
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun CameraPermission(
+    onGranted: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val permissionState = rememberPermissionState(Manifest.permission.CAMERA)
+
+    LaunchedEffect(Unit) {
+        if (!permissionState.status.isGranted) {
+            permissionState.launchPermissionRequest()
+        }
+    }
+
+    if (permissionState.status.isGranted) {
+        onGranted()
+    }
+}
+
+
+@Composable
+fun CameraBarcodeScanner(
+    onResult: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    CameraPermission {
+        AndroidView(
+            factory = { ctx ->
+                val previewView = PreviewView(ctx).apply {
+                    implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                }
+
+                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                cameraProviderFuture.addListener({
+                    val cameraProvider = cameraProviderFuture.get()
+
+                    val preview = Preview.Builder().build().apply {
+                        setSurfaceProvider(previewView.surfaceProvider)
+                    }
+
+                    val scanner = BarcodeScanning.getClient(
+                        BarcodeScannerOptions.Builder()
+                            .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
+                            .build()
+                    )
+
+                    val analysis = ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+
+                    analysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                        val mediaImage = imageProxy.image
+                        if (mediaImage != null) {
+                            val image = InputImage.fromMediaImage(
+                                mediaImage,
+                                imageProxy.imageInfo.rotationDegrees
+                            )
+
+                            scanner.process(image)
+                                .addOnSuccessListener { barcodes ->
+                                    barcodes.firstOrNull()?.rawValue?.let {
+                                        onResult(it)
+                                        onClose()
+                                    }
+                                }
+                                .addOnCompleteListener {
+                                    imageProxy.close()
+                                }
+                        } else imageProxy.close()
+                    }
+
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        analysis
+                    )
+                }, ContextCompat.getMainExecutor(ctx))
+
+                previewView
+            },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

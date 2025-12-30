@@ -10,14 +10,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Print
@@ -28,8 +26,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.warriortech.resb.model.KitchenCategory
@@ -53,6 +50,8 @@ import com.warriortech.resb.util.StringDropdown
 import kotlinx.coroutines.launch
 import com.warriortech.resb.model.TblUnit
 import com.warriortech.resb.network.SessionManager
+import com.warriortech.resb.ui.components.BarcodeInputField
+import com.warriortech.resb.ui.components.CameraBarcodeScanner
 import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -436,6 +435,7 @@ fun MenuItemDialog(
     var preparationTime by remember { mutableStateOf(menuItem?.preparation_time ?: 0) }
     var isFavourite by remember { mutableStateOf(menuItem?.is_favourite == true) }
 
+    val focusManager = LocalFocusManager.current
     // Inventory fields
     var isInventory by remember { mutableStateOf(menuItem?.is_inventory ?: 0L) }
     var hsnCode by remember { mutableStateOf(menuItem?.hsn_code ?: "") }
@@ -444,6 +444,9 @@ fun MenuItemDialog(
     var stockMaintain by remember { mutableStateOf(menuItem?.stock_maintain ?: "NO") }
     var unitId by remember { mutableStateOf(menuItem?.unit_id ?: 1) }
     var isActive by remember { mutableStateOf(menuItem?.is_active ?: 1) }
+    var barcode by remember { mutableStateOf(menuItem?.menu_item_code ?: "") }
+    var showScanner by remember { mutableStateOf(false) }
+
 
     ReusableBottomSheet(
         onDismiss = onDismiss,
@@ -470,7 +473,7 @@ fun MenuItemDialog(
                 is_inventory = isInventory,
                 is_raw = isRaw,
                 is_available = isAvailable,
-                menu_item_code = menuItem?.menu_item_code ?: "",
+                menu_item_code = barcode,
                 menu_id = menuId,
                 is_favourite = isFavourite,
                 is_active = isActive,
@@ -517,6 +520,14 @@ fun MenuItemDialog(
                 keyboardActions = KeyboardActions(
                     onNext = { rateFocus.requestFocus() }
                 )
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            BarcodeInputField(
+                value = barcode,
+                onValueChange = { barcode = it },
+                onBarcodeScanned = { barcode = it },
+                onCameraClick = { showScanner = true }
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -582,7 +593,7 @@ fun MenuItemDialog(
 
             OutlinedTextField(
                 value = preparationTime.toString(),
-                onValueChange = { preparationTime = it.toIntOrNull() ?: 0 },
+                onValueChange = { preparationTime = it.toLongOrNull() ?: 0 },
                 label = { Text("Preparation Time (min)") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -612,7 +623,7 @@ fun MenuItemDialog(
 
             OutlinedTextField(
                 value = minStock.toString(),
-                onValueChange = { minStock = it.toIntOrNull() ?: 0 },
+                onValueChange = { minStock = it.toLongOrNull() ?: 0 },
                 label = { Text("Min Stock") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -627,7 +638,7 @@ fun MenuItemDialog(
 
             OutlinedTextField(
                 value = orderBy.toString(),
-                onValueChange = { orderBy = it.toIntOrNull() ?: 0 },
+                onValueChange = { orderBy = it.toLongOrNull() ?: 0 },
                 label = { Text("Order By") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -635,7 +646,7 @@ fun MenuItemDialog(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { LocalFocusManager.current.clearFocus() }
+                    onDone = { focusManager.clearFocus() }
                 )
             )
 
@@ -772,7 +783,21 @@ fun MenuItemDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
+        }
+    }
 
+    if (showScanner) {
+        Dialog(onDismissRequest = { showScanner = false }) {
+            Box(Modifier.fillMaxSize()) {
+                CameraBarcodeScanner(
+                    onResult = {
+                        barcode = it
+                    },
+                    onClose = {
+                        showScanner = false
+                    }
+                )
+            }
         }
     }
 }

@@ -9,9 +9,11 @@ import com.warriortech.resb.data.local.MIGRATION_2_3
 import com.warriortech.resb.data.local.RestaurantDatabase
 import com.warriortech.resb.data.local.dao.MenuItemDao
 import com.warriortech.resb.data.local.dao.TableDao
+import com.warriortech.resb.data.local.dao.TblAreaDao
 import com.warriortech.resb.data.local.dao.TblOrderDetailsDao
 import com.warriortech.resb.data.local.dao.TblOrderMasterDao
 import com.warriortech.resb.data.local.dao.TblVoucherDao
+import com.warriortech.resb.data.local.entity.TblArea
 import com.warriortech.resb.data.repository.AreaRepository
 import com.warriortech.resb.data.repository.DashboardRepository
 import com.warriortech.resb.data.repository.MenuItemRepository
@@ -78,6 +80,12 @@ object AppModule {
     @Singleton
     fun provideTableDao(database: RestaurantDatabase): TableDao {
         return database.tableDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAreaDao(database: RestaurantDatabase): TblAreaDao {
+        return database.tblAreaDao()
     }
 
     //
@@ -274,11 +282,15 @@ object AppModule {
     @Singleton
     fun provideAreaRepository(
         apiService: ApiService,
-        sessionManager: SessionManager
+        sessionManager: SessionManager,
+        areaDao: TblAreaDao,
+        networkMonitor: NetworkMonitor
     ): AreaRepository {
         return AreaRepository(
             apiService = apiService,
-            sessionManager = sessionManager
+            areaDao,
+            sessionManager = sessionManager,
+            networkMonitor
         )
     }
 

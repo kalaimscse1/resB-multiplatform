@@ -117,7 +117,7 @@ class OfflineQueueManager(context: Context) {
     /**
      * Get payload as specific type
      */
-    inline fun <reified T> getPayload(item: SyncQueueItem): T? {
+    private inline fun <reified T> getPayload(item: SyncQueueItem): T? {
         return try {
             gson.fromJson(item.payload, T::class.java)
         } catch (e: Exception) {

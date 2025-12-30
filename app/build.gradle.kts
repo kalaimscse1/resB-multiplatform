@@ -162,6 +162,7 @@ dependencies {
 
     // AI Integration dependencies
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
 
     // Performance optimizations
     implementation("androidx.compose.runtime:runtime-tracing:1.0.0-beta01")

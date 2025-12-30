@@ -49,7 +49,6 @@ class TableViewModel @Inject constructor(
             symbol = sessionManager.getRestaurantProfile()?.currency ?: "",
             decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
         )
-
     }
 
     fun loadTables() {

@@ -41,7 +41,7 @@ class MenuItemRepository @Inject constructor(
 
     suspend fun getAllMenuItems(): Flow<List<TblMenuItemResponse>> = flow{
         val response = apiService.getMenuItems(sessionManager.getCompanyCode()?:"")
-        forceSyncAllMenuItems()
+        syncMenuItemsFromRemote()
         if (response.isSuccessful) {
             val menuItems = response.body()
             if (menuItems != null) {
