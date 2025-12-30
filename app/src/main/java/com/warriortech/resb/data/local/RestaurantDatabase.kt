@@ -37,8 +37,9 @@ import com.warriortech.resb.data.local.entity.*
         TblUnit::class,
         TblVoucher::class,
         TblVoucherType::class,
+        SyncQueueItem::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 
@@ -71,6 +72,7 @@ abstract class RestaurantDatabase : RoomDatabase() {
     abstract fun tblUnitDao(): TblUnitDao
     abstract fun tblVoucherDao(): TblVoucherDao
     abstract fun tblVoucherTypeDao(): TblVoucherTypeDao
+    abstract fun syncQueueDao(): SyncQueueDao
 
     companion object {
         @Volatile

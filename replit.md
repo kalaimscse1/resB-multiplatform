@@ -6,7 +6,17 @@ A comprehensive Android restaurant billing system built with Kotlin, Jetpack Com
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (Latest: December 29, 2025)
+## Recent Changes (Latest: December 30, 2025)
+- **OFFLINE-FIRST SYNC SYSTEM**: Complete SQLite offline/online synchronization infrastructure
+  - Added SyncQueue entity to track all operations (CREATE, UPDATE, DELETE)
+  - Created SyncQueueDao for database access to sync queue
+  - Implemented OfflineQueueManager for easy queue management
+  - Updated RestaurantDatabase (v4 → v5) with sync_queue table
+  - Integrated with existing SyncWorker for automatic syncing when online
+  - Bills, orders, and all data are persisted locally and synced when connection available
+  - See OFFLINE_ONLINE_IMPLEMENTATION.md for detailed integration guide
+
+## Previous Changes (December 29, 2025)
 - **BARCODE SCANNER FEATURE**: Added barcode scanning capability to Quick Bill and Menu screens
   - Integrated MLKit barcode scanner for multiple barcode formats (QR Code, Code 128, EAN-13, UPC, etc.)
   - Added barcode scanner button to QuickBillScreen top app bar for quick item addition to bills
