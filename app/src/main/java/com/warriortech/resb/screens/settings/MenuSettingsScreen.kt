@@ -368,6 +368,7 @@ fun MenuDialog(
                             }
                         }
                     },
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { descriptionFocus.requestFocus() }
@@ -392,6 +393,7 @@ fun MenuDialog(
                             }
                         }
                     },
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { startTimeFocus.requestFocus() }
@@ -424,6 +426,7 @@ fun MenuDialog(
                             }
                         }
                     },
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { endTimeFocus.requestFocus() }
@@ -448,7 +451,8 @@ fun MenuDialog(
                             }
                         }
                     },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = { focusManager.clearFocus() } // ✅ correct
                 )
