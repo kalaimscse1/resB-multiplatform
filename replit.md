@@ -6,7 +6,15 @@ A comprehensive Android restaurant billing system built with Kotlin, Jetpack Com
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (Latest: December 30, 2025)
+## Recent Changes (Latest: December 30, 2025 - Update 2)
+- **UI/UX FIXES & EXCEL IMPORT**:
+  - Fixed Enter key behavior in Menu Category, Table, and Area dialogs - pressing Done now submits instead of creating newlines
+  - Improved keyboard actions in Category dialog - pressing Done in Order field now submits form
+  - Improved Area dialog - pressing Done now submits the form with validation
+  - Created ExcelImportHelper utility for importing menu items from Excel (.xlsx) files
+  - Excel import reads all 26 menu item fields: ID, code, names, rates, taxes, kitchen categories, stock info, etc.
+
+## Previous Changes (December 30, 2025)
 - **OFFLINE-FIRST SYNC SYSTEM**: Complete SQLite offline/online synchronization infrastructure
   - Added SyncQueue entity to track all operations (CREATE, UPDATE, DELETE)
   - Created SyncQueueDao for database access to sync queue

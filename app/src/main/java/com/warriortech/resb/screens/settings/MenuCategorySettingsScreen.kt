@@ -320,7 +320,10 @@ fun CategoryDialog(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() } // 🔥 REQUIRED
+                    onDone = { 
+                        focusManager.clearFocus()
+                        onConfirm(name, orderBy, isActive)
+                    }
                 )
             )
 

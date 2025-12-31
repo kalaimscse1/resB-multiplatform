@@ -309,7 +309,10 @@ fun AddAreaDialog(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }
+                    onDone = { 
+                        focusManager.clearFocus()
+                        if (name.isNotBlank()) onAdd(name)
+                    }
                 )
             )
 
