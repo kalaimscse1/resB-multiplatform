@@ -665,6 +665,7 @@ fun AppNavigation(
                 onNavigateToDue = {
                     navController.navigate("due")
                 },
+                navController = navController
             )
         }
 

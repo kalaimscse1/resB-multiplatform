@@ -149,6 +149,16 @@ class MenuItemRepository @Inject constructor(
         val response = apiService.printMenuItems(paperWidth,menuItems ,sessionManager.getCompanyCode()?:"")
         return response
     }
+
+    suspend fun getOrderBy(): Map<String, Long>{
+        val response = apiService.getMenuCategoryOrderBy(sessionManager.getCompanyCode()?:"")
+        if (response.isSuccessful) {
+            return response.body() ?: emptyMap()
+        }
+        else{
+            throw Exception("Failed to get OrderBy: ${response.message()}")
+        }
+    }
 }
 
 // Extension functions

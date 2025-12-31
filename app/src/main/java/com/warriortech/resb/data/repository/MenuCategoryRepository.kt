@@ -71,7 +71,7 @@ class MenuCategoryRepository @Inject constructor(
     }
 
     suspend fun getOrderBy(): Map<String, Long>{
-        val response = apiService.getMenuCategoryOrderBy(sessionManager.getCompanyCode()?:"")
+        val response = apiService.getMenuItemOrderBy(sessionManager.getCompanyCode()?:"")
         if (response.isSuccessful) {
             return response.body() ?: emptyMap()
         }

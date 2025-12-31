@@ -77,6 +77,7 @@ fun MenuItemSettingsScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val order by viewModel.orderBy.collectAsStateWithLifecycle()
     val menus by viewModel.menus.collectAsStateWithLifecycle()
     val menuCategories by viewModel.menuCategories.collectAsStateWithLifecycle()
     val kitchenCategories by viewModel.kitchenCategories.collectAsStateWithLifecycle()
@@ -308,7 +309,8 @@ fun MenuItemSettingsScreen(
                 menuCategories = menuCategories,
                 kitchenCategories = kitchenCategories,
                 taxes = taxes,
-                units = units
+                units = units,
+                order = order.toLong()
             )
         }
 
@@ -405,6 +407,7 @@ fun MenuItemDialog(
     kitchenCategories: List<KitchenCategory>,
     taxes: List<Tax>,
     units: List<TblUnit>,
+    order:Long
 ) {
     val rateOptions = listOf("YES", "NO")
 
@@ -428,7 +431,7 @@ fun MenuItemDialog(
     var taxId by remember { mutableStateOf(menuItem?.tax_id ?: 1) }
     var rate by remember { mutableStateOf(menuItem?.rate?.toString() ?: "") }
     var rateLock by remember { mutableStateOf(menuItem?.rate_lock ?: rateOptions.first()) }
-    var orderBy by remember { mutableStateOf(menuItem?.order_by ?: 1) }
+    var orderBy by remember { mutableStateOf(menuItem?.order_by ?: order) }
     var acRate by remember { mutableStateOf(menuItem?.ac_rate?.toString() ?: "") }
     var parcelRate by remember { mutableStateOf(menuItem?.parcel_rate?.toString() ?: "") }
     var parcelCharge by remember { mutableStateOf(menuItem?.parcel_charge?.toString() ?: "") }
@@ -602,21 +605,6 @@ fun MenuItemDialog(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
                     onNext = { hsnCodeFocus.requestFocus() }
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = hsnCode,
-                onValueChange = { hsnCode = it },
-                label = { Text("HSN Code") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(hsnCodeFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { minStockFocus.requestFocus() }
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -801,395 +789,6 @@ fun MenuItemDialog(
         }
     }
 }
-//data class MenuItemFormState(
-//    val name: String = "",
-//    val nameTamil: String = "",
-//    val menuId: Int = 1,
-//    val menuItemCatId: Int = 1,
-//    val kitchenCatId: Int = 1,
-//    val isAvailable: String = "YES",
-//    val taxId: Int = 1,
-//    val rate: String = "",
-//    val rateLock: String = "YES",
-//    val orderBy: Int = 1,
-//    val acRate: String = "",
-//    val parcelRate: String = "",
-//    val parcelCharge: String = "",
-//    val preparationTime: Int = 0,
-//    val isFavourite: Boolean = false,
-//    val isInventory: Long = 0L,
-//    val hsnCode: String = "",
-//    val minStock: Int = 0,
-//    val isRaw: String = "NO",
-//    val stockMaintain: String = "NO",
-//    val unitId: Int = 1,
-//    val isActive: Int = 1
-//)
-//
-//
-//fun MenuItemFormState.copyFrom(menuItem: TblMenuItemResponse?): MenuItemFormState {
-//    return this.copy(
-//        name = menuItem?.menu_item_name ?: "",
-//        nameTamil = menuItem?.menu_item_name_tamil ?: "",
-//        menuId = (menuItem?.menu_id ?: 1).toInt(),
-//        menuItemCatId = (menuItem?.item_cat_id ?: 1).toInt(),
-//        kitchenCatId = (menuItem?.kitchen_cat_id ?: 1).toInt(),
-//        isAvailable = menuItem?.is_available ?: "YES",
-//        taxId = (menuItem?.tax_id ?: 1).toInt(),
-//        rate = menuItem?.rate?.toString() ?: "",
-//        rateLock = menuItem?.rate_lock ?: "YES",
-//        orderBy = (menuItem?.order_by ?: 1).toInt(),
-//        acRate = menuItem?.ac_rate?.toString() ?: "",
-//        parcelRate = menuItem?.parcel_rate?.toString() ?: "",
-//        parcelCharge = menuItem?.parcel_charge?.toString() ?: "",
-//        preparationTime = (menuItem?.preparation_time ?: 0).toInt(),
-//        isFavourite = menuItem?.is_favourite == true,
-//        isInventory = menuItem?.is_inventory ?: 0L,
-//        hsnCode = menuItem?.hsn_code ?: "",
-//        minStock = (menuItem?.min_stock ?: 0).toInt(),
-//        isRaw = menuItem?.is_raw ?: "NO",
-//        stockMaintain = menuItem?.stock_maintain ?: "NO",
-//        unitId = (menuItem?.unit_id ?: 1).toInt(),
-//        isActive = (menuItem?.is_active ?: 1).toInt()
-//    )
-//}
-//
-//@Composable
-//fun MenuItemDialog(
-//    menuItem: TblMenuItemResponse?,
-//    onDismiss: () -> Unit,
-//    onSave: (TblMenuItemRequest) -> Unit,
-//    menus: List<Menu>,
-//    menuCategories: List<MenuCategory>,
-//    kitchenCategories: List<KitchenCategory>,
-//    taxes: List<Tax>,
-//    units: List<TblUnit>,
-//) {
-//    var formState by remember(menuItem) {
-//        mutableStateOf(MenuItemFormState().copyFrom(menuItem))
-//    }
-//
-//    val isSaveEnabled by remember {
-//        derivedStateOf {
-//            formState.name.isNotBlank() &&
-//                    formState.rate.toDoubleOrNull() != null &&
-//                    formState.rate.isNotBlank()
-//        }
-//    }
-//
-//    val focusManager = LocalFocusManager.current
-//    val coroutineScope = rememberCoroutineScope()
-//
-//    ReusableBottomSheet(
-//        onDismiss = onDismiss,
-//        title = if (menuItem != null) "Edit Menu Item" else "Add Menu Item",
-//        onSave = {
-//            val request = TblMenuItemRequest(
-//                menu_item_id = menuItem?.menu_item_id ?: 0,
-//                menu_item_name = formState.name,
-//                menu_item_name_tamil = formState.nameTamil,
-//                item_cat_id = formState.menuItemCatId.toLong(),
-//                rate = formState.rate.toDoubleOrNull() ?: 0.0,
-//                ac_rate = formState.acRate.toDoubleOrNull() ?: 0.0,
-//                parcel_rate = formState.parcelRate.toDoubleOrNull() ?: 0.0,
-//                parcel_charge = formState.parcelCharge.toDoubleOrNull() ?: 0.0,
-//                tax_id = formState.taxId.toLong(),
-//                cess_specific = 0.0,
-//                kitchen_cat_id = formState.kitchenCatId.toLong(),
-//                stock_maintain = formState.stockMaintain,
-//                rate_lock = formState.rateLock,
-//                unit_id = formState.unitId.toLong(),
-//                min_stock = formState.minStock.toLong(),
-//                hsn_code = formState.hsnCode,
-//                order_by = formState.orderBy.toLong(),
-//                is_inventory = formState.isInventory,
-//                is_raw = formState.isRaw,
-//                is_available = formState.isAvailable,
-//                menu_item_code = menuItem?.menu_item_code ?: "",
-//                menu_id = formState.menuId.toLong(),
-//                is_favourite = formState.isFavourite,
-//                is_active = formState.isActive.toLong(),
-//                image = "",
-//                preparation_time = formState.preparationTime.toLong()
-//            )
-//            onSave(request)
-//        },
-//        isSaveEnabled = isSaveEnabled,
-//        buttonText = if (menuItem != null) "Update" else "Add"
-//    ) {
-//        LazyColumn(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .fillMaxHeight(0.9f),
-//            verticalArrangement = Arrangement.spacedBy(12.dp),
-//            contentPadding = PaddingValues(16.dp)
-//        ) {
-//            item { BasicInfoSection(formState, menus, menuCategories, { newState -> formState = newState }, focusManager) }
-//            item { RateSection(formState, { newState -> formState = newState }, focusManager) }
-//            item { AvailabilitySection(formState, { newState -> formState = newState }) }
-//            item {
-//                InventorySection(
-//                    formState,
-//                    units,
-//                    kitchenCategories,
-//                    taxes,
-//                    { newState -> formState = newState },
-//                    focusManager
-//                )
-//            }
-//        }
-//    }
-//}
-//
-//@Composable
-//private fun BasicInfoSection(
-//    state: MenuItemFormState,
-//    menus: List<Menu>,
-//    menuCategories: List<MenuCategory>,
-//    onStateChange: (MenuItemFormState) -> Unit,
-//    focusManager: FocusManager
-//) {
-//    Card(
-//        modifier = Modifier.fillMaxWidth(),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-//    ) {
-//        Column(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(16.dp),
-//            verticalArrangement = Arrangement.spacedBy(12.dp)
-//        ) {
-//            Text("Basic Information", style = MaterialTheme.typography.titleMedium)
-//
-//            OutlinedTextField(
-//                value = state.name,
-//                onValueChange = { onStateChange(state.copy(name = it.uppercase())) },
-//                label = { Text("Name") },
-//                modifier = Modifier.fillMaxWidth(),
-//                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-//                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//            )
-//
-//            OutlinedTextField(
-//                value = state.nameTamil,
-//                onValueChange = { onStateChange(state.copy(nameTamil = it)) },
-//                label = { Text("Name (Tamil)") },
-//                modifier = Modifier.fillMaxWidth(),
-//                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-//                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//            )
-//
-//            MenuDropdown(
-//                menus = menus,
-//                onMenuSelected = { onStateChange(state.copy(menuId = it.menu_id.toInt())) },
-//                label = "Select Menu",
-//                modifier = Modifier.fillMaxWidth(),
-//                selectedMenu = menus.find { it.menu_id.toInt() == state.menuId }
-//            )
-//
-//            MenuCategoryDropdown(
-//                menus = menuCategories,
-//                onMenuCategorySelected = { onStateChange(state.copy(menuItemCatId = it.item_cat_id.toInt())) },
-//                label = "Select Menu Category",
-//                modifier = Modifier.fillMaxWidth(),
-//                selectedMenuCategory = menuCategories.find { it.item_cat_id.toInt() == state.menuItemCatId }
-//            )
-//        }
-//    }
-//}
-//
-//@Composable
-//private fun RateSection(
-//    state: MenuItemFormState,
-//    onStateChange: (MenuItemFormState) -> Unit,
-//    focusManager: FocusManager
-//) {
-//    Card(
-//        modifier = Modifier.fillMaxWidth(),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-//    ) {
-//        Column(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(16.dp),
-//            verticalArrangement = Arrangement.spacedBy(12.dp)
-//        ) {
-//            Text("Pricing", style = MaterialTheme.typography.titleMedium)
-//
-//            OutlinedTextField(
-//                value = state.rate,
-//                onValueChange = { onStateChange(state.copy(rate = it)) },
-//                label = { Text("Rate *") },
-//                modifier = Modifier.fillMaxWidth(),
-//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-//                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//            )
-//
-//            OutlinedTextField(
-//                value = state.acRate,
-//                onValueChange = { onStateChange(state.copy(acRate = it)) },
-//                label = { Text("AC Rate") },
-//                modifier = Modifier.fillMaxWidth(),
-//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-//                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//            )
-//
-//            OutlinedTextField(
-//                value = state.parcelRate,
-//                onValueChange = { onStateChange(state.copy(parcelRate = it)) },
-//                label = { Text("Parcel Rate") },
-//                modifier = Modifier.fillMaxWidth(),
-//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-//                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//            )
-//
-//            StringDropdown(
-//                options = listOf("YES", "NO"),
-//                selectedOption = state.rateLock,
-//                onOptionSelected = { onStateChange(state.copy(rateLock = it)) },
-//                label = "Rate Lock",
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//        }
-//    }
-//}
-//
-//@Composable
-//private fun AvailabilitySection(
-//    state: MenuItemFormState,
-//    onStateChange: (MenuItemFormState) -> Unit
-//) {
-//    Card(
-//        modifier = Modifier.fillMaxWidth(),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-//    ) {
-//        Column(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(16.dp),
-//            verticalArrangement = Arrangement.spacedBy(12.dp)
-//        ) {
-//            Text("Availability", style = MaterialTheme.typography.titleMedium)
-//
-//            Row(verticalAlignment = Alignment.CenterVertically) {
-//                Switch(
-//                    checked = state.isFavourite,
-//                    onCheckedChange = { onStateChange(state.copy(isFavourite = it)) }
-//                )
-//                Spacer(modifier = Modifier.width(12.dp))
-//                Text("Mark as Favourite")
-//            }
-//
-//            StringDropdown(
-//                options = listOf("YES", "NO"),
-//                selectedOption = state.isAvailable,
-//                onOptionSelected = { onStateChange(state.copy(isAvailable = it)) },
-//                label = "Is Available",
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//        }
-//    }
-//}
-//
-//@Composable
-//private fun InventorySection(
-//    state: MenuItemFormState,
-//    units: List<TblUnit>,
-//    kitchenCategories: List<KitchenCategory>,
-//    taxes: List<Tax>,
-//    onStateChange: (MenuItemFormState) -> Unit,
-//    focusManager: FocusManager
-//) {
-//    Card(
-//        modifier = Modifier.fillMaxWidth(),
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-//    ) {
-//        Column(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(16.dp),
-//            verticalArrangement = Arrangement.spacedBy(12.dp)
-//        ) {
-//            Row(verticalAlignment = Alignment.CenterVertically) {
-//                Switch(
-//                    checked = state.isInventory == 1L,
-//                    onCheckedChange = {
-//                        val newInventory = if (it) 1L else 0L
-//                        onStateChange(state.copy(isInventory = newInventory))
-//                    }
-//                )
-//                Spacer(modifier = Modifier.width(12.dp))
-//                Text("Enable Inventory", style = MaterialTheme.typography.titleMedium)
-//            }
-//
-//            if (state.isInventory == 1L) {
-//                Divider(modifier = Modifier.padding(vertical = 8.dp))
-//
-//                KitchenGroupDropdown(
-//                    menus = kitchenCategories,
-//                    onKitchenCategorySelected = { onStateChange(state.copy(kitchenCatId = it.kitchen_cat_id.toInt())) },
-//                    label = "Kitchen Category",
-//                    modifier = Modifier.fillMaxWidth(),
-//                    selectedKitchenCategory = kitchenCategories.find { it.kitchen_cat_id.toInt() == state.kitchenCatId }
-//                )
-//
-//                TaxDropdown(
-//                    taxes = taxes,
-//                    onTaxSelected = { onStateChange(state.copy(taxId = it.tax_id.toInt())) },
-//                    label = "Select Tax",
-//                    modifier = Modifier.fillMaxWidth(),
-//                    selectedTax = taxes.find { it.tax_id.toInt() == state.taxId }
-//                )
-//
-//                OutlinedTextField(
-//                    value = state.hsnCode,
-//                    onValueChange = { onStateChange(state.copy(hsnCode = it)) },
-//                    label = { Text("HSN Code") },
-//                    modifier = Modifier.fillMaxWidth(),
-//                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-//                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//                )
-//
-//                OutlinedTextField(
-//                    value = state.minStock.toString(),
-//                    onValueChange = {
-//                        val stock = it.toIntOrNull() ?: 0
-//                        onStateChange(state.copy(minStock = stock))
-//                    },
-//                    label = { Text("Minimum Stock") },
-//                    modifier = Modifier.fillMaxWidth(),
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-//                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-//                )
-//
-//                UnitDropdown(
-//                    menus = units,
-//                    onUnitSelected = { onStateChange(state.copy(unitId = it.unit_id.toInt())) },
-//                    label = "Select Unit",
-//                    modifier = Modifier.fillMaxWidth(),
-//                    selectedUnit = units.find { it.unit_id.toInt() == state.unitId }
-//                )
-//
-//                StringDropdown(
-//                    options = listOf("YES", "NO"),
-//                    selectedOption = state.isRaw,
-//                    onOptionSelected = { onStateChange(state.copy(isRaw = it)) },
-//                    label = "Is Raw",
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//
-//                StringDropdown(
-//                    options = listOf("YES", "NO"),
-//                    selectedOption = state.stockMaintain,
-//                    onOptionSelected = { onStateChange(state.copy(stockMaintain = it)) },
-//                    label = "Stock Maintain",
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//        }
-//    }
-//}
-//
 sealed class MenuItemSettingsUiState {
     object Loading : MenuItemSettingsUiState()
     data class Success(val menuItems: List<TblMenuItemResponse>) : MenuItemSettingsUiState()

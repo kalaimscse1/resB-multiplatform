@@ -10,8 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -19,12 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.R
 import com.warriortech.resb.model.DashboardMetrics
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.ui.components.MobileOptimizedButton
 import com.warriortech.resb.ui.components.MobileOptimizedCard
-import com.warriortech.resb.ui.components.OptimizedLazyColumn
 import com.warriortech.resb.ui.components.PaymentModePieChart
 import com.warriortech.resb.ui.components.WeeklySalesBarChart
 import com.warriortech.resb.ui.theme.PrimaryGreen
@@ -32,8 +32,8 @@ import com.warriortech.resb.ui.theme.ResbTypography
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.DashboardViewModel
 import com.warriortech.resb.util.CurrencySettings
-import com.warriortech.resb.util.getDeviceInfo
 import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("DefaultLocale")
@@ -47,7 +47,8 @@ fun DashboardScreen(
     onTakeawaySelected: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
     sessionManager: SessionManager,
-    onQuickBill: () -> Unit
+    onQuickBill: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -95,6 +96,13 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.dayClose(navController) }) {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = "Day Close",
+                            tint = SurfaceLight
+                        )
+                    }
                     IconButton(onClick = { viewModel.refreshDashboard() }) {
                         Icon(
                             Icons.Default.Refresh,

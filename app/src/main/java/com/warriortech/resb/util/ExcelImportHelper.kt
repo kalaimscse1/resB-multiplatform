@@ -2,6 +2,7 @@ package com.warriortech.resb.util
 
 import android.content.Context
 import android.net.Uri
+import com.warriortech.resb.data.local.entity.SyncStatus
 import com.warriortech.resb.data.local.entity.TblMenuItem
 import timber.log.Timber
 import java.io.InputStream
@@ -48,7 +49,7 @@ class ExcelImportHelper(private val context: Context) {
                             is_favourite = (row.getCell(23)?.booleanCellValue ?: false),
                             is_active = (row.getCell(24)?.numericCellValue?.toInt() ?: 1) == 1,
                             preparation_time = (row.getCell(25)?.numericCellValue?.toInt() ?: 0),
-                            is_synced = "SYNCED",
+                            is_synced = SyncStatus.SYNCED,
                             last_synced_at = System.currentTimeMillis()
                         )
                         menuItems.add(menuItem)

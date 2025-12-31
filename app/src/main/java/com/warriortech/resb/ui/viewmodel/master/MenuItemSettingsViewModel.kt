@@ -12,6 +12,7 @@ import com.warriortech.resb.data.repository.TaxRepository
 import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.screens.settings.MenuItemSettingsUiState
+import com.warriortech.resb.ui.viewmodel.master.MenuCategorySettingsViewModel.UiState
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.PrinterHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,9 +32,7 @@ class MenuItemSettingsViewModel @Inject constructor(
     private val taxRepository: TaxRepository,
     private val sessionManager: SessionManager,
     private val printerHelper: PrinterHelper,
-    private val orderRepository: OrderRepository,
-    private val billRepository: BillRepository,
-
+    private val orderRepository: OrderRepository
 ) : ViewModel() {
 
     // UI state
@@ -62,6 +61,9 @@ class MenuItemSettingsViewModel @Inject constructor(
     // ✅ Separate state for all items and filtered items
     private val _menuItems = MutableStateFlow<List<TblMenuItemResponse>>(emptyList())
     val menuItems: StateFlow<List<TblMenuItemResponse>> = _menuItems.asStateFlow()
+
+    private val _orderBy = MutableStateFlow<String>("")
+    val orderBy: StateFlow<String> = _orderBy.asStateFlow()
 
     private val _filteredMenuItems = MutableStateFlow<List<TblMenuItemResponse>>(emptyList())
     val filteredMenuItems: StateFlow<List<TblMenuItemResponse>> = _filteredMenuItems.asStateFlow()
@@ -158,6 +160,16 @@ class MenuItemSettingsViewModel @Inject constructor(
         }
     }
 
+    fun getOrderBy() {
+        viewModelScope.launch {
+            try {
+                val response = menuItemRepository.getOrderBy()
+                _orderBy.value = response["order_by"].toString()
+            } catch (e: Exception) {
+                _uiState.value = MenuItemSettingsUiState.Error(e.message ?: "Failed to getOrderBy")
+            }
+        }
+    }
     // ✅ Delete item
     fun deleteMenuItem(menuItemId: Int) {
         viewModelScope.launch {
@@ -196,47 +208,4 @@ class MenuItemSettingsViewModel @Inject constructor(
             }
         }
     }
-//        val width = paperWidth
-//        val divider = "─".repeat(width)
-//
-//        val itemCol = (width * 0.70).toInt().coerceAtLeast(12)
-//        val qtyCol = width - itemCol - 1
-//
-//        fun padRight(s: String, n: Int) = s.take(n).padEnd(n)
-//        fun padLeft(s: String, n: Int) = s.take(n).padStart(n)
-//
-//        val title = "MENU ITEMS REPORT"
-//        val sb = StringBuilder()
-//        sb.append("<center><b><font size='tall'>$title</font></b></center>\n")
-//        sb.append("$divider\n")
-//
-//        sb.append(
-//            padRight("<b>ITEMS</b>", itemCol) +
-//                    padLeft("<b>RATE</b>", qtyCol) +
-//                    "\n"
-//        )
-//        menuItems.forEach {
-//            val wrapped = it.menu_item_name.chunked(itemCol)
-//            val rate = String.format("%.2f", it.rate).padStart(qtyCol)
-//
-//            // First line
-//            sb.append(
-//                padRight(wrapped[0], itemCol) +
-//                        padLeft(rate, qtyCol) +
-//                        "\n"
-//            )
-//
-//            // Overflow lines
-//            for (i in 1 until wrapped.size) {
-//                sb.append(padRight(wrapped[i], itemCol) + "\n")
-//            }
-//            sb.append("$divider\n")
-//        }
-//        sb.append("<center><b>Thank You</b></center>\n")
-//        val printData = sb.toString().toByteArray(Charsets.ISO_8859_1)
-//        printerHelper.printViaTcp("192.168.1.100", data = printData){
-//                success, message ->
-//            // Handle result
-//        }
-//    }
 }

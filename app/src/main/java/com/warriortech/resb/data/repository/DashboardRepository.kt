@@ -1,8 +1,10 @@
 package com.warriortech.resb.data.repository
 
+import com.warriortech.resb.model.ApiResponse
 import com.warriortech.resb.model.DashboardMetrics
 import com.warriortech.resb.model.RunningOrder
 import com.warriortech.resb.model.DashboardChartData
+import com.warriortech.resb.model.DayCloseResponse
 import com.warriortech.resb.model.PaymentModeData
 import com.warriortech.resb.model.WeeklySalesData
 import com.warriortech.resb.network.ApiService
@@ -56,6 +58,10 @@ class DashboardRepository @Inject constructor(
         } catch (e: Exception) {
             getDefaultChartData()
         }
+    }
+
+    suspend fun addDayClose(staffId: Long): ApiResponse<DayCloseResponse>{
+        return apiService.addDayClose(staffId,sessionManager.getCompanyCode()?:"").body()!!
     }
 
   suspend  fun getPaymentModeData(): List<PaymentModeData> {

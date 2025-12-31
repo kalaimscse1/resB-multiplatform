@@ -50,6 +50,16 @@ interface ApiService {
     ): Response<Unit>
 
     /**
+     * Day Close
+     */
+
+    @POST("dayClose/create")
+    suspend fun addDayClose(
+        @Query("staff_id") staffId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response <ApiResponse<DayCloseResponse>>
+
+    /**
      * Dashboard Management
      */
 

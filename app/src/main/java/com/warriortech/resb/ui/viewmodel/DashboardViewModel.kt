@@ -3,6 +3,7 @@ package com.warriortech.resb.ui.viewmodel
 import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import com.warriortech.resb.data.repository.DashboardRepository
 import com.warriortech.resb.data.repository.OrderRepository
 import com.warriortech.resb.model.DashboardMetrics
@@ -81,5 +82,12 @@ class DashboardViewModel @Inject constructor(
             return@launch
         }
         return emptyList()
+    }
+
+    fun dayClose(navController: NavHostController){
+        viewModelScope.launch {
+            dashboardRepository.addDayClose(sessionManager.getUser()?.staff_id?:1)
+            navController.navigate("login")
+        }
     }
 }
