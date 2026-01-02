@@ -35,6 +35,13 @@ import com.warriortech.resb.util.CurrencySettings
 import kotlinx.coroutines.launch
 
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import android.widget.Toast
+import android.content.Context.MODE_PRIVATE
+import androidx.core.content.edit
+
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("DefaultLocale")
 @Composable
@@ -52,6 +59,47 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        showLogoutDialog = true
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout Confirmation") },
+            text = { Text("Are you sure you want to logout?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        scope.launch {
+                            val sharedPref = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
+                            sessionManager.saveUserLogin(false)
+                            sessionManager.clearBluetoothPrinter()
+                            sharedPref.edit { clear() }
+                            
+                            navController.navigate("login") {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                            
+                            Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()

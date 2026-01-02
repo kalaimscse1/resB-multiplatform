@@ -274,10 +274,6 @@ class MainActivity : ComponentActivity() {
                                         popUpTo(0) { inclusive = true } // completely clears stack
                                         launchSingleTop = true
                                     }
-
-
-                                    // ✅ Finish activity to prevent going back
-//                                    (context as? ComponentActivity)?.finish()
                                 }
                             } else {
                                 navController.navigate(route) {
