@@ -222,31 +222,16 @@ class MenuViewModel @Inject constructor(
 
     @SuppressLint("SuspiciousIndentation")
     fun addItemToOrder(menuItem: TblMenuItemResponse) {
-        viewModelScope.launch {
-            modifierRepository.getModifierGroupsForMenuItem(menuItem.menu_item_id.toLong()).collect { result ->
-                result.fold(
-                    onSuccess = { modifiers ->
-                        if (modifiers.isEmpty()) {
-                            _showAlert.value = "The item ${menuItem.menu_item_name} does not contain any modifiers."
-                        } else {
-                            if (_isExistingOrderLoaded.value) {
-                                val currentItems = _newselectedItems.value.toMutableMap()
-                                val currentQuantity = currentItems[menuItem] ?: 0
-                                currentItems[menuItem] = currentQuantity + 1
-                                _newselectedItems.value = currentItems
-                            } else {
-                                val currentItems = _selectedItems.value.toMutableMap()
-                                val currentQuantity = currentItems[menuItem] ?: 0
-                                currentItems[menuItem] = currentQuantity + 1
-                                _selectedItems.value = currentItems
-                            }
-                        }
-                    },
-                    onFailure = { error ->
-                        _showAlert.value = "Error checking modifiers: ${error.message}"
-                    }
-                )
-            }
+        if (_isExistingOrderLoaded.value) {
+            val currentItems = _newselectedItems.value.toMutableMap()
+            val currentQuantity = currentItems[menuItem] ?: 0
+            currentItems[menuItem] = currentQuantity + 1
+            _newselectedItems.value = currentItems
+        } else {
+            val currentItems = _selectedItems.value.toMutableMap()
+            val currentQuantity = currentItems[menuItem] ?: 0
+            currentItems[menuItem] = currentQuantity + 1
+            _selectedItems.value = currentItems
         }
     }
 
@@ -460,9 +445,25 @@ class MenuViewModel @Inject constructor(
     }
 
     fun showModifierDialog(menuItem: TblMenuItemResponse) {
-        _selectedMenuItemForModifier.value = menuItem
-        _showModifierDialog.value = true
-        loadModifiersForMenuItem(menuItem.item_cat_id)
+        viewModelScope.launch {
+            modifierRepository.getModifierGroupsForMenuItem(menuItem.menu_item_id.toLong()).collect { result ->
+                result.fold(
+                    onSuccess = { modifiers ->
+                        if (modifiers.isEmpty()) {
+                            _showAlert.value = "The item ${menuItem.menu_item_name} does not contain any modifiers."
+                        } else {
+                            _selectedMenuItemForModifier.value = menuItem
+                            _showModifierDialog.value = true
+                            _modifierGroups.value = modifiers
+                        }
+                    },
+                    onFailure = { error ->
+                        _showAlert.value = "Error loading modifiers: ${error.message}"
+                        _modifierGroups.value = emptyList()
+                    }
+                )
+            }
+        }
     }
 
     fun hideModifierDialog() {
