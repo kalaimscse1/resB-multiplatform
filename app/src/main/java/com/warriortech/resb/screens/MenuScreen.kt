@@ -97,6 +97,7 @@ fun MenuScreen(
     val tableStatusFromVM by viewModel.tableStatus.collectAsStateWithLifecycle() // Assuming tableStatus is part of the table info
     val isExistingOrderLoaded by viewModel.isExistingOrderLoaded.collectAsStateWithLifecycle()
     val orderDetailsResponse by viewModel.orderDetailsResponse.collectAsStateWithLifecycle()
+    val showAlertMessage by viewModel.showAlert.collectAsStateWithLifecycle()
 
     // Modifier-related state
     val showModifierDialog by viewModel.showModifierDialog.collectAsStateWithLifecycle()
@@ -175,6 +176,19 @@ fun MenuScreen(
             onConfirm = { showOrderDialog = false },
             tableStatus = effectiveStatus.toString(),
             items= orderDetailsResponse
+        )
+    }
+
+    showAlertMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissAlert() },
+            title = { Text("Modifier Required") },
+            text = { Text(message) },
+            confirmButton = {
+                Button(onClick = { viewModel.dismissAlert() }) {
+                    Text("OK")
+                }
+            }
         )
     }
 

@@ -213,21 +213,41 @@ class MenuViewModel @Inject constructor(
         _selectedTableId.value = tableId
     }
 
+    private val _showAlert = MutableStateFlow<String?>(null)
+    val showAlert: StateFlow<String?> = _showAlert.asStateFlow()
+
+    fun dismissAlert() {
+        _showAlert.value = null
+    }
+
     @SuppressLint("SuspiciousIndentation")
     fun addItemToOrder(menuItem: TblMenuItemResponse) {
-
-        if (_isExistingOrderLoaded.value) {
-            val currentItems = _newselectedItems.value.toMutableMap()
-            val currentQuantity = currentItems[menuItem] ?: 0
-            currentItems[menuItem] = currentQuantity + 1
-            _newselectedItems.value = currentItems
-        } else {
-            val currentItems = _selectedItems.value.toMutableMap()
-            val currentQuantity = currentItems[menuItem] ?: 0
-            currentItems[menuItem] = currentQuantity + 1
-            _selectedItems.value = currentItems
+        viewModelScope.launch {
+            modifierRepository.getModifierGroupsForMenuItem(menuItem.menu_item_id.toLong()).collect { result ->
+                result.fold(
+                    onSuccess = { modifiers ->
+                        if (modifiers.isEmpty()) {
+                            _showAlert.value = "The item ${menuItem.menu_item_name} does not contain any modifiers."
+                        } else {
+                            if (_isExistingOrderLoaded.value) {
+                                val currentItems = _newselectedItems.value.toMutableMap()
+                                val currentQuantity = currentItems[menuItem] ?: 0
+                                currentItems[menuItem] = currentQuantity + 1
+                                _newselectedItems.value = currentItems
+                            } else {
+                                val currentItems = _selectedItems.value.toMutableMap()
+                                val currentQuantity = currentItems[menuItem] ?: 0
+                                currentItems[menuItem] = currentQuantity + 1
+                                _selectedItems.value = currentItems
+                            }
+                        }
+                    },
+                    onFailure = { error ->
+                        _showAlert.value = "Error checking modifiers: ${error.message}"
+                    }
+                )
+            }
         }
-
     }
 
     @SuppressLint("SuspiciousIndentation")
