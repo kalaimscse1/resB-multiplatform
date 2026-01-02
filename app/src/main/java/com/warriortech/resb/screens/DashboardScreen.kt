@@ -61,9 +61,33 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDayCloseDialog by remember { mutableStateOf(false) }
 
     BackHandler {
         showLogoutDialog = true
+    }
+
+    if (showDayCloseDialog) {
+        AlertDialog(
+            onDismissRequest = { showDayCloseDialog = false },
+            title = { Text("Day Close Confirmation") },
+            text = { Text("Are you sure you want to perform day close?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDayCloseDialog = false
+                        viewModel.dayClose(navController)
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDayCloseDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showLogoutDialog) {
@@ -144,7 +168,7 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.dayClose(navController) }) {
+                    IconButton(onClick = { showDayCloseDialog = true }) {
                         Icon(
                             Icons.Default.CalendarToday,
                             contentDescription = "Day Close",
