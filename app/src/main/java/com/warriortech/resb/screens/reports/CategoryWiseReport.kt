@@ -32,15 +32,24 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+import androidx.activity.compose.BackHandler
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryWiseReportScreen(
     viewModel: CategoryWiseViewModel = hiltViewModel(),
     drawerState: DrawerState,
-    sessionManager: SessionManager
+    sessionManager: SessionManager,
+    navController: NavHostController
 ) {
     val uiState by viewModel.reportState.collectAsState()
     val context = LocalContext.current
+    
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
 
     var fromDateApi by remember { mutableStateOf("") }
     var fromDateUi by remember { mutableStateOf("") }

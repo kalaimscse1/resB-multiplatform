@@ -52,6 +52,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import androidx.activity.compose.BackHandler
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectionScreen(
@@ -62,6 +64,12 @@ fun SelectionScreen(
     navController: NavHostController
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
+    
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
     val tablesState by viewModel.tablesState.collectAsState()
     val areas by viewModel.areas.collectAsState()
     val scope = rememberCoroutineScope()

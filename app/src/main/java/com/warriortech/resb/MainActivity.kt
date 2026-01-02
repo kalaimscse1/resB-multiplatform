@@ -788,13 +788,15 @@ fun AppNavigation(
         composable("item_wise") {
             ItemWiseReportScreen(
                 sessionManager = sessionManager,
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
         composable("category_wise") {
             CategoryWiseReportScreen(
                 sessionManager = sessionManager,
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
