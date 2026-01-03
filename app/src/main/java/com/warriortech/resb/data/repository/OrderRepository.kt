@@ -480,6 +480,11 @@ class OrderRepository @Inject constructor(
         }
     }
 
+    suspend fun getOrderMasterById(orderId: String): TblOrderResponse{
+        return apiService.getOrderMasterById(orderId, sessionManager.getCompanyCode() ?: "").body()!!
+    }
+
+
     suspend fun placeOrderLocalDb(
         tableId: Long,
         itemsToPlace: List<OrderItem>,

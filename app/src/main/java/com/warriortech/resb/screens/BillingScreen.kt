@@ -107,7 +107,13 @@ fun BillingScreen(
         when {
             orderDetailsResponse != null && orderMasterId != null -> {
                 viewModel.setBillingDetailsFromOrderResponse(orderDetailsResponse, orderMasterId)
+
             }
+        }
+    }
+    LaunchedEffect(orderMasterId) {
+        when {
+            orderMasterId != null -> viewModel.previewDetails(orderMasterId)
         }
     }
 
@@ -190,12 +196,13 @@ fun BillingScreen(
         )
 
     }
-    if (previewDialog){
+    if (previewDialog && preview != null) {
         PreviewBillDialog(
             preview = preview!!,
             onDismiss = { previewDialog = false }
         )
     }
+
 }
 
 @Composable

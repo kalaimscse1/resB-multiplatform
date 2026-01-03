@@ -19,6 +19,8 @@ import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.service.PrintService
 import com.warriortech.resb.ui.viewmodel.setting.CustomerSettingsViewModel.UiState
 import com.warriortech.resb.util.CurrencySettings
+import com.warriortech.resb.util.getCurrentDateModern
+import com.warriortech.resb.util.getCurrentTimeModern
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -749,13 +751,12 @@ class BillingViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(discount = discount)
     }
 
-    fun previewDetails(billNo: String) {
+    fun previewDetails(orderID: String) {
         viewModelScope.launch {
-            val bill = billRepository.getPaymentByBillNo(billNo)
-            val response = bill!!
             val orderDetails =
-                orderRepository.getOrdersByOrderId(bill.order_master.order_master_id)
+                orderRepository.getOrdersByOrderId(orderID)
                     .body()!!
+            val order = orderRepository.getOrderMasterById(orderID)
             val counter = sessionManager.getUser()?.counter_name ?: "Counter1"
             var sn = 1
             val billItems = orderDetails.map { detail ->
@@ -783,25 +784,25 @@ class BillingViewModel @Inject constructor(
             }
             val billDetails = Bill(
                 company_code = sessionManager.getCompanyCode() ?: "",
-                billNo = response.bill_no,
-                date = response.bill_date.toString(),
-                time = response.bill_create_time.toString(),
-                orderNo = response.order_master.order_master_id,
+                billNo = "C1-BILL-1001",
+                date = getCurrentDateModern(),
+                time = getCurrentTimeModern(),
+                orderNo = orderID,
                 counter = counter,
-                tableNo = response.order_master.table_name,
-                custName = response.customer.customer_name,
-                custNo = response.customer.contact_no,
-                custAddress = response.customer.address,
-                custGstin = response.customer.gst_no,
+                tableNo = order.table_name,
+                custName = "",
+                custNo = "",
+                custAddress = "",
+                custGstin = "",
                 items = billItems,
-                subtotal = response.order_amt,
+                subtotal = orderDetails.sumOf { it.grand_total },
                 deliveryCharge = 0.0, // Assuming no delivery charge
-                discount = response.disc_amt,
-                roundOff = response.round_off,
-                total = response.grand_total,
+                discount = 0.0,
+                roundOff = 0.0,
+                total = orderDetails.sumOf { it.grand_total },
                 paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 58 else 80,
-                received_amt = response.received_amt,
-                pending_amt = response.pending_amt
+                received_amt = orderDetails.sumOf { it.grand_total },
+                pending_amt = 0.0
             )
             preview(billDetails)
         }

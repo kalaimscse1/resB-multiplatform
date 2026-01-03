@@ -2,6 +2,7 @@ package com.warriortech.resb.screens
 
 import android.Manifest
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresPermission
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -58,6 +59,12 @@ fun ItemWiseBillScreen(
     navController: NavHostController,
     onProceedToBilling: (orderDetailsResponse: Map<TblMenuItemResponse, Int>) -> Unit
 ) {
+
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val selectedItems by viewModel.selectedItems.collectAsStateWithLifecycle()

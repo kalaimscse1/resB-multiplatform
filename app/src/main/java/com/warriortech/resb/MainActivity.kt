@@ -262,7 +262,6 @@ class MainActivity : ComponentActivity() {
                                     val sharedPref =
                                         context.getSharedPreferences("user_prefs", MODE_PRIVATE)
                                     sessionManager.saveUserLogin(false)
-                                    sessionManager.clearBluetoothPrinter()
                                     sharedPref.edit { clear() }
                                     Toast.makeText(
                                         context,

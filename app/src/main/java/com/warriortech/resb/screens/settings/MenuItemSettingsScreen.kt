@@ -101,6 +101,7 @@ fun MenuItemSettingsScreen(
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
+        viewModel.getOrderBy()
         viewModel.loadMenuItems()
     }
 
