@@ -139,27 +139,6 @@ class BillingViewModel @Inject constructor(
         }
     }
 
-    fun loadBillPreviewById(orderMasterId: String) {
-        viewModelScope.launch {
-            try {
-                // We create a dummy Bill object with just the orderMasterId 
-                // as the API might use it or we can extend repository to take just ID
-                val bill = Bill(
-                    order_master_id = orderMasterId,
-                    bill_no = "",
-                    bill_date = "",
-                    grand_total = 0.0,
-                    staff_id = 0,
-                    customer_id = 0
-                )
-                val bmp = billRepository.fetchBillPreview(bill)
-                _preview.value = bmp
-            } catch (e: Exception) {
-                Log.e("BillingViewModel", "Error loading preview", e)
-            }
-        }
-    }
-
     fun addCustomer(customer: TblCustomer) {
         viewModelScope.launch {
             try {
@@ -825,17 +804,13 @@ class BillingViewModel @Inject constructor(
                 received_amt = orderDetails.sumOf { it.grand_total },
                 pending_amt = 0.0
             )
-            preview(billDetails)
+            val bmp = billRepository.fetchBillPreview(billDetails)
+            _preview.value = bmp?.copy(bmp.config!!,false)
         }
     }
-
-    fun preview(bill: Bill){
-        viewModelScope.launch {
-            val bmp = billRepository.fetchBillPreview(bill)
-            _preview.value = bmp
-        }
+    fun clearPreview() {
+        _preview.value = null
     }
-
 
 }
 

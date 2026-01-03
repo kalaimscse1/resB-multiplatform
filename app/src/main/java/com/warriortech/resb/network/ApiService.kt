@@ -338,7 +338,7 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<ResponseBody>
 
-    @GET("print/bill/preview")
+    @POST("print/bill/preview")
     suspend fun getBillPreview(
         @Body bill: Bill,
         @Header("X-Tenant-ID") tenantId: String

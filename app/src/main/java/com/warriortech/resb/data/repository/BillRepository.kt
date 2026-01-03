@@ -243,8 +243,13 @@ class BillRepository @Inject constructor(
 
     suspend fun fetchBillPreview(bill: Bill): Bitmap? = try {
         val res = apiService.getBillPreview(bill, sessionManager.getCompanyCode() ?: "")
-        if (res.isSuccessful) res.body()?.byteStream()
-            ?.use { BitmapFactory.decodeStream(it) } else null
+        if (res.isSuccessful){
+            val bytes= res.body()?.bytes()
+            BitmapFactory.decodeByteArray(bytes, 0, bytes!!.size)
+        }
+        else{
+            null
+        }
     } catch (_: Exception) {
         null
     }

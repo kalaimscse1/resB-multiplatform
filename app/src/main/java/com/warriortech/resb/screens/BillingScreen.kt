@@ -111,11 +111,6 @@ fun BillingScreen(
             }
         }
     }
-    LaunchedEffect(orderMasterId) {
-        if (orderMasterId != null) {
-            viewModel.loadBillPreviewById(orderMasterId)
-        }
-    }
 
     if (showKotSelectionDialog && orderDetailsResponse != null) {
         KotSelectionDialog(
@@ -152,7 +147,10 @@ fun BillingScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            previewDialog = true
+                            if (orderMasterId != null) {
+                                viewModel.previewDetails(orderMasterId)
+                                previewDialog = true
+                            }
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
@@ -197,10 +195,15 @@ fun BillingScreen(
 
     }
     if (previewDialog && preview != null) {
-        PreviewBillDialog(
-            preview = preview!!,
-            onDismiss = { previewDialog = false }
-        )
+        preview?.let {
+            PreviewBillDialog(
+                preview = it,
+                onDismiss = {
+                    previewDialog = false
+                    viewModel.clearPreview()
+                }
+            )
+        }
     }
 
 }
