@@ -112,8 +112,8 @@ fun BillingScreen(
         }
     }
     LaunchedEffect(orderMasterId) {
-        when {
-            orderMasterId != null -> viewModel.previewDetails(orderMasterId)
+        if (orderMasterId != null) {
+            viewModel.loadBillPreviewById(orderMasterId)
         }
     }
 
