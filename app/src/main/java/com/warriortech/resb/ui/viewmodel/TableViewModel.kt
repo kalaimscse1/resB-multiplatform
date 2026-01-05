@@ -44,6 +44,79 @@ class TableViewModel @Inject constructor(
     // Selected section
     private val _selectedSection = MutableStateFlow<Long?>(null)
 
+    // Table selection mode
+    private val _isSelectionMode = MutableStateFlow(false)
+    val isSelectionMode: StateFlow<Boolean> = _isSelectionMode.asStateFlow()
+
+    private val _selectedTables = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedTables: StateFlow<Set<Long>> = _selectedTables.asStateFlow()
+
+    private val _selectionAction = MutableStateFlow<SelectionAction?>(null)
+    val selectionAction: StateFlow<SelectionAction?> = _selectionAction.asStateFlow()
+
+    sealed class SelectionAction {
+        object ChangeTable : SelectionAction()
+        object MergeTable : SelectionAction()
+    }
+
+    fun enableSelectionMode(action: SelectionAction, initialTableId: Long) {
+        _isSelectionMode.value = true
+        _selectionAction.value = action
+        _selectedTables.value = setOf(initialTableId)
+    }
+
+    fun disableSelectionMode() {
+        _isSelectionMode.value = false
+        _selectionAction.value = null
+        _selectedTables.value = emptySet()
+    }
+
+    fun toggleTableSelection(tableId: Long) {
+        if (!_isSelectionMode.value) return
+        
+        val currentSelection = _selectedTables.value
+        if (currentSelection.contains(tableId)) {
+            if (currentSelection.size > 1) { // Keep at least one table selected (the source)
+                _selectedTables.value = currentSelection - tableId
+            }
+        } else {
+            if (_selectionAction.value == SelectionAction.ChangeTable) {
+                // Change table only allows one source and one destination
+                _selectedTables.value = setOf(currentSelection.first(), tableId)
+            } else {
+                _selectedTables.value = currentSelection + tableId
+            }
+        }
+    }
+
+    fun confirmSelection() {
+        viewModelScope.launch {
+            val action = _selectionAction.value
+            val tables = _selectedTables.value.toList()
+            
+            if (action != null && tables.size >= 2) {
+                try {
+                    val success = when (action) {
+                        SelectionAction.ChangeTable -> {
+                            tableRepository.changeTable(tables[0], tables[1])
+                        }
+                        SelectionAction.MergeTable -> {
+                            tableRepository.mergeTables(tables)
+                        }
+                    }
+                    if (success) {
+                        loadTables()
+                    } else {
+                        _tablesState.value = TablesState.Error("Action failed on server")
+                    }
+                } catch (e: Exception) {
+                    _tablesState.value = TablesState.Error(e.message ?: "Action failed")
+                }
+            }
+            disableSelectionMode()
+        }
+    }
+
     init {
         CurrencySettings.update(
             symbol = sessionManager.getRestaurantProfile()?.currency ?: "",

@@ -292,4 +292,24 @@ class TableRepository @Inject constructor(
             )
         }
     }
+
+    suspend fun changeTable(sourceTableId: Long, targetTableId: Long): Boolean {
+        return try {
+            val response = apiService.changeTable(sourceTableId, targetTableId, sessionManager.getCompanyCode() ?: "")
+            response.isSuccessful && response.body()?.data == true
+        } catch (e: Exception) {
+            Timber.e(e, "Error changing table")
+            false
+        }
+    }
+
+    suspend fun mergeTables(tableIds: List<Long>): Boolean {
+        return try {
+            val response = apiService.mergeTables(tableIds, sessionManager.getCompanyCode() ?: "")
+            response.isSuccessful && response.body()?.data == true
+        } catch (e: Exception) {
+            Timber.e(e, "Error merging tables")
+            false
+        }
+    }
 }

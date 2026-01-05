@@ -22,6 +22,10 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,6 +58,10 @@ import java.time.format.DateTimeFormatter
 
 import androidx.activity.compose.BackHandler
 
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectionScreen(
@@ -64,10 +72,19 @@ fun SelectionScreen(
     navController: NavHostController
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
+    val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val selectedTables by viewModel.selectedTables.collectAsState()
+    val selectionAction by viewModel.selectionAction.collectAsState()
+    
+    var showTableOptions by remember { mutableStateOf<TableStatusResponse?>(null) }
     
     BackHandler {
-        navController.navigate("dashboard") {
-            popUpTo("dashboard") { inclusive = true }
+        if (isSelectionMode) {
+            viewModel.disableSelectionMode()
+        } else {
+            navController.navigate("dashboard") {
+                popUpTo("dashboard") { inclusive = true }
+            }
         }
     }
     val tablesState by viewModel.tablesState.collectAsState()
@@ -98,26 +115,77 @@ fun SelectionScreen(
         }
     }
 
+    if (showTableOptions != null) {
+        AlertDialog(
+            onDismissRequest = { showTableOptions = null },
+            title = { Text("Table Options - ${showTableOptions?.table_name}") },
+            text = { Text("What would you like to do?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showTableOptions?.let { 
+                        viewModel.enableSelectionMode(TableViewModel.SelectionAction.ChangeTable, it.table_id) 
+                    }
+                    showTableOptions = null
+                }) {
+                    Text("Change Table")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        showTableOptions?.let { 
+                            viewModel.enableSelectionMode(TableViewModel.SelectionAction.MergeTable, it.table_id) 
+                        }
+                        showTableOptions = null
+                    }) {
+                        Text("Merge Tables")
+                    }
+                    TextButton(onClick = { showTableOptions = null }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Table",
+                        if (isSelectionMode) {
+                            when (selectionAction) {
+                                TableViewModel.SelectionAction.ChangeTable -> "Select Target Table"
+                                TableViewModel.SelectionAction.MergeTable -> "Select Tables to Merge"
+                                null -> "Table"
+                            }
+                        } else "Table",
                         style = MaterialTheme.typography.titleLarge,
                         color = SurfaceLight
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = SurfaceLight)
+                    if (isSelectionMode) {
+                        IconButton(onClick = { viewModel.disableSelectionMode() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel", tint = SurfaceLight)
+                        }
+                    } else {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = SurfaceLight)
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        navController.navigate("takeaway_menu") { launchSingleTop = true }
-                    }) {
-                        Icon(Icons.Default.Fastfood, contentDescription = "Takeaway Menu", tint = SurfaceLight)
+                    if (isSelectionMode) {
+                        IconButton(onClick = { viewModel.confirmSelection() }) {
+                            Icon(Icons.Default.Check, contentDescription = "Confirm", tint = SurfaceLight)
+                        }
+                    } else {
+                        IconButton(onClick = {
+                            navController.navigate("takeaway_menu") { launchSingleTop = true }
+                        }) {
+                            Icon(Icons.Default.Fastfood, contentDescription = "Takeaway Menu", tint = SurfaceLight)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryGreen)
@@ -175,6 +243,10 @@ fun SelectionScreen(
                                         filteredTables = filteredTables,
                                         onTableSelected = onTableSelected,
                                         sessionManager = sessionManager,
+                                        isSelectionMode = isSelectionMode,
+                                        selectedTables = selectedTables,
+                                        onTableLongClick = { if (!isSelectionMode) showTableOptions = it },
+                                        onTableSelectionToggle = { viewModel.toggleTableSelection(it.table_id) },
                                         time = "",
                                         staff = ""
                                     )
@@ -215,6 +287,10 @@ fun SelectionScreen(
                                 filteredTables = filteredTables,
                                 onTableSelected = onTableSelected,
                                 sessionManager = sessionManager,
+                                isSelectionMode = isSelectionMode,
+                                selectedTables = selectedTables,
+                                onTableLongClick = { if (!isSelectionMode) showTableOptions = it },
+                                onTableSelectionToggle = { viewModel.toggleTableSelection(it.table_id) },
                                 time = "",
                                 staff = ""
                             )
@@ -237,6 +313,10 @@ fun ResponsiveTableGrid(
     filteredTables: List<TableStatusResponse>,
     onTableSelected: (Table) -> Unit,
     sessionManager: SessionManager,
+    isSelectionMode: Boolean = false,
+    selectedTables: Set<Long> = emptySet(),
+    onTableLongClick: (TableStatusResponse) -> Unit = {},
+    onTableSelectionToggle: (TableStatusResponse) -> Unit = {},
     time: String,
     staff: String
 ) {
@@ -257,20 +337,26 @@ fun ResponsiveTableGrid(
         items(filteredTables) { table ->
             TableItem(
                 table = table,
+                isSelected = selectedTables.contains(table.table_id),
                 onClick = {
-                    val tbl = Table(
-                        table_id = table.table_id,
-                        area_id = table.area_id,
-                        area_name = table.area_name,
-                        table_name = table.table_name,
-                        seating_capacity = table.seating_capacity.toInt(),
-                        is_ac = table.is_ac,
-                        table_status = table.table_status,
-                        table_availability = table.table_availability,
-                        is_active = table.is_active
-                    )
-                    onTableSelected(tbl)
+                    if (isSelectionMode) {
+                        onTableSelectionToggle(table)
+                    } else {
+                        val tbl = Table(
+                            table_id = table.table_id,
+                            area_id = table.area_id,
+                            area_name = table.area_name,
+                            table_name = table.table_name,
+                            seating_capacity = table.seating_capacity.toInt(),
+                            is_ac = table.is_ac,
+                            table_status = table.table_status,
+                            table_availability = table.table_availability,
+                            is_active = table.is_active
+                        )
+                        onTableSelected(tbl)
+                    }
                 },
+                onLongClick = { onTableLongClick(table) },
                 sessionManager = sessionManager,
                 time = time,
                 staff = staff
@@ -433,11 +519,14 @@ fun ResponsiveTableGrid(
 //        }
 //    }
 //}
+@OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun TableItem(
     table: TableStatusResponse,
+    isSelected: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     sessionManager: SessionManager,
     time: String,
     staff: String
@@ -451,23 +540,31 @@ fun TableItem(
         screenWidthDp < 840 -> 130.dp
         else -> 160.dp
     }
-    val color = when (table.table_availability) {
-        "AVAILABLE" -> TextSecondary
-        "OCCUPIED" -> SuccessGreen
-        "RESERVED" -> MaterialTheme.colorScheme.tertiaryContainer
+    val color = when {
+        isSelected -> MaterialTheme.colorScheme.primary
+        table.table_availability == "AVAILABLE" -> TextSecondary
+        table.table_availability == "OCCUPIED" -> SuccessGreen
+        table.table_availability == "RESERVED" -> MaterialTheme.colorScheme.tertiaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val borderColor: Color = color
     val cornerRadius: Dp = 12.dp
-    val borderWidth: Dp = 6.dp
+    val borderWidth: Dp = if (isSelected) 8.dp else 6.dp
 
     Surface(
         modifier = Modifier
             .width(tableSize)
             .height(tableSize)
-            .clickable(onClick = onClick)
-            .border(1.dp, borderColor, RoundedCornerShape(cornerRadius)),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .border(
+                if (isSelected) 4.dp else 1.dp, 
+                if (isSelected) MaterialTheme.colorScheme.primary else borderColor, 
+                RoundedCornerShape(cornerRadius)
+            ),
         shape = RoundedCornerShape(cornerRadius),
         tonalElevation = 8.dp,
         color = ghostWhite
