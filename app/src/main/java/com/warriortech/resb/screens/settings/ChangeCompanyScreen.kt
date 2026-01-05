@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.ui.components.MobileOptimizedTextField
 import com.warriortech.resb.ui.components.MobilePasswordOptimizedTextField
@@ -47,7 +49,7 @@ import com.warriortech.resb.util.AnimatedSnackbarDemo
 @Composable
 fun ChangeCompanyScreen(
     onBackPressed: () -> Unit,
-    navController: NavController,
+    navController: NavHostController,
     sessionManager: SessionManager,
 ) {
     var password by remember { mutableStateOf("") }

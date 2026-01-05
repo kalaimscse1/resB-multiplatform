@@ -56,6 +56,7 @@ class MenuCategorySettingsViewModel @Inject constructor(
                     is_active = is_active
                 )
                 categoryRepository.insertCategory(category)
+                _errorMessage.value = "Menu Category added successfully"
                 loadCategories()
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to add category")
@@ -73,6 +74,7 @@ class MenuCategorySettingsViewModel @Inject constructor(
                     is_active = is_active
                 )
                 categoryRepository.updateCategory(category)
+                _errorMessage.value = "Menu Category updated successfully"
                 loadCategories()
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to update category")

@@ -139,6 +139,7 @@ class MenuItemSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 menuItemRepository.insertMenuItem(menuItem)
+                _errorMessage.value = "Menu item added successfully"
                 loadMenuItems()
             } catch (e: Exception) {
                 _uiState.value =
@@ -152,6 +153,7 @@ class MenuItemSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 menuItemRepository.updateMenuItem(menuItem)
+                _errorMessage.value = "Menu item updated successfully"
                 loadMenuItems()
             } catch (e: Exception) {
                 _uiState.value =

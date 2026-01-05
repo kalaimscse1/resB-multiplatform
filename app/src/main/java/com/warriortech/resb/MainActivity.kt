@@ -455,7 +455,7 @@ fun AppNavigation(
             )
         }
 
-        composable("menu")  @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT) {
+        composable("menu") {
             val tableId = selectedTable?.table_id ?: 1L
             val tableStatId = selectedTable != null || isTakeaway == "TABLE"
             val tableNumber = selectedTable?.table_name ?: ""
@@ -556,15 +556,19 @@ fun AppNavigation(
         composable("area_setting") {
             AreaSettingsScreen(
                 onBackPressed = { navController.popBackStack() },
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
         composable("table_setting") {
-            TableSettingsScreen(onBackPressed = {
-                navController.popBackStack()
-            },
-                drawerState = drawerState)
+            TableSettingsScreen(
+                onBackPressed = {
+                    navController.popBackStack()
+                },
+                drawerState = drawerState,
+                navController = navController
+            )
         }
 
         composable("menu_setting") {
@@ -572,7 +576,8 @@ fun AppNavigation(
                 onBackPressed = {
                     navController.popBackStack()
                 },
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
@@ -582,7 +587,8 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 sessionManager = sessionManager,
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
@@ -591,19 +597,22 @@ fun AppNavigation(
                 onBackPressed = {
                     navController.popBackStack()
                 },
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
         composable("staff_setting") {
             StaffSettingsScreen(
-                onBackPressed = { navController.popBackStack() }
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
             )
         }
 
         composable("customer_setting") {
             CustomerSettingsScreen(
-                onBackPressed = { navController.popBackStack() }
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
             )
         }
 
@@ -627,7 +636,8 @@ fun AppNavigation(
                     navController.navigate("billing_screen/${orderId}")
                 },
                 drawerState = drawerState,
-                counterId = counterId
+                counterId = counterId,
+                navController = navController
             )
         }
 
@@ -638,7 +648,8 @@ fun AppNavigation(
                     selectedItems = items
                     navController.navigate("billing_screen/${orderId}")
                 },
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
@@ -711,7 +722,10 @@ fun AppNavigation(
         }
 
         composable("role_setting") {
-            RoleSettingsScreen(onBackPressed = { navController.popBackStack() })
+            RoleSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
 
         composable("printer_setting") {
@@ -722,18 +736,25 @@ fun AppNavigation(
         }
 
         composable("tax_setting") {
-            TaxSettingsScreen(onBackPressed = { navController.popBackStack() })
+            TaxSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
 
         composable("tax_split_setting") {
-            TaxSplitSettingsScreen(onBackPressed = { navController.popBackStack() })
+            TaxSplitSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
 
         composable("restaurant_profile_setting") {
             RestaurantProfileScreen(
                 onBackPressed = { navController.popBackStack() },
                 apiService = apiService,
-                sessionManager = sessionManager
+                sessionManager = sessionManager,
+                navController = navController
             )
         }
 
@@ -741,16 +762,23 @@ fun AppNavigation(
             GeneralSettingsScreen(
                 onBackPressed = {
                     navController.popBackStack()
-                }
+                },
+                navController = navController
             )
         }
 
         composable("voucher_setting") {
-            VoucherSettingsScreen(onBackPressed = { navController.popBackStack() })
+            VoucherSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
 
         composable("counter_setting") {
-            CounterSettingsScreen(onBackPressed = { navController.popBackStack() })
+            CounterSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
 
         composable(
@@ -762,7 +790,8 @@ fun AppNavigation(
 
         composable("change_password") {
             ChangePasswordScreen(
-                onBackPressed = { navController.popBackStack() }
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
             )
         }
         composable(route = "reset_data") {
@@ -772,7 +801,7 @@ fun AppNavigation(
                 navController = navController
             )
         }
-        composable("quick_bills")  {
+        composable("quick_bills") {
             ItemWiseBillScreen(
                 drawerState = drawerState,
                 navController = navController,
@@ -782,7 +811,10 @@ fun AppNavigation(
             )
         }
         composable("modifier_setting") {
-            ModifierSettingsScreen(onBackPressed = { navController.popBackStack() })
+            ModifierSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable("item_wise") {
             ItemWiseReportScreen(
@@ -810,7 +842,8 @@ fun AppNavigation(
         composable("support_screen") {
             SupportScreen(
                 onBackPressed = { navController.popBackStack() },
-                drawerState = drawerState
+                drawerState = drawerState,
+                navController = navController
             )
         }
 
@@ -832,19 +865,34 @@ fun AppNavigation(
             )
         }
         composable("modifier_setting") {
-            ModifierSettingsScreen(onBackPressed = { navController.popBackStack() })
+            ModifierSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable("unit_setting") {
-            UnitSettingsScreen(onBackPressed = { navController.popBackStack() })
+            UnitSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable("kitchen_category_setting") {
-            KitchenCategorySettingsScreen(onBackPressed = { navController.popBackStack() })
+            KitchenCategorySettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable("voucher_type_setting") {
-            VoucherTypeSettingsScreen(onBackPressed = { navController.popBackStack() })
+            VoucherTypeSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable("change_password") {
-            ChangePasswordScreen(onBackPressed = { navController.popBackStack() })
+            ChangePasswordScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
         composable("paid_bills") {
             PaidBillsScreen(
@@ -1130,37 +1178,37 @@ fun DrawerContent(
                                     colors = subMenuColors
                                 )
                             }
-                                if (sessionManager.getGeneralSetting()?.is_accounts == true) {
-                                    NavigationDrawerItem(
-                                        label = { if (!isCollapsed) Text("Ledger") else Text("") },
-                                        icon = {
-                                            DrawerIcon(
-                                                Icons.Default.AccountBalance,
-                                                contentDescription = null,
-                                                isCollapsed
-                                            )
-                                        },
-                                        selected = currentDestination?.route == "ledger_screen",
-                                        onClick = { onDestinationClicked("ledger_screen") },
-                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                                        colors = subMenuColors
-                                    )
+                            if (sessionManager.getGeneralSetting()?.is_accounts == true) {
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Ledger") else Text("") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.AccountBalance,
+                                            contentDescription = null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "ledger_screen",
+                                    onClick = { onDestinationClicked("ledger_screen") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
 
-                                    NavigationDrawerItem(
-                                        label = { if (!isCollapsed) Text("Account Group") else Text("") },
-                                        icon = {
-                                            DrawerIcon(
-                                                Icons.Default.Exposure,
-                                                contentDescription = null,
-                                                isCollapsed
-                                            )
-                                        },
-                                        selected = currentDestination?.route == "group_screen",
-                                        onClick = { onDestinationClicked("group_screen") },
-                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                                        colors = subMenuColors
-                                    )
-                                }
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Account Group") else Text("") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.Exposure,
+                                            contentDescription = null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "group_screen",
+                                    onClick = { onDestinationClicked("group_screen") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
+                            }
 
                         }
                     }
@@ -1168,69 +1216,68 @@ fun DrawerContent(
 
                 // 🔹 Orders
 
-                    if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CASHIER")) {
-                        NavigationDrawerItem(
-                            label = { if (!isCollapsed) Text("Orders") else Text("") },
-                            icon = {
-                                DrawerIcon(
-                                    Icons.Default.Receipt,
-                                    contentDescription = null,
-                                    isCollapsed
-                                )
-                            },
-                            selected = currentDestination?.route in listOf(
-                                "selects",
-                                "takeaway_menu"
-                            ),
-                            onClick = {
-                                setExpandedMenu(if (expandedMenu == ExpandedMenu.ORDERS) ExpandedMenu.NONE else ExpandedMenu.ORDERS)
-                            },
-                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                            colors = drawerItemColors
-                        )
-                        AnimatedVisibility(expandedMenu == ExpandedMenu.ORDERS) {
-                            Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                                if (sessionManager.getGeneralSetting()?.is_table_allowed == true) {
-                                    NavigationDrawerItem(
-                                        label = { if (!isCollapsed) Text("Dine In") else Text("") },
-                                        icon = {
-                                            DrawerIcon(
-                                                Icons.Default.Restaurant,
-                                                contentDescription = null,
-                                                isCollapsed
-                                            )
-                                        },
-                                        selected = currentDestination?.route == "selects",
-                                        onClick = { onDestinationClicked("selects") },
-                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                                        colors = subMenuColors
-                                    )
-                                }
+                if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CASHIER")) {
+                    NavigationDrawerItem(
+                        label = { if (!isCollapsed) Text("Orders") else Text("") },
+                        icon = {
+                            DrawerIcon(
+                                Icons.Default.Receipt,
+                                contentDescription = null,
+                                isCollapsed
+                            )
+                        },
+                        selected = currentDestination?.route in listOf(
+                            "selects",
+                            "takeaway_menu"
+                        ),
+                        onClick = {
+                            setExpandedMenu(if (expandedMenu == ExpandedMenu.ORDERS) ExpandedMenu.NONE else ExpandedMenu.ORDERS)
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                        colors = drawerItemColors
+                    )
+                    AnimatedVisibility(expandedMenu == ExpandedMenu.ORDERS) {
+                        Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
+                            if (sessionManager.getGeneralSetting()?.is_table_allowed == true) {
                                 NavigationDrawerItem(
-                                    label = { if (!isCollapsed) Text("Takeaway") else Text("") },
+                                    label = { if (!isCollapsed) Text("Dine In") else Text("") },
                                     icon = {
                                         DrawerIcon(
-                                            Icons.Default.Fastfood,
+                                            Icons.Default.Restaurant,
                                             contentDescription = null,
                                             isCollapsed
                                         )
                                     },
-                                    selected = currentDestination?.route == "takeaway_menu",
-                                    onClick = { onDestinationClicked("takeaway_menu") },
+                                    selected = currentDestination?.route == "selects",
+                                    onClick = { onDestinationClicked("selects") },
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                     colors = subMenuColors
                                 )
-
                             }
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Takeaway") else Text("") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.Default.Fastfood,
+                                        contentDescription = null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "takeaway_menu",
+                                onClick = { onDestinationClicked("takeaway_menu") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+
                         }
                     }
-
+                }
 
 
                 // 🔹 Billing
 
                 if (role in listOf("RESBADMIN", "ADMIN", "CASHIER")) {
-                    if(sessionManager.getGeneralSetting()?.is_accounts == true){
+                    if (sessionManager.getGeneralSetting()?.is_accounts == true) {
                         NavigationDrawerItem(
                             label = { if (!isCollapsed) Text("Accounts Entry") else Text("") },
                             icon = {

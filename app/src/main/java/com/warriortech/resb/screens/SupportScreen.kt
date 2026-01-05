@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -22,11 +24,16 @@ import com.warriortech.resb.ui.theme.SurfaceLight
 @Composable
 fun SupportScreen(
     onBackPressed: () -> Unit,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    navController: NavController
 ) {
     var selectedCategory by remember { mutableStateOf<SupportCategory?>(null) }
     val uriHandler = LocalUriHandler.current
-
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(

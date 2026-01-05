@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.R
 import com.warriortech.resb.model.Tax
 import com.warriortech.resb.model.TaxSplit
@@ -36,7 +38,8 @@ import kotlin.collections.find
 @Composable
 fun TaxSplitSettingsScreen(
     viewModel: TaxSplitSettingsViewModel = hiltViewModel(),
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }

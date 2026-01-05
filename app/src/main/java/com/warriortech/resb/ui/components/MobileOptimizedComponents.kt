@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.graphics.Color
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -648,6 +649,7 @@ fun CameraPermission(
 }
 
 
+@androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraBarcodeScanner(
     onResult: (String) -> Unit,

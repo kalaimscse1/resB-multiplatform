@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
@@ -54,7 +56,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun CustomerSettingsScreen(
     viewModel: CustomerSettingsViewModel = hiltViewModel(),
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -65,6 +68,7 @@ fun CustomerSettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.loadCustomers()
     }
+
     Scaffold(
         topBar = {
             TopAppBar(

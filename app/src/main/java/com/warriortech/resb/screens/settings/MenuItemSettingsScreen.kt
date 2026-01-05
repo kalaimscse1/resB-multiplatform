@@ -1,6 +1,7 @@
 package com.warriortech.resb.screens.settings
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.KitchenCategory
 import com.warriortech.resb.model.Menu
 import com.warriortech.resb.model.MenuCategory
@@ -72,7 +74,8 @@ fun MenuItemSettingsScreen(
     onBackPressed: () -> Unit,
     viewModel: MenuItemSettingsViewModel = hiltViewModel(),
     sessionManager: SessionManager,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    navController: NavHostController
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,9 +108,15 @@ fun MenuItemSettingsScreen(
         viewModel.loadMenuItems()
     }
 
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
+
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
-            if (errorMessage == "Menu item deleted successfully") {
+            if (errorMessage == "Menu item deleted successfully" || errorMessage == "Menu item updated successfully" || errorMessage == "Menu item added successfully") {
                 success = true
             } else {
                 failed = true
@@ -497,6 +506,15 @@ fun MenuItemDialog(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Common Menu Fields
+
+            BarcodeInputField(
+                value = barcode,
+                onValueChange = { barcode = it },
+                onBarcodeScanned = { barcode = it },
+                onCameraClick = { showScanner = true }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it.uppercase() },
@@ -527,13 +545,6 @@ fun MenuItemDialog(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            BarcodeInputField(
-                value = barcode,
-                onValueChange = { barcode = it },
-                onBarcodeScanned = { barcode = it },
-                onCameraClick = { showScanner = true }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = rate,

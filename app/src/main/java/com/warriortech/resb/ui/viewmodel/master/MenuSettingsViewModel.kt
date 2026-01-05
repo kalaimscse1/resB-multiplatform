@@ -69,6 +69,7 @@ class MenuSettingsViewModel @Inject constructor(
                     is_active = isActive,
                 )
                 menuRepository.insertMenu(menu)
+                _errorMessage.value = "Menu Chart added successfully"
                 loadMenus()
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to add menu")
@@ -95,6 +96,7 @@ class MenuSettingsViewModel @Inject constructor(
                     is_active = isActive,
                 )
                 menuRepository.updateMenu(menu)
+                _errorMessage.value = "Menu Chart updated successfully"
                 loadMenus()
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to update menu")

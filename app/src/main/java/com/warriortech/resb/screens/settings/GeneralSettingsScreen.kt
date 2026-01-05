@@ -1,6 +1,7 @@
 package com.warriortech.resb.screens.settings
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.warriortech.resb.R
 import com.warriortech.resb.ui.viewmodel.setting.GeneralSettingsViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.GeneralSettings
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -27,7 +29,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun GeneralSettingsScreen(
     viewModel: GeneralSettingsViewModel = hiltViewModel(),
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -38,6 +41,7 @@ fun GeneralSettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.loadSettings()
     }
+
 
     Scaffold(
         topBar = {

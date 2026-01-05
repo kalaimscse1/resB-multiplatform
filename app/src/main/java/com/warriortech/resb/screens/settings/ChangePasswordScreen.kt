@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.setting.ChangePasswordViewModel
@@ -28,7 +30,8 @@ import com.warriortech.resb.ui.viewmodel.setting.ChangePasswordViewModel
 @Composable
 fun ChangePasswordScreen(
     viewModel: ChangePasswordViewModel = hiltViewModel(),
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var currentPassword by remember { mutableStateOf("") }
@@ -59,6 +62,7 @@ fun ChangePasswordScreen(
             else -> {}
         }
     }
+
 
     Scaffold(
         topBar = {

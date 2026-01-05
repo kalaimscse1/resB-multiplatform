@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.Area
 import com.warriortech.resb.model.Table
 import com.warriortech.resb.model.TblTable
@@ -44,7 +46,8 @@ import com.warriortech.resb.util.StringDropdown
 fun TableSettingsScreen(
     viewModel: TableSettingsViewModel = hiltViewModel(),
     onBackPressed: () -> Unit,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -61,6 +64,11 @@ fun TableSettingsScreen(
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
             snackbarHostState.showSnackbar(errorMessage ?: "An error occurred")
+        }
+    }
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
         }
     }
 

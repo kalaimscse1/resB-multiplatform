@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.MenuCategory
 import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
@@ -40,7 +42,8 @@ import kotlinx.coroutines.launch
 fun MenuCategorySettingsScreen(
     onBackPressed: () -> Unit,
     viewModel: MenuCategorySettingsViewModel = hiltViewModel(),
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val order by viewModel.orderBy.collectAsStateWithLifecycle()
@@ -56,10 +59,15 @@ fun MenuCategorySettingsScreen(
         viewModel.getOrderBy()
         viewModel.loadCategories()
     }
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
 
     LaunchedEffect(errorMessage) {
         if (errorMessage!= null) {
-            if (errorMessage=="Menu Category deleted successfully") {
+            if (errorMessage=="Menu Category deleted successfully" || errorMessage=="Menu Category updated successfully" || errorMessage=="Menu Category added successfully") {
                 sucess = true
             } else {
                 failed = true

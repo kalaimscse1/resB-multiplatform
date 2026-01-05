@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.Menu
 import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
@@ -44,7 +46,8 @@ import kotlinx.coroutines.launch
 fun MenuSettingsScreen(
     viewModel: MenuSettingsViewModel = hiltViewModel(),
     onBackPressed: () -> Unit,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val order by viewModel.orderBy.collectAsStateWithLifecycle()
@@ -63,11 +66,17 @@ fun MenuSettingsScreen(
 
     LaunchedEffect(errorMessage) {
         if (errorMessage!= null) {
-            if (errorMessage=="Menu Chart deleted successfully") {
+            if (errorMessage=="Menu Chart deleted successfully" || errorMessage=="Menu Chart updated successfully" || errorMessage=="Menu Chart added successfully") {
                 sucess = true
             } else {
                 failed = true
             }
+        }
+    }
+
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
         }
     }
 

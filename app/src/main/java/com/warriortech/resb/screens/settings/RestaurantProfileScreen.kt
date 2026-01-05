@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
@@ -29,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.warriortech.resb.R
 import com.warriortech.resb.model.RestaurantProfile
@@ -52,7 +54,8 @@ fun RestaurantProfileScreen(
     viewModel: RestaurantProfileViewModel = hiltViewModel(),
     apiService: ApiService,
     sessionManager: SessionManager,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()

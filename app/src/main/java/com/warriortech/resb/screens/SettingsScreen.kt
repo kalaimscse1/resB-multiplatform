@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,6 +38,12 @@ fun SettingsScreen(
 ) {
     var selectedModule by remember { mutableStateOf<SettingsModule?>(null) }
     val scope = rememberCoroutineScope()
+
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(

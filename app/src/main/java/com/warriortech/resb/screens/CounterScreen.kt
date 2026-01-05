@@ -10,6 +10,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.warriortech.resb.ui.viewmodel.CounterViewModel
 import kotlinx.coroutines.launch
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.model.TblOrderDetailsResponse
 import com.warriortech.resb.ui.components.MobileOptimizedButton
@@ -66,7 +68,8 @@ fun CounterScreen(
     onProceedToBilling: (orderDetailsResponse: List<TblOrderDetailsResponse>, orderId: String) -> Unit,
     viewModel: CounterViewModel = hiltViewModel(),
     drawerState: DrawerState,
-    counterId: Long? = null
+    counterId: Long? = null,
+    navController: NavHostController
 ) {
     val menuState by viewModel.menuState.collectAsStateWithLifecycle()
     val selectedItems by viewModel.selectedItems.collectAsStateWithLifecycle()
@@ -90,6 +93,12 @@ fun CounterScreen(
         if (counterId != null) {
             // Load counter information by ID
             // This would typically come from a repository call
+        }
+    }
+
+    BackHandler {
+        navController.navigate("dashboard") {
+            popUpTo("dashboard") { inclusive = true }
         }
     }
 

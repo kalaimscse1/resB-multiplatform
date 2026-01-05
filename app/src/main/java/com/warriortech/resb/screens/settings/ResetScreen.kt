@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,6 +36,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.setting.ResetViewModel
@@ -44,7 +46,7 @@ import com.warriortech.resb.util.AnimatedSnackbarDemo
 @Composable
 fun ResetScreen(
     onBackPressed: () -> Unit,
-    navController: NavController,
+    navController: NavHostController,
     sessionManager: SessionManager,
     viewModel: ResetViewModel = hiltViewModel()
 ) {

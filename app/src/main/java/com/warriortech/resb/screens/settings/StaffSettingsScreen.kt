@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.Area
 import com.warriortech.resb.model.Role
 import com.warriortech.resb.model.TblCounter
@@ -35,7 +37,8 @@ import com.warriortech.resb.util.RoleDropdown
 @Composable
 fun StaffSettingsScreen(
     onBackPressed: () -> Unit,
-    viewModel: StaffViewModel = hiltViewModel()
+    viewModel: StaffViewModel = hiltViewModel(),
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -58,7 +61,6 @@ fun StaffSettingsScreen(
             viewModel.clearMessages()
         }
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -322,12 +324,10 @@ fun AddStaffDialog(
                     )
                 },
                 enabled = name.isNotBlank() &&
-                        address.isNotBlank() &&
                         phone.isNotBlank() &&
                         userName.isNotBlank() &&
                         password.isNotBlank() &&
                         role != 0L &&
-                        areaId != 0L &&
                         counterId != 0L
             ) {
                 Text("Add")

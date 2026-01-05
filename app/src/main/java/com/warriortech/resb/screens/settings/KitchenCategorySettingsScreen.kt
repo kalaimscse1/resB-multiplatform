@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.warriortech.resb.model.KitchenCategory
 import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
@@ -28,7 +30,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun KitchenCategorySettingsScreen(
     onBackPressed: () -> Unit,
-    viewModel: KitchenCategorySettingsViewModel = hiltViewModel()
+    viewModel: KitchenCategorySettingsViewModel = hiltViewModel(),
+    navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -39,6 +42,7 @@ fun KitchenCategorySettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.loadKitchenCategories()
     }
+
 
     Scaffold(
         topBar = {
