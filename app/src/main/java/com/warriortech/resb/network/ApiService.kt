@@ -358,18 +358,17 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Int>
 
-    @POST("table/changeTable")
+    @POST("table/table/changeTable")
     suspend fun changeTable(
-        @Query("sourceTableId") sourceTableId: Long,
-        @Query("targetTableId") targetTableId: Long,
+        @Body tableRequest: ChangeTable,
         @Header("X-Tenant-ID") tenantId: String
-    ): Response<ApiResponse<Boolean>>
+    ): Response<Int>
 
-    @POST("table/mergeTables")
+    @POST("order/mergeTable")
     suspend fun mergeTables(
-        @Body tableIds: List<Long>,
+        @Body mergeRequest: MergeTable,
         @Header("X-Tenant-ID") tenantId: String
-    ): Response<ApiResponse<Boolean>>
+    ): Response<Int>
 
     @GET("settings/printer/getPrinterByIpAddress/{kitchen_cat_name}")
     suspend fun getIpAddresss(

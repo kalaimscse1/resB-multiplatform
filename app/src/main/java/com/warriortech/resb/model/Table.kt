@@ -22,8 +22,19 @@ data class TblTable(
     val table_availability: String,
     val is_active: Boolean
 )
+data class ChangeTable(
+    val sourceTableId:Long,
+    val targetTableId:Long,
+    val orderId:String,
+    val reason:String
+)
 
-
+data class MergeTable(
+    val sourceOrderId:String,
+    val targetOrderId:String,
+    val tableId:Long,
+    val table:String
+)
 data class TableStatusResponse(
     var table_id: Long,
     var area_id: Long,

@@ -98,10 +98,11 @@ class TableViewModel @Inject constructor(
                 try {
                     val success = when (action) {
                         SelectionAction.ChangeTable -> {
+
                             tableRepository.changeTable(tables[0], tables[1])
                         }
                         SelectionAction.MergeTable -> {
-                            tableRepository.mergeTables(tables)
+                            tableRepository.mergeTables(tables[0], tables[1])
                         }
                     }
                     if (success) {

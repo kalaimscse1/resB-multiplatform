@@ -1,15 +1,19 @@
 package com.warriortech.resb.data.repository
 
+import android.util.Log
 import com.warriortech.resb.data.local.dao.TableDao
 import com.warriortech.resb.data.local.entity.SyncStatus
 import com.warriortech.resb.data.local.entity.TblTableEntity
 import timber.log.Timber
 import com.warriortech.resb.model.Area
+import com.warriortech.resb.model.ChangeTable
+import com.warriortech.resb.model.MergeTable
 import com.warriortech.resb.model.Table
 import com.warriortech.resb.model.TableStatusResponse
 import com.warriortech.resb.model.TblTable
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
+import com.warriortech.resb.ui.viewmodel.TableViewModel
 import com.warriortech.resb.util.NetworkMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -295,21 +299,60 @@ class TableRepository @Inject constructor(
 
     suspend fun changeTable(sourceTableId: Long, targetTableId: Long): Boolean {
         return try {
-            val response = apiService.changeTable(sourceTableId, targetTableId, sessionManager.getCompanyCode() ?: "")
-            response.isSuccessful && response.body()?.data == true
+            val order = apiService.getOpenOrderMasterForTable(
+                sourceTableId,
+                sessionManager.getCompanyCode() ?: ""
+            ).body()
+            val response = apiService.changeTable(
+                ChangeTable(
+                    sourceTableId, targetTableId,
+                    orderId = order?.order_master_id ?: "",
+                    reason = "CHANGE TABLE"
+                ),
+                sessionManager.getCompanyCode() ?: ""
+            )
+            response.isSuccessful
         } catch (e: Exception) {
             Timber.e(e, "Error changing table")
             false
         }
     }
 
-    suspend fun mergeTables(tableIds: List<Long>): Boolean {
+    suspend fun mergeTables(sourceTableId: Long, targetTableId: Long): Boolean {
         return try {
-            val response = apiService.mergeTables(tableIds, sessionManager.getCompanyCode() ?: "")
-            response.isSuccessful && response.body()?.data == true
+            val tenantId = sessionManager.getCompanyCode()
+                ?: throw IllegalStateException("Tenant missing")
+
+            val order1 = apiService
+                .getOpenOrderMasterForTable(sourceTableId, tenantId)
+                .body() ?: return false
+
+            val order2 = apiService
+                .getOpenOrderMasterForTable(targetTableId, tenantId)
+                .body() ?: return false
+
+            val table = apiService.getTablesByStatus(sourceTableId, tenantId)
+
+            val response = apiService.mergeTables(
+                MergeTable(
+                    sourceOrderId = order1.order_master_id,
+                    table = table.table_name,
+                    tableId = table.table_id,
+                    targetOrderId = order2.order_master_id,
+                ),
+                tenantId = tenantId
+            )
+
+            if (!response.isSuccessful) {
+                Log.e("MergeTables", "Merge failed: ${response.code()} ${response.errorBody()?.string()}")
+                return false
+            }
+
+            response.body() == 1
         } catch (e: Exception) {
             Timber.e(e, "Error merging tables")
             false
         }
     }
+
 }

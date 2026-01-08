@@ -105,7 +105,7 @@ fun SelectionScreen(
     LaunchedEffect(Unit) {
         while (true) {
             viewModel.loadTables()
-            delay(5 * 1000)
+            delay(7 * 1000)
         }
     }
 
