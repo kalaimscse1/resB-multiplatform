@@ -167,7 +167,7 @@ fun OrderScreen(
 
 
 @Composable
-private fun OrderSection(
+fun OrderSection(
     title: String,
     icon: ImageVector,
     orders: List<OrderDisplayItem>,

@@ -49,6 +49,18 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Unit>
 
+
+    /**
+     * Auditing Management
+     */
+
+    @POST("auditing/createAuditing")
+    suspend fun createAuditing(
+        @Body auditingRequest: TblAuditingRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblAuditingResponse>
+
+
     /**
      * Day Close
      */

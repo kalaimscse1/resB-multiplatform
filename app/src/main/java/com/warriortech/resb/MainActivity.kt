@@ -156,6 +156,7 @@ import com.warriortech.resb.screens.reports.KotReportScreen
 import com.warriortech.resb.screens.reports.PaidBillsScreen
 import com.warriortech.resb.screens.QuickBillScreen
 import com.warriortech.resb.screens.SplashScreen
+import com.warriortech.resb.screens.TakeAwayOrderScreen
 import com.warriortech.resb.screens.accounts.reports.DayBookReportScreen
 import com.warriortech.resb.screens.accounts.reports.DayEntryReportScreen
 import com.warriortech.resb.screens.accounts.transaction.DayEntryModifyScreen
@@ -534,6 +535,18 @@ fun AppNavigation(
 
         composable("orders") {
             OrderScreen(
+                drawerState = drawerState,
+                onNavigateToBilling = { items, orderId ->
+                    selectedItems = items
+                    navController.navigate("billing_screen/${orderId}") {
+                        popUpTo("orders") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable("takeaway_orders") {
+            TakeAwayOrderScreen(
                 drawerState = drawerState,
                 onNavigateToBilling = { items, orderId ->
                     selectedItems = items

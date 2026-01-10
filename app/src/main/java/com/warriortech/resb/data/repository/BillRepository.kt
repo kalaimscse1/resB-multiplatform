@@ -108,7 +108,7 @@ class BillRepository @Inject constructor(
 
 
             val billNumber = when {
-                paymentMethod.name == "DUE" || voucherType == "DUE" || receivedAmt < total-> apiService.getBillNoByCounterId(
+                paymentMethod.name == "DUE" || voucherType == "DUE" || receivedAmt < total -> apiService.getBillNoByCounterId(
                     sessionManager.getUser()?.counter_id!!, "DUE", tenant
                 )
 
@@ -159,7 +159,6 @@ class BillRepository @Inject constructor(
             )
 
 
-
             val check = apiService.checkBillExists(orderMasterId, tenant)
             if (check.body()?.data != true) return@flow emit(Result.failure(Exception("Order already billed or invalid")))
 
@@ -174,7 +173,26 @@ class BillRepository @Inject constructor(
                 apiService.updateIgstForOrderDetails(orderMasterId, tenant)
             else
                 apiService.updateGstForOrderDetails(orderMasterId, tenant)
-            if (sessionManager.getGeneralSetting()?.is_accounts==true){
+
+            apiService.createAuditing(
+                TblAuditingRequest(
+                    id =5,
+                    modify_date = getCurrentDateModern(),
+                    modify_time = getCurrentTimeModern(),
+                    groups = "NEW",
+                    counter_id = sessionManager.getUser()?.counter_id ?: 0,
+                    user_id = sessionManager.getUser()?.staff_id ?: 0,
+                    created_date = getCurrentDateModern(),
+                    member = "${voucher?.voucher_id ?: 0L}",
+                    member_id = billNumber["bill_no"] ?: "",
+                    narration = "BILL-${billNumber["bill_no"] ?: ""}",
+                    credit = response.body()?.grand_total ?: 0.0,
+                    debit =0.0
+                ),
+                sessionManager.getCompanyCode() ?: ""
+            )
+
+            if (sessionManager.getGeneralSetting()?.is_accounts == true) {
                 val ledgerDetail = apiService.findByContactNo(
                     bill?.customer?.contact_no ?: customer.contact_no,
                     tenant
@@ -190,9 +208,20 @@ class BillRepository @Inject constructor(
                         gst_no = customer.gst_no,
                         igst_status = if (customer.igst_status) "YES" else "NO",
                         due_date = getCurrentDateModern(),
-                        order_by = 0, address1 = "", place = "", pincode = 0, country = "", pan_no = "",
-                        state_code = "", state_name = "", sac_code = "", opening_balance = "",
-                        bank_details = "NO", tamil_text = "", distance = 0.0, is_default = false
+                        order_by = 0,
+                        address1 = "",
+                        place = "",
+                        pincode = 0,
+                        country = "",
+                        pan_no = "",
+                        state_code = "",
+                        state_name = "",
+                        sac_code = "",
+                        opening_balance = "",
+                        bank_details = "NO",
+                        tamil_text = "",
+                        distance = 0.0,
+                        is_default = false
                     )
                     if (ledgerDetail?.contact_no != customer.contact_no)
                         apiService.createLedger(req, tenant).body()
@@ -243,11 +272,10 @@ class BillRepository @Inject constructor(
 
     suspend fun fetchBillPreview(bill: Bill): Bitmap? = try {
         val res = apiService.getBillPreview(bill, sessionManager.getCompanyCode() ?: "")
-        if (res.isSuccessful){
-            val bytes= res.body()?.bytes()
+        if (res.isSuccessful) {
+            val bytes = res.body()?.bytes()
             BitmapFactory.decodeByteArray(bytes, 0, bytes!!.size)
-        }
-        else{
+        } else {
             null
         }
     } catch (_: Exception) {
@@ -301,7 +329,7 @@ class BillRepository @Inject constructor(
             note = "",
             is_active = 1L
         )
-        if (sessionManager.getGeneralSetting()?.is_accounts == true){
+        if (sessionManager.getGeneralSetting()?.is_accounts == true) {
             val ledgerDetails = apiService.getLedgerDetailsByEntryNo(
                 billNo, sessionManager.getCompanyCode() ?: ""
             ).body()!!.filter { it.ledger_details_id.toInt() % 2 != 0 }
@@ -323,12 +351,48 @@ class BillRepository @Inject constructor(
             }
             apiService.updateAllLedgerDetails(ledgerRequest, sessionManager.getCompanyCode() ?: "")
         }
+        apiService.createAuditing(
+            TblAuditingRequest(
+                id =5,
+                modify_date = getCurrentDateModern(),
+                modify_time = getCurrentTimeModern(),
+                groups = "MODIFY",
+                counter_id = sessionManager.getUser()?.counter_id ?: 0,
+                user_id = sessionManager.getUser()?.staff_id ?: 0,
+                created_date = bill.bill_date,
+                member = "${bill.voucher.voucher_id}",
+                member_id = bill.bill_no,
+                narration = "BILL-${bill.bill_no}",
+                credit = if (bill.grand_total < request.grand_total) request.grand_total - bill.grand_total else 0.0,
+                debit = if (bill.grand_total > request.grand_total) bill.grand_total- request.grand_total else 0.0
+            ),
+            sessionManager.getCompanyCode() ?: ""
+        )
         apiService.updateByBillNo(billNo, request, sessionManager.getCompanyCode() ?: "")
 
     }
 
     suspend fun deleteBill(billNo: String): Int? {
+        val bill =
+            apiService.getPaymentByBillNo(billNo, sessionManager.getCompanyCode() ?: "").body()!!
         val response = apiService.deleteByBillNo(billNo, sessionManager.getCompanyCode() ?: "")
+        apiService.createAuditing(
+            TblAuditingRequest(
+                id =5,
+                modify_date = getCurrentDateModern(),
+                modify_time = getCurrentTimeModern(),
+                groups = "DELETE",
+                counter_id = sessionManager.getUser()?.counter_id ?: 0,
+                user_id = sessionManager.getUser()?.staff_id ?: 0,
+                created_date = bill.bill_date,
+                member = "${bill.voucher.voucher_id}",
+                member_id = bill.bill_no,
+                narration = "BILL-${bill.bill_no}",
+                credit =  0.0,
+                debit = 0.0
+            ),
+            sessionManager.getCompanyCode() ?: ""
+        )
         return if (response.isSuccessful) {
             response.body()
         } else

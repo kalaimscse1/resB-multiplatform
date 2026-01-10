@@ -32,6 +32,7 @@ import androidx.compose.material.Tab
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.RemoveShoppingCart
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -222,6 +223,19 @@ fun MenuScreen(
                     }
                 },
                 actions = {
+                    if (effectiveStatus == "TAKEAWAY" || tableStatusFromVM == "DELIVERY" && sessionManager.getUser()?.role == "ADMIN" || sessionManager.getUser()?.role == "CASHIER"){
+                        IconButton(onClick = {
+                            navController.navigate("takeaway_orders") {
+                                launchSingleTop = true
+                            }
+                        }, modifier = Modifier.padding(start = 5.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Paid,
+                                contentDescription = "Payment",
+                                tint = SurfaceLight
+                            )
+                        }
+                    }
                     BarcodeScannerButton(
                         onBarcodeScanned = { barcode ->
                             viewModel.findAndAddItemByBarcode(barcode)
