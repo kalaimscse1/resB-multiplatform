@@ -136,20 +136,23 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
                     .padding(10.dp)
             ) {
-                MobileOptimizedTextField(
-                    value = uiState.value.companyCode,
-                    onValueChange = viewModel::onCompanyCodeChange,
-                    label = "Email Id",
-                    enabled = code.isBlank(),
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "CompanyCode",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    },
-                )
-                Spacer(modifier = Modifier.height(Dimensions.spacingM))
+                if (sessionManager.getCompanyCode()?.isBlank() == true){
+                    MobileOptimizedTextField(
+                        value = uiState.value.companyCode,
+                        onValueChange = viewModel::onCompanyCodeChange,
+                        label = "Email Id",
+                        enabled = code.isBlank(),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "CompanyCode",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(Dimensions.spacingM))
+                }
+
                 MobileOptimizedTextField(
                     value = uiState.value.username,
                     onValueChange = viewModel::onUsernameChange,
