@@ -33,6 +33,7 @@ import androidx.compose.material.Tab
 import androidx.compose.material.Text
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.RemoveShoppingCart
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -230,7 +231,7 @@ fun MenuScreen(
                             }
                         }, modifier = Modifier.padding(start = 5.dp)) {
                             Icon(
-                                imageVector = Icons.Default.Paid,
+                                imageVector = Icons.Default.Payment,
                                 contentDescription = "Payment",
                                 tint = SurfaceLight
                             )

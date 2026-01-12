@@ -147,7 +147,7 @@ fun DashboardScreen(
                                 "Real-time overview",
                                 style = ResbTypography.bodySmall,
                                 color = SurfaceLight,
-                                modifier = Modifier.padding(start = 2.dp, top = 15.dp)
+                                modifier = Modifier.padding(start = 2.dp)
                             )
                         }
                     }

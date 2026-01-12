@@ -407,6 +407,7 @@ fun MenuItemCard(
     }
 }
 
+@SuppressLint("AutoboxingStateCreation")
 @Composable
 fun MenuItemDialog(
     menuItem: TblMenuItemResponse?,
@@ -438,21 +439,21 @@ fun MenuItemDialog(
     var menuItemCatId by remember { mutableStateOf(menuItem?.item_cat_id ?: 1) }
     var kitchenCatId by remember { mutableStateOf(menuItem?.kitchen_cat_id ?: 1) }
     var isAvailable by remember { mutableStateOf(menuItem?.is_available ?: "YES") }
-    var taxId by remember { mutableStateOf(menuItem?.tax_id ?: 1) }
+    var taxId by remember { mutableLongStateOf(menuItem?.tax_id ?: 1) }
     var rate by remember { mutableStateOf(menuItem?.rate?.toString() ?: "") }
     var rateLock by remember { mutableStateOf(menuItem?.rate_lock ?: rateOptions.first()) }
-    var orderBy by remember { mutableStateOf(menuItem?.order_by ?: order) }
+    var orderBy by remember { mutableLongStateOf(menuItem?.order_by ?: order) }
     var acRate by remember { mutableStateOf(menuItem?.ac_rate?.toString() ?: "") }
     var parcelRate by remember { mutableStateOf(menuItem?.parcel_rate?.toString() ?: "") }
     var parcelCharge by remember { mutableStateOf(menuItem?.parcel_charge?.toString() ?: "") }
-    var preparationTime by remember { mutableStateOf(menuItem?.preparation_time ?: 0) }
+    var preparationTime by remember { mutableStateOf(menuItem?.preparation_time?.toString() ?: "") }
     var isFavourite by remember { mutableStateOf(menuItem?.is_favourite == true) }
 
     val focusManager = LocalFocusManager.current
     // Inventory fields
     var isInventory by remember { mutableStateOf(menuItem?.is_inventory ?: 0L) }
     var hsnCode by remember { mutableStateOf(menuItem?.hsn_code ?: "") }
-    var minStock by remember { mutableStateOf(menuItem?.min_stock ?: 0) }
+    var minStock by remember { mutableStateOf(menuItem?.min_stock?.toString() ?: "") }
     var isRaw by remember { mutableStateOf(menuItem?.is_raw ?: "NO") }
     var stockMaintain by remember { mutableStateOf(menuItem?.stock_maintain ?: "NO") }
     var unitId by remember { mutableStateOf(menuItem?.unit_id ?: 1) }
@@ -480,7 +481,7 @@ fun MenuItemDialog(
                 stock_maintain = stockMaintain,
                 rate_lock = rateLock,
                 unit_id = unitId,
-                min_stock = minStock,
+                min_stock = minStock.toLong(),
                 hsn_code = hsnCode,
                 order_by = orderBy,
                 is_inventory = isInventory,
@@ -491,11 +492,11 @@ fun MenuItemDialog(
                 is_favourite = isFavourite,
                 is_active = isActive,
                 image = "",
-                preparation_time = preparationTime
+                preparation_time = preparationTime.toLong()
             )
             onSave(newMenuItem)
         },
-        isSaveEnabled = name.isNotBlank() && rate.isNotBlank(),
+        isSaveEnabled = name.isNotBlank() && rate.isNotBlank() && menuItemCatId.toInt() != 0  && menuId.toInt() != 0 && taxId.toInt() != 0,
         buttonText = if (menuItem != null) "Update" else "Add"
     ) {
         Column(
@@ -607,8 +608,8 @@ fun MenuItemDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
-                value = preparationTime.toString(),
-                onValueChange = { preparationTime = it.toLongOrNull() ?: 0 },
+                value = preparationTime,
+                onValueChange = { preparationTime = it },
                 label = { Text("Preparation Time (min)") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -622,8 +623,8 @@ fun MenuItemDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
-                value = minStock.toString(),
-                onValueChange = { minStock = it.toLongOrNull() ?: 0 },
+                value = minStock,
+                onValueChange = { minStock = it },
                 label = { Text("Min Stock") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -743,8 +744,8 @@ fun MenuItemDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
-                    value = minStock.toString(),
-                    onValueChange = { minStock = it.toLong() },
+                    value = minStock,
+                    onValueChange = { minStock = it },
                     label = { Text("Minimum Stock") },
                     modifier = Modifier
                         .fillMaxWidth()

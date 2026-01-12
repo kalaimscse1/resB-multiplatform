@@ -485,7 +485,9 @@ fun AppNavigation(
                 tableId = 1L,
                 onBackPressed = { navController.popBackStack() },
                 onOrderPlaced = {
-                    navController.popBackStack()
+                    navController.navigate("takeaway_menu") {
+                        popUpTo("takeaway_menu") { inclusive = true }
+                    }
                     selectedTable = null
                 },
                 drawerState = drawerState,
