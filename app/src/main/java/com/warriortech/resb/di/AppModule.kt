@@ -29,7 +29,6 @@ import com.warriortech.resb.data.repository.RoleRepository
 import com.warriortech.resb.data.repository.StaffRepository
 import com.warriortech.resb.data.repository.TaxRepository
 import com.warriortech.resb.data.repository.TaxSplitRepository
-import com.warriortech.resb.data.repository.TemplateRepository
 import com.warriortech.resb.data.repository.UnitRepository
 import com.warriortech.resb.data.repository.VoucherTypeRepository
 import com.warriortech.resb.data.repository.VoucherRepository
@@ -37,7 +36,6 @@ import com.warriortech.resb.data.sync.SyncManager
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.notification.NotificationHelper
-import com.warriortech.resb.service.PrintService
 import com.warriortech.resb.util.NetworkMonitor
 import com.warriortech.resb.util.PrinterHelper
 import com.warriortech.resb.util.SubscriptionScheduler
@@ -328,21 +326,6 @@ object AppModule {
             apiService = apiService,
             sessionManager = sessionManager
         )
-    }
-
-    @Provides
-    @Singleton
-    fun provideTemplateRepository(): TemplateRepository {
-        return TemplateRepository()
-    }
-
-    @Provides
-    @Singleton
-    fun providePrintService(
-        @ApplicationContext context: Context,
-        templateRepository: TemplateRepository
-    ): PrintService {
-        return PrintService(context, templateRepository)
     }
 
     @Provides

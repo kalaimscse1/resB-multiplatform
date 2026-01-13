@@ -136,7 +136,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
                     .padding(10.dp)
             ) {
-                if (sessionManager.getCompanyCode()?.isBlank() == true){
+                if (sessionManager.getEmail()?.isBlank() == true){
                     MobileOptimizedTextField(
                         value = uiState.value.companyCode,
                         onValueChange = viewModel::onCompanyCodeChange,

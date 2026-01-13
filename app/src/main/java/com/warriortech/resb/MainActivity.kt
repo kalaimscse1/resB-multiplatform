@@ -123,7 +123,6 @@ import com.warriortech.resb.screens.reports.ReportScreen
 import com.warriortech.resb.screens.RegistrationScreen
 import com.warriortech.resb.screens.AIAssistantScreen
 import com.warriortech.resb.screens.BillEditScreen
-import com.warriortech.resb.screens.BillTemplateScreen
 import com.warriortech.resb.screens.reports.CategoryWiseReportScreen
 import com.warriortech.resb.screens.CounterSelectionScreen
 import com.warriortech.resb.screens.accounts.master.GroupScreen
@@ -144,9 +143,6 @@ import com.warriortech.resb.screens.settings.TableSettingsScreen
 import com.warriortech.resb.screens.settings.TaxSettingsScreen
 import com.warriortech.resb.screens.settings.TaxSplitSettingsScreen
 import com.warriortech.resb.screens.settings.VoucherSettingsScreen
-import com.warriortech.resb.screens.TemplateScreen
-import com.warriortech.resb.screens.TemplateEditorScreen
-import com.warriortech.resb.screens.TemplatePreviewScreen
 import com.warriortech.resb.util.LocaleHelper
 import com.warriortech.resb.screens.ItemWiseBillScreen
 import com.warriortech.resb.screens.reports.ItemWiseReportScreen
@@ -715,23 +711,6 @@ fun AppNavigation(
             )
         }
 
-        composable("template_screen") {
-            TemplateScreen(navController = navController)
-        }
-
-        composable("template_editor/{templateId}") {
-            val templateId = it.arguments?.getString("templateId") ?: ""
-            TemplateEditorScreen(navController = navController, templateId = templateId)
-        }
-
-        composable("template_preview/{templateId}") { backStackEntry ->
-            val templateId = backStackEntry.arguments?.getString("templateId") ?: ""
-            TemplatePreviewScreen(
-                navController = navController,
-                templateId = templateId
-            )
-        }
-
         composable("language_setting") {
             LanguageSettingsScreen(navController = navController)
         }
@@ -796,12 +775,6 @@ fun AppNavigation(
             )
         }
 
-        composable(
-            route = "bill_template/{billId}"
-        ) { backStackEntry ->
-            val billId = backStackEntry.arguments?.getLong("billId") ?: 0L
-            BillTemplateScreen(navController, billId)
-        }
 
         composable("change_password") {
             ChangePasswordScreen(

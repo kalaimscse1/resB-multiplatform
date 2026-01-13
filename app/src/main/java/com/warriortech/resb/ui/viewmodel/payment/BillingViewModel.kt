@@ -1,6 +1,7 @@
 package com.warriortech.resb.ui.viewmodel.payment
 
 import android.graphics.Bitmap
+import android.printservice.PrintService
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -16,7 +17,6 @@ import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.model.TblOrderDetailsResponse
 import com.warriortech.resb.network.SessionManager
-import com.warriortech.resb.service.PrintService
 import com.warriortech.resb.ui.viewmodel.setting.CustomerSettingsViewModel.UiState
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.getCurrentDateModern
@@ -79,7 +79,6 @@ class BillingViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val billRepository: BillRepository,
     private val orderRepository: OrderRepository,
-    private val printService: PrintService,
     private val sessionManager: SessionManager,
     private val customerRepository: CustomerRepository
 ) : ViewModel() {
