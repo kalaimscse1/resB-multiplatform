@@ -21,7 +21,79 @@ import com.warriortech.resb.ui.viewmodel.setting.PrintSettingsViewModel
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 
+@Composable
+fun PrintPreview(
+    template: PrintTemplateEntity,
+    sections: List<PrintTemplateSectionEntity>,
+    viewModel: PrintSettingsViewModel
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(0.dp) // Paper look
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            sections.forEach { section ->
+                val lines by viewModel.getLinesForSection(section.section_id).collectAsState(initial = emptyList())
+                lines.forEach { line ->
+                    val columns by viewModel.getColumnsForLine(line.line_id).collectAsState(initial = emptyList())
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (columns.isEmpty()) {
+                            // If no columns, just show the field key as a full line
+                            Text(
+                                text = "[ ${line.field_key} ]",
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            columns.forEach { column ->
+                                Text(
+                                    text = "[ ${column.field_key} ]",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.weight(column.width_pct.toFloat()),
+                                    textAlign = when (column.align_type.uppercase()) {
+                                        "RIGHT" -> TextAlign.End
+                                        "CENTER" -> TextAlign.Center
+                                        else -> TextAlign.Start
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+                // Add a divider between sections for clarity
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+            
+            Text(
+                text = "--- End of Preview ---",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+        }
+    }
+}
+
 import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
+import androidx.compose.ui.text.style.TextAlign
 import com.warriortech.resb.data.local.entity.KotSettingsEntity
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -153,38 +225,49 @@ fun TemplateEditor(
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
                 Text("Settings", modifier = Modifier.padding(8.dp))
             }
+            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                Text("Preview", modifier = Modifier.padding(8.dp))
+            }
         }
 
-        if (selectedTab == 0) {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(sections) { section ->
-                    SectionItem(section, viewModel)
-                }
-                
-                item {
-                    Button(
-                        onClick = { showAddSectionDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Add Section")
+        when (selectedTab) {
+            0 -> {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(sections) { section ->
+                        SectionItem(section, viewModel)
+                    }
+
+                    item {
+                        Button(
+                            onClick = { showAddSectionDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add Section")
+                        }
                     }
                 }
             }
-        } else {
-            Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-                if (template.document_type == "KOT") {
-                    Text("KOT Settings", style = MaterialTheme.typography.titleMedium)
-                    KotSettingsView(template, kotSettings, viewModel)
-                    Spacer(Modifier.height(16.dp))
+            1 -> {
+                Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                    if (template.document_type == "KOT") {
+                        Text("KOT Settings", style = MaterialTheme.typography.titleMedium)
+                        KotSettingsView(template, kotSettings, viewModel)
+                        Spacer(Modifier.height(16.dp))
+                    }
+                    Text("Platform Overrides", style = MaterialTheme.typography.titleMedium)
+                    PlatformOverridesView(template, platformOverrides, viewModel)
                 }
-                Text("Platform Overrides", style = MaterialTheme.typography.titleMedium)
-                PlatformOverridesView(template, platformOverrides, viewModel)
+            }
+            2 -> {
+                Box(modifier = Modifier.weight(1f).padding(16.dp)) {
+                    PrintPreview(template, sections, viewModel)
+                }
             }
         }
     }
