@@ -21,6 +21,18 @@ import com.warriortech.resb.ui.viewmodel.setting.PrintSettingsViewModel
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 
+import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
+import com.warriortech.resb.data.local.entity.KotSettingsEntity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlinx.coroutines.flow.flowOf
+import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.flow.flowOf
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrintSettingsScreen(
@@ -225,14 +237,6 @@ fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewM
     }
 }
 
-import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
-import com.warriortech.resb.data.local.entity.KotSettingsEntity
-import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsViewModel) {
@@ -369,15 +373,14 @@ fun PlatformOverridesView(template: PrintTemplateEntity, overrides: List<PrintPl
             }
         }
     }
-    Button(onClick = { viewModel.addPlatformOverride(PrintPlatformOverrideEntity(template_id = template.template_id, platform = "WINDOWS", dpi = 203)) }) {
+    Button(onClick = { viewModel.addPlatformOverride(PrintPlatformOverrideEntity(
+        template_id = template.template_id, platform = "WINDOWS", dpi = 203,
+        char_width = 10, supports_image = true, supports_qr = true,
+    )) }) {
         Text("Add Windows Override")
     }
 }
 
-import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
