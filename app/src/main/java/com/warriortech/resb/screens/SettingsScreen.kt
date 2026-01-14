@@ -135,6 +135,7 @@ fun SettingsMainScreen(
                 SettingsModule.Staff,
                 SettingsModule.Role,
                 SettingsModule.Printer,
+                SettingsModule.Print,
                 SettingsModule.Tax,
                 SettingsModule.TaxSplit,
                 SettingsModule.RestaurantProfile,
@@ -266,6 +267,10 @@ fun SettingsModuleScreen(
 
         is SettingsModule.Printer -> {
             navController.navigate("printer_setting")
+        }
+
+        is SettingsModule.Print -> {
+            navController.navigate("print_settings")
         }
 
         is SettingsModule.Tax -> {
@@ -402,6 +407,14 @@ sealed class SettingsModule(
         "Customer",
         "Manage customer information",
         Icons.Default.Person,
+        listOf("name", "phone", "email", "address")
+    )
+
+    object Print : SettingsModule(
+        "print",
+        "Print",
+        "Manage customer information",
+        Icons.Default.Print,
         listOf("name", "phone", "email", "address")
     )
 

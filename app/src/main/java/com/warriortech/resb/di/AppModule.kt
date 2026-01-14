@@ -8,6 +8,7 @@ import com.warriortech.resb.ai.AIRepository
 import com.warriortech.resb.data.local.MIGRATION_2_3
 import com.warriortech.resb.data.local.RestaurantDatabase
 import com.warriortech.resb.data.local.dao.MenuItemDao
+import com.warriortech.resb.data.local.dao.PrintTemplateDao
 import com.warriortech.resb.data.local.dao.TableDao
 import com.warriortech.resb.data.local.dao.TblAreaDao
 import com.warriortech.resb.data.local.dao.TblOrderDetailsDao
@@ -106,6 +107,12 @@ object AppModule {
     @Provides
     fun provideVoucherDao(db: RestaurantDatabase): TblVoucherDao {
         return db.tblVoucherDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePrintTemplateDao(database: RestaurantDatabase): PrintTemplateDao {
+        return database.printTemplateDao()
     }
 
     @Provides

@@ -30,6 +30,9 @@ class PrintSettingsViewModel @Inject constructor(
     private val _sections = MutableStateFlow<List<PrintTemplateSectionEntity>>(emptyList())
     val sections = _sections.asStateFlow()
 
+    private val _sectionsLine = MutableStateFlow<List<PrintTemplateLineEntity>>(emptyList())
+    val sectionsLine = _sectionsLine.asStateFlow()
+
     init {
         loadTemplates()
     }
@@ -45,7 +48,7 @@ class PrintSettingsViewModel @Inject constructor(
     fun selectTemplate(template: PrintTemplateEntity?) {
         _selectedTemplate.value = template
         if (template != null) {
-            loadSections(template.id)
+            loadSections(template.template_id.toLong())
         } else {
             _sections.value = emptyList()
         }
@@ -53,7 +56,7 @@ class PrintSettingsViewModel @Inject constructor(
 
     private fun loadSections(templateId: Long) {
         viewModelScope.launch {
-            printTemplateDao.getSectionsForTemplate(templateId).collect {
+            printTemplateDao.getSectionsForTemplate(templateId.toInt()).collect {
                 _sections.value = it
             }
         }
@@ -73,15 +76,15 @@ class PrintSettingsViewModel @Inject constructor(
 
     fun deleteTemplate(template: PrintTemplateEntity) {
         viewModelScope.launch {
-            printTemplateDao.deleteTemplate(template)
+            printTemplateDao.deleteTemplate(template.template_id)
         }
     }
 
     fun addSection(templateId: Long, sectionName: String, order: Int) {
         viewModelScope.launch {
             val section = PrintTemplateSectionEntity(
-                template_id = templateId,
-                section_name = sectionName,
+                template_id = templateId.toInt(),
+                section_type = sectionName,
                 sort_order = order
             )
             printTemplateDao.insertSection(section)
@@ -90,22 +93,36 @@ class PrintSettingsViewModel @Inject constructor(
 
     fun deleteSection(section: PrintTemplateSectionEntity) {
         viewModelScope.launch {
-            printTemplateDao.deleteSection(section)
+            printTemplateDao.deleteSection(section.section_id)
         }
     }
 
     fun addLine(sectionId: Long, lineName: String, order: Int) {
         viewModelScope.launch {
             val line = PrintTemplateLineEntity(
-                section_id = sectionId,
-                line_name = lineName,
-                sort_order = order
+                section_id = sectionId.toInt(),
+                field_key = lineName,
+                sort_order = order,
+                display_text = lineName,
+                align_type = "CENTER",
+                font_size = "14",
+                max_width_pct = 2
             )
             printTemplateDao.insertLine(line)
         }
     }
 
-    fun getLinesForSection(sectionId: Long) = printTemplateDao.getLinesForSection(sectionId)
+    fun getLinesForSection(sectionId: Long) {
+        viewModelScope.launch {
+            printTemplateDao.getLinesForSection(sectionId.toInt()).collect {
+                _sectionsLine.value = it
+            }
+        }
+    }
 
-    fun getColumnsForLine(lineId: Long) = printTemplateDao.getColumnsForLine(lineId)
+    fun getColumnsForLine(lineId: Long) = {
+        viewModelScope.launch {
+            printTemplateDao.getColumnsForLine(lineId.toInt())
+        }
+    }
 }

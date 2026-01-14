@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.warriortech.resb.data.local.entity.PrintTemplateEntity
@@ -162,7 +163,7 @@ fun TemplateEditor(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.addSection(template.id, sectionName, sections.size)
+                    viewModel.addSection(template.template_id.toLong(), sectionName, sections.size)
                     showAddSectionDialog = false
                 }) { Text("Add") }
             }
@@ -172,7 +173,7 @@ fun TemplateEditor(
 
 @Composable
 fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsViewModel) {
-    val lines by viewModel.getLinesForSection(section.id).collectAsState(initial = emptyList())
+    val lines by viewModel.sectionsLine.collectAsState()
     var showAddLineDialog by remember { mutableStateOf(false) }
 
     Card(
@@ -181,7 +182,7 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = section.section_name, style = MaterialTheme.typography.titleSmall)
+                Text(text = section.section_type, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { viewModel.deleteSection(section) }) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete Section", tint = MaterialTheme.colorScheme.error)
@@ -218,7 +219,7 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.addLine(section.id, lineName, lines.size)
+                    viewModel.addLine(section.section_id.toLong(), lineName, lines.size)
                     showAddLineDialog = false
                 }) { Text("Add") }
             }
@@ -236,7 +237,7 @@ fun LineItem(line: PrintTemplateLineEntity) {
     ) {
         Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
-        Text(text = line.line_name, style = MaterialTheme.typography.bodySmall)
+        Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
     }
 }
 
