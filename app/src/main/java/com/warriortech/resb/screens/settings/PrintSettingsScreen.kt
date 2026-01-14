@@ -213,9 +213,11 @@ fun TemplateEditor(
 
 @Composable
 fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewModel) {
+    var showEditDialog by remember { mutableStateOf(false) }
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
-        shape = MaterialTheme.shapes.small
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.clickable { showEditDialog = true }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -234,6 +236,33 @@ fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewM
                     .clickable { viewModel.deleteColumn(column) }
             )
         }
+    }
+
+    if (showEditDialog) {
+        var fieldKey by remember { mutableStateOf(column.field_key) }
+        var width by remember { mutableStateOf(column.width_pct.toString()) }
+        var align by remember { mutableStateOf(column.align_type) }
+
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Column") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = fieldKey, onValueChange = { fieldKey = it }, label = { Text("Field Key") })
+                    OutlinedTextField(value = width, onValueChange = { width = it }, label = { Text("Width %") })
+                    OutlinedTextField(value = align, onValueChange = { align = it }, label = { Text("Align (LEFT/CENTER/RIGHT)") })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateColumn(column.copy(field_key = fieldKey, width_pct = width.toIntOrNull() ?: 100, align_type = align))
+                    showEditDialog = false
+                }) { Text("Update") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -300,15 +329,18 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
     var showAddColumnDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showAddColumnDialog = true }, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.AddCircleOutline, contentDescription = "Add Column", modifier = Modifier.size(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { viewModel.deleteLine(line.line_id) }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                }
+                IconButton(onClick = { showAddColumnDialog = true }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Add Column", modifier = Modifier.size(16.dp))
+                }
             }
-        }
         
         if (columns.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -116,9 +116,27 @@ class PrintSettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateLine(line: PrintTemplateLineEntity) {
+        viewModelScope.launch {
+            printTemplateDao.insertLine(line)
+        }
+    }
+
+    fun deleteLine(lineId: Int) {
+        viewModelScope.launch {
+            printTemplateDao.deleteLine(lineId)
+        }
+    }
+
     fun getLinesForSection(sectionId: Int) = printTemplateDao.getLinesForSection(sectionId)
 
     fun getColumnsForLine(lineId: Int) = printTemplateDao.getColumnsForLine(lineId)
+
+    fun updateColumn(column: PrintTemplateColumnEntity) {
+        viewModelScope.launch {
+            printTemplateDao.insertColumn(column)
+        }
+    }
 
     fun addColumn(lineId: Int, fieldKey: String, width: Int, align: String, order: Int) {
         viewModelScope.launch {

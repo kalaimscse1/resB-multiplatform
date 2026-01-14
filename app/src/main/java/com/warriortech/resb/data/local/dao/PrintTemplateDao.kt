@@ -24,6 +24,9 @@ interface PrintTemplateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLine(line: PrintTemplateLineEntity): Long
 
+    @Query("UPDATE tbl_print_template_line SET is_active = 0 WHERE line_id = :lineId")
+    suspend fun deleteLine(lineId: Int)
+
     @Query("UPDATE tbl_print_template SET is_active = 0 WHERE template_id = :templateId")
     suspend fun deleteTemplate(templateId: Int)
 
