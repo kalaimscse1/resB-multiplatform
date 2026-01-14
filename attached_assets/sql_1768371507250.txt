@@ -1,0 +1,71 @@
+CREATE TABLE tbl_print_template (
+    template_id        INT IDENTITY PRIMARY KEY,
+    template_name      VARCHAR(50) NOT NULL,
+    document_type      VARCHAR(10) NOT NULL, -- BILL / KOT
+    platform           VARCHAR(10) NOT NULL, -- ANDROID / WINDOWS
+    paper_width_mm     INT NOT NULL,          -- 58 / 80 / 112
+    is_default         BIT DEFAULT 0,
+    is_active          BIT DEFAULT 1,
+    created_at         DATETIME DEFAULT GETDATE()
+);
+
+
+CREATE TABLE tbl_print_template_section (
+    section_id     INT IDENTITY PRIMARY KEY,
+    template_id    INT NOT NULL,
+    section_type   VARCHAR(20) NOT NULL, -- HEADER / BODY / FOOTER
+    sort_order     INT NOT NULL,
+    is_active      BIT DEFAULT 1,
+    FOREIGN KEY (template_id) REFERENCES tbl_print_template(template_id)
+);
+
+
+CREATE TABLE tbl_print_template_line (
+    line_id          INT IDENTITY PRIMARY KEY,
+    section_id       INT NOT NULL,
+    field_key        VARCHAR(50) NOT NULL, 
+    display_text     VARCHAR(100) NULL,
+    align_type       VARCHAR(10) NOT NULL, -- LEFT / CENTER / RIGHT
+    font_size        VARCHAR(10) NOT NULL, -- SMALL / NORMAL / LARGE
+    is_bold          BIT DEFAULT 0,
+    is_underline     BIT DEFAULT 0,
+    max_width_pct    INT NULL,              -- for column layout
+    sort_order       INT NOT NULL,
+    is_repeatable    BIT DEFAULT 0,          -- for item rows
+    is_active        BIT DEFAULT 1,
+    FOREIGN KEY (section_id) REFERENCES tbl_print_template_section(section_id)
+);
+
+
+CREATE TABLE tbl_print_template_column (
+    column_id     INT IDENTITY PRIMARY KEY,
+    line_id       INT NOT NULL,
+    field_key     VARCHAR(50) NOT NULL, -- ITEM_NAME, QTY, RATE
+    width_pct     INT NOT NULL,
+    align_type    VARCHAR(10) NOT NULL,
+    sort_order    INT NOT NULL,
+    FOREIGN KEY (line_id) REFERENCES tbl_print_template_line(line_id)
+);
+
+
+CREATE TABLE tbl_kot_settings (
+    template_id        INT PRIMARY KEY,
+    print_item_notes   BIT DEFAULT 1,
+    print_order_time   BIT DEFAULT 1,
+    group_by_category  BIT DEFAULT 0,
+    show_running_no    BIT DEFAULT 1,
+    FOREIGN KEY (template_id) REFERENCES tbl_print_template(template_id)
+);
+
+
+CREATE TABLE tbl_print_platform_override (
+    override_id     INT IDENTITY PRIMARY KEY,
+    template_id     INT NOT NULL,
+    platform        VARCHAR(10) NOT NULL,
+    dpi             INT NULL,
+    char_width      INT NULL,
+    supports_image  BIT DEFAULT 1,
+    supports_qr     BIT DEFAULT 1,
+    FOREIGN KEY (template_id) REFERENCES tbl_print_template(template_id)
+);
+
