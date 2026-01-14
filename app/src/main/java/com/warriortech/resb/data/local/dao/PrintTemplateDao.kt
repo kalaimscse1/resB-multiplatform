@@ -31,6 +31,23 @@ interface PrintTemplateDao {
     suspend fun deleteSection(sectionId: Int)
 
     @Query("SELECT * FROM tbl_print_template_column WHERE line_id = :lineId ORDER BY sort_order")
-    suspend fun getColumnsForLine(lineId: Int): List<PrintTemplateColumnEntity>
+    fun getColumnsForLine(lineId: Int): Flow<List<PrintTemplateColumnEntity>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertColumn(column: PrintTemplateColumnEntity): Long
+
+    @Query("DELETE FROM tbl_print_template_column WHERE column_id = :columnId")
+    suspend fun deleteColumn(columnId: Int)
+
+    @Query("SELECT * FROM tbl_kot_settings WHERE template_id = :templateId")
+    fun getKotSettings(templateId: Int): Flow<KotSettingsEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertKotSettings(settings: KotSettingsEntity): Long
+
+    @Query("SELECT * FROM tbl_print_platform_override WHERE template_id = :templateId")
+    fun getPlatformOverrides(templateId: Int): Flow<List<PrintPlatformOverrideEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPlatformOverride(override: PrintPlatformOverrideEntity): Long
 }

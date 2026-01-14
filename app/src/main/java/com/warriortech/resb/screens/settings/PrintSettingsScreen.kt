@@ -29,8 +29,9 @@ fun PrintSettingsScreen(
 ) {
     val templates by viewModel.templates.collectAsState()
     val selectedTemplate by viewModel.selectedTemplate.collectAsState()
-    val platformOverrides by (if (selectedTemplate != null) viewModel.getPlatformOverrides(selectedTemplate!!.template_id) else flowOf(emptyList())).collectAsState(initial = emptyList())
-    val kotSettings by (if (selectedTemplate != null) viewModel.getKotSettings(selectedTemplate!!.template_id) else flowOf(null)).collectAsState(initial = null)
+    val sections by viewModel.sections.collectAsState()
+    val platformOverrides by (if (selectedTemplate != null) viewModel.getPlatformOverrides(selectedTemplate!!.template_id.toInt()) else flowOf(emptyList())).collectAsState(initial = emptyList())
+    val kotSettings by (if (selectedTemplate != null) viewModel.getKotSettings(selectedTemplate!!.template_id.toInt()) else flowOf(null)).collectAsState(initial = null)
     var showAddTemplateDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -198,8 +199,40 @@ fun TemplateEditor(
     }
 }
 
+@Composable
+fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewModel) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${column.field_key} (${column.width_pct}%)",
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Delete Column",
+                modifier = Modifier
+                    .size(12.dp)
+                    .clickable { viewModel.deleteColumn(column) }
+            )
+        }
+    }
+}
+
 import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
 import com.warriortech.resb.data.local.entity.KotSettingsEntity
+import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsViewModel) {
