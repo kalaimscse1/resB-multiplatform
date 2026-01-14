@@ -38,8 +38,14 @@ import com.warriortech.resb.data.local.entity.*
         TblVoucher::class,
         TblVoucherType::class,
         SyncQueueItem::class,
+        PrintTemplateEntity::class,
+        PrintTemplateSectionEntity::class,
+        PrintTemplateLineEntity::class,
+        PrintTemplateColumnEntity::class,
+        KotSettingsEntity::class,
+        PrintPlatformOverrideEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 
@@ -73,6 +79,7 @@ abstract class RestaurantDatabase : RoomDatabase() {
     abstract fun tblVoucherDao(): TblVoucherDao
     abstract fun tblVoucherTypeDao(): TblVoucherTypeDao
     abstract fun syncQueueDao(): SyncQueueDao
+    abstract fun printTemplateDao(): PrintTemplateDao
 
     companion object {
         @Volatile
