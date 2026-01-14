@@ -172,8 +172,10 @@ import com.warriortech.resb.screens.settings.UnitSettingsScreen
 import com.warriortech.resb.screens.settings.VoucherTypeSettingsScreen
 import com.warriortech.resb.util.BluetoothPrinterScreen
 
-@AndroidEntryPoint
+import com.warriortech.resb.screens.settings.PrintSettingsScreen
+import com.warriortech.resb.ui.viewmodel.setting.PrintSettingsViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     var onVolumeUpPressed: (() -> Unit)? = null
     override fun attachBaseContext(newBase: Context?) {
@@ -501,6 +503,12 @@ fun AppNavigation(
                 navController = navController,
                 orderDetailsResponse = selectedItems,
                 orderMasterId = backStackEntry.arguments?.getString("orderMasterId")
+            )
+        }
+
+        composable("print_settings") {
+            PrintSettingsScreen(
+                onBackPressed = { navController.popBackStack() }
             )
         }
 
