@@ -20,6 +20,19 @@ import com.warriortech.resb.data.local.entity.PrintTemplateLineEntity
 import com.warriortech.resb.ui.viewmodel.setting.PrintSettingsViewModel
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
+import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
+import androidx.compose.ui.text.style.TextAlign
+import com.warriortech.resb.data.local.entity.KotSettingsEntity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlinx.coroutines.flow.flowOf
+import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.flow.flowOf
+
 
 @Composable
 fun PrintPreview(
@@ -92,18 +105,6 @@ fun PrintPreview(
     }
 }
 
-import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
-import androidx.compose.ui.text.style.TextAlign
-import com.warriortech.resb.data.local.entity.KotSettingsEntity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import kotlinx.coroutines.flow.flowOf
-import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
