@@ -75,7 +75,7 @@ fun TableSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Table Settings", color = SurfaceLight) },
+                title = { Text("Table", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {

@@ -83,7 +83,7 @@ fun MenuSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Menu Chart Settings", color = SurfaceLight) },
+                title = { Text("Menu Chart ", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {

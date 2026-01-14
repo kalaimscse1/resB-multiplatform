@@ -127,7 +127,7 @@ fun MenuItemSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Menu Item Settings", color = SurfaceLight) },
+                title = { Text("Menu Item", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -496,7 +496,7 @@ fun MenuItemDialog(
             )
             onSave(newMenuItem)
         },
-        isSaveEnabled = name.isNotBlank() && rate.isNotBlank() && menuItemCatId.toInt() != 0  && menuId.toInt() != 0 && taxId.toInt() != 0,
+        isSaveEnabled = name.isNotBlank() && rate.isNotBlank() && menuItemCatId != 0L  && menuId != 0L && taxId != 0L,
         buttonText = if (menuItem != null) "Update" else "Add"
     ) {
         Column(

@@ -87,7 +87,7 @@ fun AreaSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Area Settings", color = SurfaceLight) },
+                title = { Text("Area", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {

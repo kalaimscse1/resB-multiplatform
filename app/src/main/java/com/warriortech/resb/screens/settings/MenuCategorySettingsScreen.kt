@@ -78,7 +78,7 @@ fun MenuCategorySettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MenuCategory Settings", color = SurfaceLight) },
+                title = { Text("MenuCategory", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {
