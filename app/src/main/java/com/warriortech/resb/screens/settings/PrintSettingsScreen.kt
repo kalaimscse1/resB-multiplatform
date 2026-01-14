@@ -29,7 +29,8 @@ fun PrintSettingsScreen(
 ) {
     val templates by viewModel.templates.collectAsState()
     val selectedTemplate by viewModel.selectedTemplate.collectAsState()
-    val sections by viewModel.sections.collectAsState()
+    val platformOverrides by (if (selectedTemplate != null) viewModel.getPlatformOverrides(selectedTemplate!!.template_id) else flowOf(emptyList())).collectAsState(initial = emptyList())
+    val kotSettings by (if (selectedTemplate != null) viewModel.getKotSettings(selectedTemplate!!.template_id) else flowOf(null)).collectAsState(initial = null)
     var showAddTemplateDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -70,6 +71,8 @@ fun PrintSettingsScreen(
                 TemplateEditor(
                     selectedTemplate!!,
                     sections,
+                    kotSettings,
+                    platformOverrides,
                     viewModel
                 )
             }
@@ -122,29 +125,53 @@ fun TemplateList(templates: List<PrintTemplateEntity>, onTemplateClick: (PrintTe
 fun TemplateEditor(
     template: PrintTemplateEntity,
     sections: List<PrintTemplateSectionEntity>,
+    kotSettings: KotSettingsEntity?,
+    platformOverrides: List<PrintPlatformOverrideEntity>,
     viewModel: PrintSettingsViewModel
 ) {
     var showAddSectionDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(sections) { section ->
-                SectionItem(section, viewModel)
+        TabRow(selectedTabIndex = selectedTab) {
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                Text("Layout", modifier = Modifier.padding(8.dp))
             }
-            
-            item {
-                Button(
-                    onClick = { showAddSectionDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Add Section")
+            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                Text("Settings", modifier = Modifier.padding(8.dp))
+            }
+        }
+
+        if (selectedTab == 0) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(sections) { section ->
+                    SectionItem(section, viewModel)
                 }
+                
+                item {
+                    Button(
+                        onClick = { showAddSectionDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add Section")
+                    }
+                }
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                if (template.document_type == "KOT") {
+                    Text("KOT Settings", style = MaterialTheme.typography.titleMedium)
+                    KotSettingsView(template, kotSettings, viewModel)
+                    Spacer(Modifier.height(16.dp))
+                }
+                Text("Platform Overrides", style = MaterialTheme.typography.titleMedium)
+                PlatformOverridesView(template, platformOverrides, viewModel)
             }
         }
     }
@@ -171,9 +198,12 @@ fun TemplateEditor(
     }
 }
 
+import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
+import com.warriortech.resb.data.local.entity.KotSettingsEntity
+
 @Composable
 fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsViewModel) {
-    val lines by viewModel.sectionsLine.collectAsState()
+    val lines by viewModel.getLinesForSection(section.section_id).collectAsState(initial = emptyList())
     var showAddLineDialog by remember { mutableStateOf(false) }
 
     Card(
@@ -191,7 +221,7 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
             
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 lines.forEach { line ->
-                    LineItem(line)
+                    LineItem(line, viewModel)
                 }
             }
 
@@ -228,18 +258,93 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
 }
 
 @Composable
-fun LineItem(line: PrintTemplateLineEntity) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
+fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
+    val columns by viewModel.getColumnsForLine(line.line_id).collectAsState(initial = emptyList())
+    var showAddColumnDialog by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { showAddColumnDialog = true }, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Default.AddCircleOutline, contentDescription = "Add Column", modifier = Modifier.size(16.dp))
+            }
+        }
+        
+        if (columns.isNotEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                columns.forEach { column ->
+                    ColumnBadge(column, viewModel)
+                }
+            }
+        }
+    }
+
+    if (showAddColumnDialog) {
+        var fieldKey by remember { mutableStateOf("") }
+        var width by remember { mutableStateOf("100") }
+        var align by remember { mutableStateOf("LEFT") }
+        
+        AlertDialog(
+            onDismissRequest = { showAddColumnDialog = false },
+            title = { Text("Add Column") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = fieldKey, onValueChange = { fieldKey = it }, label = { Text("Field Key (e.g., ITEM_NAME)") })
+                    OutlinedTextField(value = width, onValueChange = { width = it }, label = { Text("Width %") })
+                    OutlinedTextField(value = align, onValueChange = { align = it }, label = { Text("Align (LEFT/CENTER/RIGHT)") })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.addColumn(line.line_id, fieldKey, width.toIntOrNull() ?: 100, align, columns.size)
+                    showAddColumnDialog = false
+                }) { Text("Add") }
+            }
+        )
     }
 }
+
+@Composable
+fun KotSettingsView(template: PrintTemplateEntity, settings: KotSettingsEntity?, viewModel: PrintSettingsViewModel) {
+    val currentSettings = settings ?: KotSettingsEntity(template_id = template.template_id)
+    
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = currentSettings.print_item_notes, onCheckedChange = { viewModel.updateKotSettings(currentSettings.copy(print_item_notes = it)) })
+            Text("Print Item Notes")
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = currentSettings.print_order_time, onCheckedChange = { viewModel.updateKotSettings(currentSettings.copy(print_order_time = it)) })
+            Text("Print Order Time")
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = currentSettings.group_by_category, onCheckedChange = { viewModel.updateKotSettings(currentSettings.copy(group_by_category = it)) })
+            Text("Group by Category")
+        }
+    }
+}
+
+@Composable
+fun PlatformOverridesView(template: PrintTemplateEntity, overrides: List<PrintPlatformOverrideEntity>, viewModel: PrintSettingsViewModel) {
+    overrides.forEach { override ->
+        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text("${override.platform} - DPI: ${override.dpi ?: "Default"}")
+            }
+        }
+    }
+    Button(onClick = { viewModel.addPlatformOverride(PrintPlatformOverrideEntity(template_id = template.template_id, platform = "WINDOWS", dpi = 203)) }) {
+        Text("Add Windows Override")
+    }
+}
+
+import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

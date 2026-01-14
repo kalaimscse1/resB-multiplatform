@@ -112,17 +112,42 @@ class PrintSettingsViewModel @Inject constructor(
         }
     }
 
-    fun getLinesForSection(sectionId: Long) {
+    fun getLinesForSection(sectionId: Int) = printTemplateDao.getLinesForSection(sectionId)
+
+    fun getColumnsForLine(lineId: Int) = printTemplateDao.getColumnsForLine(lineId)
+
+    fun addColumn(lineId: Int, fieldKey: String, width: Int, align: String, order: Int) {
         viewModelScope.launch {
-            printTemplateDao.getLinesForSection(sectionId.toInt()).collect {
-                _sectionsLine.value = it
-            }
+            val column = PrintTemplateColumnEntity(
+                line_id = lineId,
+                field_key = fieldKey,
+                width_pct = width,
+                align_type = align,
+                sort_order = order
+            )
+            printTemplateDao.insertColumn(column)
         }
     }
 
-    fun getColumnsForLine(lineId: Long) = {
+    fun deleteColumn(column: PrintTemplateColumnEntity) {
         viewModelScope.launch {
-            printTemplateDao.getColumnsForLine(lineId.toInt())
+            printTemplateDao.deleteColumn(column.column_id)
+        }
+    }
+
+    fun getKotSettings(templateId: Int) = printTemplateDao.getKotSettings(templateId)
+
+    fun updateKotSettings(settings: KotSettingsEntity) {
+        viewModelScope.launch {
+            printTemplateDao.insertKotSettings(settings)
+        }
+    }
+
+    fun getPlatformOverrides(templateId: Int) = printTemplateDao.getPlatformOverrides(templateId)
+
+    fun addPlatformOverride(override: PrintPlatformOverrideEntity) {
+        viewModelScope.launch {
+            printTemplateDao.insertPlatformOverride(override)
         }
     }
 }
