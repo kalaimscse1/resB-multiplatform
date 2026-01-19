@@ -524,7 +524,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(nameFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
                 keyboardActions = KeyboardActions(
                     onNext = { nameTamilFocus.requestFocus() }
                 )
@@ -555,7 +558,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(rateFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
                 keyboardActions = KeyboardActions(
                     onNext = { acRateFocus.requestFocus() }
                 )
@@ -570,7 +576,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(acRateFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
                 keyboardActions = KeyboardActions(
                     onNext = { parcelRateFocus.requestFocus() }
                 )
@@ -585,7 +594,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(parcelRateFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
                 keyboardActions = KeyboardActions(
                     onNext = { parcelChargeFocus.requestFocus() }
                 )
@@ -600,7 +612,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(parcelChargeFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next
+                ),
                 keyboardActions = KeyboardActions(
                     onNext = { preparationTimeFocus.requestFocus() }
                 )
@@ -615,9 +630,12 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(preparationTimeFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
                 keyboardActions = KeyboardActions(
-                    onNext = { hsnCodeFocus.requestFocus() }
+                    onNext = { minStockFocus.requestFocus() }
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))

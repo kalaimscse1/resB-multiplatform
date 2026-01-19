@@ -304,7 +304,10 @@ fun TableDialog(
                     label = { Text("Table Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next,
+                        capitalization = KeyboardCapitalization.Characters
+                    ),
                     keyboardActions = KeyboardActions(
                         onNext = { capacityFocus.requestFocus() }
                     )
@@ -328,7 +331,10 @@ fun TableDialog(
                         .fillMaxWidth()
                         .focusRequester(capacityFocus),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
                     keyboardActions = KeyboardActions(
                         onDone = { focusManager.clearFocus() }
                     )

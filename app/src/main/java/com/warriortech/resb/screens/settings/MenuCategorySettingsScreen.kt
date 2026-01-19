@@ -309,9 +309,12 @@ fun CategoryDialog(
                     .fillMaxWidth()
                     .focusRequester(nameFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
                 keyboardActions = KeyboardActions(
-                    onNext = { orderFocus.requestFocus() } // 🔥 REQUIRED
+                    onNext = { orderFocus.requestFocus() }
                 )
             )
 
@@ -326,7 +329,10 @@ fun CategoryDialog(
                     .fillMaxWidth()
                     .focusRequester(orderFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
                 keyboardActions = KeyboardActions(
                     onDone = { 
                         focusManager.clearFocus()

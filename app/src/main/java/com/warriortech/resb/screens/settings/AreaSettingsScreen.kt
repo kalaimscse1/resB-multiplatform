@@ -316,7 +316,10 @@ fun AddAreaDialog(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
                 keyboardActions = KeyboardActions(
                     onDone = { 
                         focusManager.clearFocus()
@@ -417,7 +420,10 @@ fun EditAreaDialog(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
                 keyboardActions = KeyboardActions(
                     onDone = { focusManager.clearFocus() }
                 )
