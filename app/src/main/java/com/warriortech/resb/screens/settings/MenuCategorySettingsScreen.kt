@@ -180,6 +180,10 @@ fun MenuCategorySettingsScreen(
 
 
         if (showAddDialog) {
+            val nameFocus = remember { FocusRequester() }
+            LaunchedEffect(showAddDialog) {
+                nameFocus.requestFocus()
+            }
             CategoryDialog(
                 category = null,
                 onDismiss = { showAddDialog = false },
@@ -189,11 +193,16 @@ fun MenuCategorySettingsScreen(
                         showAddDialog = false
                     }
                 },
-                order = order
+                order = order,
+                nameFocus = nameFocus
             )
         }
 
         editingCategory?.let { category ->
+            val nameFocus = remember { FocusRequester() }
+            LaunchedEffect(editingCategory) {
+                nameFocus.requestFocus()
+            }
             CategoryDialog(
                 category = category,
                 onDismiss = { editingCategory = null },
@@ -203,7 +212,8 @@ fun MenuCategorySettingsScreen(
                         editingCategory = null
                     }
                 },
-                order = order
+                order = order,
+                nameFocus = nameFocus
             )
         }
 
@@ -278,13 +288,13 @@ fun CategoryDialog(
     category: MenuCategory?,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Boolean) -> Unit,
-    order: String
+    order: String,
+    nameFocus: FocusRequester = remember { FocusRequester() }
 ) {
     var name by remember { mutableStateOf(category?.item_cat_name ?: "") }
     var orderBy by remember { mutableStateOf(category?.order_by ?: order) }
     var isActive by remember { mutableStateOf(category?.is_active != false) }
 
-    val nameFocus = remember { FocusRequester() }
     val orderFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 

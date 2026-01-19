@@ -293,7 +293,12 @@ fun TableDialog(
     }
     var isActive by remember { mutableStateOf(table?.is_active ?: true) }
     val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
     val capacityFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -304,7 +309,9 @@ fun TableDialog(
                     value = tableNumber,
                     onValueChange = { tableNumber = it.uppercase() },
                     label = { Text("Table Name") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocus),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Next,

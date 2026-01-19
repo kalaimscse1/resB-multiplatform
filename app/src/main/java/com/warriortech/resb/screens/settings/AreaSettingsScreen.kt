@@ -264,7 +264,12 @@ fun AddAreaDialog(
 ) {
     var name by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
 
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
+    
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
