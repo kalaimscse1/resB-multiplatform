@@ -34,6 +34,10 @@ import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.flow.flowOf
 
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Image
+
 @Composable
 fun PrintPreview(
     template: PrintTemplateEntity,
@@ -58,30 +62,47 @@ fun PrintPreview(
                 val lines by viewModel.getLinesForSection(section.section_id).collectAsState(initial = emptyList())
                 lines.forEach { line ->
                     val columns by viewModel.getColumnsForLine(line.line_id).collectAsState(initial = emptyList())
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        if (columns.isEmpty()) {
-                            // If no columns, just show the field key as a full line
-                            Text(
-                                text = "[ ${line.field_key} ]",
-                                style = MaterialTheme.typography.bodySmall,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        } else {
-                            columns.forEach { column ->
+                    
+                    if (line.field_key == "LOGO") {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = "Logo Placeholder",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    } else if (line.field_key == "QRCODE") {
+                        Icon(
+                            Icons.Default.QrCode,
+                            contentDescription = "QR Code Placeholder",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            if (columns.isEmpty()) {
+                                // If no columns, just show the field key as a full line
                                 Text(
-                                    text = "[ ${column.field_key} ]",
+                                    text = "[ ${line.field_key} ]",
                                     style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.weight(column.width_pct.toFloat()),
-                                    textAlign = when (column.align_type.uppercase()) {
-                                        "RIGHT" -> TextAlign.End
-                                        "CENTER" -> TextAlign.Center
-                                        else -> TextAlign.Start
-                                    }
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+                            } else {
+                                columns.forEach { column ->
+                                    Text(
+                                        text = "[ ${column.field_key} ]",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(column.width_pct.toFloat()),
+                                        textAlign = when (column.align_type.uppercase()) {
+                                            "RIGHT" -> TextAlign.End
+                                            "CENTER" -> TextAlign.Center
+                                            else -> TextAlign.Start
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -375,12 +396,23 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
                 }
             }
 
-            TextButton(
-                onClick = { showAddLineDialog = true },
-                modifier = Modifier.align(Alignment.End)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text("Add Line", style = MaterialTheme.typography.labelMedium)
+                IconButton(onClick = { viewModel.addLogo(section.section_id, lines.size) }) {
+                    Icon(Icons.Default.Image, contentDescription = "Add Logo", modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = { viewModel.addQrCode(section.section_id, lines.size) }) {
+                    Icon(Icons.Default.QrCode, contentDescription = "Add QR Code", modifier = Modifier.size(20.dp))
+                }
+                TextButton(
+                    onClick = { showAddLineDialog = true }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("Add Line", style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
     }
@@ -413,21 +445,29 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
     var showAddColumnDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = { viewModel.deleteLine(line.line_id) }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
-                }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { viewModel.deleteLine(line.line_id) }, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+            }
+            if (line.field_key != "LOGO" && line.field_key != "QRCODE") {
                 IconButton(onClick = { showAddColumnDialog = true }, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.AddCircleOutline, contentDescription = "Add Column", modifier = Modifier.size(16.dp))
                 }
             }
+        }
         
         if (columns.isNotEmpty()) {
-            Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 columns.forEach { column ->
                     ColumnBadge(column, viewModel)
                 }

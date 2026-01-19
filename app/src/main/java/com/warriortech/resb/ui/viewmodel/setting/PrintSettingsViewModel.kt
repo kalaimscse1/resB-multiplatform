@@ -116,6 +116,36 @@ class PrintSettingsViewModel @Inject constructor(
         }
     }
 
+    fun addLogo(sectionId: Int, order: Int) {
+        viewModelScope.launch {
+            val line = PrintTemplateLineEntity(
+                section_id = sectionId,
+                field_key = "LOGO",
+                sort_order = order,
+                display_text = "LOGO",
+                align_type = "CENTER",
+                font_size = "14",
+                max_width_pct = 100
+            )
+            printTemplateDao.insertLine(line)
+        }
+    }
+
+    fun addQrCode(sectionId: Int, order: Int) {
+        viewModelScope.launch {
+            val line = PrintTemplateLineEntity(
+                section_id = sectionId,
+                field_key = "QRCODE",
+                sort_order = order,
+                display_text = "QRCODE",
+                align_type = "CENTER",
+                font_size = "14",
+                max_width_pct = 100
+            )
+            printTemplateDao.insertLine(line)
+        }
+    }
+
     fun updateLine(line: PrintTemplateLineEntity) {
         viewModelScope.launch {
             printTemplateDao.insertLine(line)
