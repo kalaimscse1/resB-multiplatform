@@ -463,6 +463,12 @@ fun MenuItemDialog(
     var showScanner by remember { mutableStateOf(false) }
 
 
+    LaunchedEffect(showAddDialog, editingMenuItem) {
+        if (showAddDialog || editingMenuItem != null) {
+            nameFocus.requestFocus()
+        }
+    }
+
     ReusableBottomSheet(
         onDismiss = onDismiss,
         title = if (menuItem != null) "Edit Menu Item" else "Add Menu Item",
@@ -649,7 +655,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(minStockFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
                 keyboardActions = KeyboardActions(
                     onNext = { orderByFocus.requestFocus() }
                 )
@@ -664,7 +673,10 @@ fun MenuItemDialog(
                     .fillMaxWidth()
                     .focusRequester(orderByFocus),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
                 keyboardActions = KeyboardActions(
                     onDone = { focusManager.clearFocus() }
                 )

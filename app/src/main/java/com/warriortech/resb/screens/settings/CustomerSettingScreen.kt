@@ -246,6 +246,14 @@ fun CustomerDialog(
     var igstStatus by remember { mutableStateOf(customer?.igst_status ?: false) }
     var isActive by remember { mutableStateOf(customer?.is_active ?: 1) }
 
+    val focusManager = LocalFocusManager.current
+    val phoneFocus = remember { FocusRequester() }
+    val emailFocus = remember { FocusRequester() }
+    val addressFocus = remember { FocusRequester() }
+    val gstFocus = remember { FocusRequester() }
+    val igstFocus = remember { FocusRequester() }
+    val statusFocus = remember { FocusRequester() }
+
     ReusableBottomSheet(
         onDismiss = onDismiss,
         title = if (customer == null) "Add Customer" else "Edit Customer",
@@ -269,51 +277,96 @@ fun CustomerDialog(
         Column {
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = it.uppercase() },
                 label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
+                keyboardActions = KeyboardActions(onNext = { phoneFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = phone,
                 onValueChange = { phone = it },
                 label = { Text("Phone") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(phoneFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(onNext = { emailFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(emailFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(onNext = { addressFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
                 label = { Text("Address") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(addressFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { gstFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = gst,
-                onValueChange = { gst = it },
+                onValueChange = { gst = it.uppercase() },
                 label = { Text("GST Number") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(gstFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
+                keyboardActions = KeyboardActions(onNext = { igstFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = if (igstStatus) "Yes" else "No",
                 onValueChange = { igstStatus = it.equals("yes", true) },
                 label = { Text("IGST Status (Yes/No)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(igstFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { statusFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = if (isActive == 1L) "Active" else "Inactive",
                 onValueChange = { isActive = if (it.equals("active", true)) 1 else 0 },
                 label = { Text("Status (Active/Inactive)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(statusFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
             )
         }
     }
