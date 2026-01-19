@@ -186,6 +186,9 @@ fun AddEditCounterDialog(
         nameFocus.requestFocus()
     }
 
+    var ipError by remember { mutableStateOf<String?>(null) }
+    val ipRegex = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$".toRegex()
+
     ReusableBottomSheet(
         title = if (counter != null) "Edit Counter" else "Add Counter",
         onDismiss = onDismissRequest,
@@ -198,7 +201,7 @@ fun AddEditCounterDialog(
             )
             onSave(newCounter)
         },
-        isSaveEnabled = counterName.isNotBlank() && ipAddress.isNotBlank(),
+        isSaveEnabled = counterName.isNotBlank() && ipAddress.isNotBlank() && ipError == null,
         buttonText = if (counter != null) "Update" else "Add"
     ) {
         Column {
@@ -220,8 +223,13 @@ fun AddEditCounterDialog(
 
             OutlinedTextField(
                 value = ipAddress,
-                onValueChange = { ipAddress = it },
+                onValueChange = { 
+                    ipAddress = it
+                    ipError = if (!ipRegex.matches(it) && it.isNotBlank()) "Invalid IP Address" else null
+                },
                 label = { Text("IP Address") },
+                isError = ipError != null,
+                supportingText = { ipError?.let { Text(it) } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(ipFocus),

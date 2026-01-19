@@ -223,6 +223,9 @@ fun PrinterDialog(
         nameFocus.requestFocus()
     }
 
+    var ipError by remember { mutableStateOf<String?>(null) }
+    val ipRegex = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$".toRegex()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -249,8 +252,13 @@ fun PrinterDialog(
                 )
                 OutlinedTextField(
                     value = ipAddress,
-                    onValueChange = { ipAddress = it },
+                    onValueChange = { 
+                        ipAddress = it
+                        ipError = if (!ipRegex.matches(it) && it.isNotBlank()) "Invalid IP Address" else null
+                    },
                     label = { Text(stringResource(R.string.ip_address)) },
+                    isError = ipError != null,
+                    supportingText = { ipError?.let { Text(it) } },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(ipFocus),

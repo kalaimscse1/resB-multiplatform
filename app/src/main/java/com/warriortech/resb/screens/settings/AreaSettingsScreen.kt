@@ -320,6 +320,7 @@ fun AddAreaDialog(
                 value = name,
                 onValueChange = { name = it.uppercase() },
                 label = { Text("Area Name") },
+                placeholder = { Text("e.g. DINING AREA") },
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,

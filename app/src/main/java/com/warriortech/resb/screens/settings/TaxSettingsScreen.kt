@@ -239,6 +239,9 @@ fun TaxDialog(
         nameFocus.requestFocus()
     }
 
+    var taxPercentageError by remember { mutableStateOf<String?>(null) }
+    var cessPercentageError by remember { mutableStateOf<String?>(null) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (tax != null) "Edit Tax" else "Add Tax") },
@@ -258,8 +261,13 @@ fun TaxDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = taxPercentage,
-                    onValueChange = { taxPercentage = it },
+                    onValueChange = { 
+                        taxPercentage = it
+                        taxPercentageError = if (it.toDoubleOrNull() == null && it.isNotBlank()) "Invalid number" else null
+                    },
                     label = { Text("Tax Percentage") },
+                    isError = taxPercentageError != null,
+                    supportingText = { taxPercentageError?.let { Text(it) } },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(taxFocus),
@@ -273,8 +281,13 @@ fun TaxDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = cessPercentage,
-                    onValueChange = { cessPercentage = it },
+                    onValueChange = { 
+                        cessPercentage = it
+                        cessPercentageError = if (it.toDoubleOrNull() == null && it.isNotBlank()) "Invalid number" else null
+                    },
                     label = { Text("Cess Percentage") },
+                    isError = cessPercentageError != null,
+                    supportingText = { cessPercentageError?.let { Text(it) } },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(cessFocus),
