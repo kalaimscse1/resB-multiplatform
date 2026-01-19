@@ -621,7 +621,7 @@ fun BarcodeInputField(
             },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Ascii,
-            imeAction = ImeAction.None
+            imeAction = ImeAction.Next
         )
     )
 

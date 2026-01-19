@@ -2,6 +2,8 @@ package com.warriortech.resb.screens.settings
 
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,23 +14,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.Print
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.TableChart
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -41,32 +36,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.warriortech.resb.model.KitchenCategory
-import com.warriortech.resb.model.Menu
-import com.warriortech.resb.model.MenuCategory
-import com.warriortech.resb.model.Tax
-import com.warriortech.resb.model.TblMenuItemRequest
-import com.warriortech.resb.model.TblMenuItemResponse
-import com.warriortech.resb.ui.components.MobileOptimizedCard
-import com.warriortech.resb.ui.viewmodel.master.MenuItemSettingsViewModel
-import com.warriortech.resb.util.StringDropdown
-import kotlinx.coroutines.launch
-import com.warriortech.resb.model.TblUnit
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.ui.components.BarcodeInputField
 import com.warriortech.resb.ui.components.CameraBarcodeScanner
+import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
-import com.warriortech.resb.util.CurrencySettings
-import com.warriortech.resb.util.KitchenGroupDropdown
-import com.warriortech.resb.util.MenuCategoryDropdown
-import com.warriortech.resb.util.MenuDropdown
-import com.warriortech.resb.util.ReportExport
-import com.warriortech.resb.util.ReusableBottomSheet
-import com.warriortech.resb.util.SuccessDialogWithButton
-import com.warriortech.resb.util.TaxDropdown
-import com.warriortech.resb.util.UnitDropdown
+import com.warriortech.resb.ui.viewmodel.master.MenuItemSettingsViewModel
+import com.warriortech.resb.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,7 +70,7 @@ fun MenuItemSettingsScreen(
     val taxes by viewModel.taxes.collectAsStateWithLifecycle()
     val units by viewModel.units.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
-    val menuItems by viewModel.filteredMenuItems.collectAsStateWithLifecycle() // ✅ updated
+    val menuItems by viewModel.filteredMenuItems.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -156,12 +138,10 @@ fun MenuItemSettingsScreen(
                     }
                     IconButton(onClick = {
                         if (searchMode) {
-                            // close search mode
                             searchMode = false
                             searchQuery = ""
-                            viewModel.searchMenuItems("") // reset full list
+                            viewModel.searchMenuItems("")
                         } else {
-                            // open search mode
                             searchMode = true
                         }
                     }) {
@@ -297,7 +277,6 @@ fun MenuItemSettingsScreen(
             }
         }
 
-        // Add/Edit Dialog
         if (showAddDialog || editingMenuItem != null) {
             MenuItemDialog(
                 menuItem = editingMenuItem,
@@ -325,7 +304,6 @@ fun MenuItemSettingsScreen(
             )
         }
 
-        // Success / Failure Dialogs
         if (success) {
             SuccessDialogWithButton(
                 title = "Success",
@@ -419,30 +397,39 @@ fun MenuItemDialog(
     kitchenCategories: List<KitchenCategory>,
     taxes: List<Tax>,
     units: List<TblUnit>,
-    order:Long
+    order: Long
 ) {
-    val rateOptions = listOf("YES", "NO")
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
 
-    val nameFocus = remember { FocusRequester() }
-    val nameTamilFocus = remember { FocusRequester() }
-    val rateFocus = remember { FocusRequester() }
-    val acRateFocus = remember { FocusRequester() }
-    val parcelRateFocus = remember { FocusRequester() }
-    val parcelChargeFocus = remember { FocusRequester() }
-    val preparationTimeFocus = remember { FocusRequester() }
-    val hsnCodeFocus = remember { FocusRequester() }
-    val minStockFocus = remember { FocusRequester() }
-    val orderByFocus = remember { FocusRequester() }
-    // Menu fields
+    // Centralized Focus Requesters
+    val focusRequesters = remember {
+        mapOf(
+            "name" to FocusRequester(),
+            "nameTamil" to FocusRequester(),
+            "rate" to FocusRequester(),
+            "acRate" to FocusRequester(),
+            "parcelRate" to FocusRequester(),
+            "parcelCharge" to FocusRequester(),
+            "preparationTime" to FocusRequester(),
+            "minStock" to FocusRequester(),
+            "orderBy" to FocusRequester(),
+            "hsnCode" to FocusRequester(),
+            "barcode" to FocusRequester()
+        )
+    }
+
+    // Form States
     var name by remember { mutableStateOf(menuItem?.menu_item_name ?: "") }
     var nameTamil by remember { mutableStateOf(menuItem?.menu_item_name_tamil ?: "") }
-    var menuId by remember { mutableStateOf(menuItem?.menu_id ?: 1) }
-    var menuItemCatId by remember { mutableStateOf(menuItem?.item_cat_id ?: 1) }
-    var kitchenCatId by remember { mutableStateOf(menuItem?.kitchen_cat_id ?: 1) }
+    var menuId by remember { mutableLongStateOf(menuItem?.menu_id ?: 1L) }
+    var menuItemCatId by remember { mutableLongStateOf(menuItem?.item_cat_id ?: 1L) }
+    var kitchenCatId by remember { mutableLongStateOf(menuItem?.kitchen_cat_id ?: 1L) }
     var isAvailable by remember { mutableStateOf(menuItem?.is_available ?: "YES") }
-    var taxId by remember { mutableLongStateOf(menuItem?.tax_id ?: 1) }
+    var taxId by remember { mutableLongStateOf(menuItem?.tax_id ?: 1L) }
     var rate by remember { mutableStateOf(menuItem?.rate?.toString() ?: "") }
-    var rateLock by remember { mutableStateOf(menuItem?.rate_lock ?: rateOptions.first()) }
+    var rateLock by remember { mutableStateOf(menuItem?.rate_lock ?: "YES") }
     var orderBy by remember { mutableLongStateOf(menuItem?.order_by ?: order) }
     var acRate by remember { mutableStateOf(menuItem?.ac_rate?.toString() ?: "") }
     var parcelRate by remember { mutableStateOf(menuItem?.parcel_rate?.toString() ?: "") }
@@ -450,69 +437,92 @@ fun MenuItemDialog(
     var preparationTime by remember { mutableStateOf(menuItem?.preparation_time?.toString() ?: "") }
     var isFavourite by remember { mutableStateOf(menuItem?.is_favourite == true) }
 
-    val focusManager = LocalFocusManager.current
     // Inventory fields
-    var isInventory by remember { mutableStateOf(menuItem?.is_inventory ?: 0L) }
+    var isInventory by remember { mutableLongStateOf(menuItem?.is_inventory ?: 0L) }
     var hsnCode by remember { mutableStateOf(menuItem?.hsn_code ?: "") }
     var minStock by remember { mutableStateOf(menuItem?.min_stock?.toString() ?: "") }
     var isRaw by remember { mutableStateOf(menuItem?.is_raw ?: "NO") }
     var stockMaintain by remember { mutableStateOf(menuItem?.stock_maintain ?: "NO") }
-    var unitId by remember { mutableStateOf(menuItem?.unit_id ?: 1) }
-    var isActive by remember { mutableStateOf(menuItem?.is_active ?: 1) }
+    var unitId by remember { mutableLongStateOf(menuItem?.unit_id ?: 1L) }
+    var isActive by remember { mutableLongStateOf(menuItem?.is_active ?: 1L) }
     var barcode by remember { mutableStateOf(menuItem?.menu_item_code ?: "") }
     var showScanner by remember { mutableStateOf(false) }
 
+    // Validation States
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var rateError by remember { mutableStateOf<String?>(null) }
+    var parcelRateError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
+    fun validate(): String? {
+        // Top to bottom validation logic
+        if (name.isBlank()) {
+            nameError = "Name is required"
+            return "name"
+        } else nameError = null
 
-            nameFocus.requestFocus()
+        if (rate.isBlank() || rate.toDoubleOrNull() == null) {
+            rateError = "Valid Rate is required"
+            return "rate"
+        } else rateError = null
+
+        if (parcelRate.isBlank() || parcelRate.toDoubleOrNull() == null) {
+            parcelRateError = "Valid Parcel Rate is required"
+            return "parcelRate"
+        } else parcelRateError = null
+
+        return null
     }
 
     ReusableBottomSheet(
         onDismiss = onDismiss,
         title = if (menuItem != null) "Edit Menu Item" else "Add Menu Item",
         onSave = {
-            val newMenuItem = TblMenuItemRequest(
-                menu_item_id = menuItem?.menu_item_id ?: 0,
-                menu_item_name = name,
-                menu_item_name_tamil = nameTamil,
-                item_cat_id = menuItemCatId,
-                rate = rate.toDoubleOrNull() ?: 0.0,
-                ac_rate = acRate.toDoubleOrNull() ?: 0.0,
-                parcel_rate = parcelRate.toDoubleOrNull() ?: 0.0,
-                parcel_charge = parcelCharge.toDoubleOrNull() ?: 0.0,
-                tax_id = taxId,
-                cess_specific = 0.0,
-                kitchen_cat_id = kitchenCatId,
-                stock_maintain = stockMaintain,
-                rate_lock = rateLock,
-                unit_id = unitId,
-                min_stock = minStock.toLong(),
-                hsn_code = hsnCode,
-                order_by = orderBy,
-                is_inventory = isInventory,
-                is_raw = isRaw,
-                is_available = isAvailable,
-                menu_item_code = barcode,
-                menu_id = menuId,
-                is_favourite = isFavourite,
-                is_active = isActive,
-                image = "",
-                preparation_time = preparationTime.toLong()
-            )
-            onSave(newMenuItem)
+            val errorField = validate()
+            if (errorField == null) {
+                val newMenuItem = TblMenuItemRequest(
+                    menu_item_id = menuItem?.menu_item_id ?: 0,
+                    menu_item_name = name,
+                    menu_item_name_tamil = nameTamil,
+                    item_cat_id = menuItemCatId,
+                    rate = rate.toDoubleOrNull() ?: 0.0,
+                    ac_rate = acRate.toDoubleOrNull() ?: 0.0,
+                    parcel_rate = parcelRate.toDoubleOrNull() ?: 0.0,
+                    parcel_charge = parcelCharge.toDoubleOrNull() ?: 0.0,
+                    tax_id = taxId,
+                    cess_specific = 0.0,
+                    kitchen_cat_id = kitchenCatId,
+                    stock_maintain = stockMaintain,
+                    rate_lock = rateLock,
+                    unit_id = unitId,
+                    min_stock = minStock.toLongOrNull() ?: 0L,
+                    hsn_code = hsnCode,
+                    order_by = orderBy,
+                    is_inventory = isInventory,
+                    is_raw = isRaw,
+                    is_available = isAvailable,
+                    menu_item_code = barcode,
+                    menu_id = menuId,
+                    is_favourite = isFavourite,
+                    is_active = isActive,
+                    image = "",
+                    preparation_time = preparationTime.toLongOrNull() ?: 0L
+                )
+                onSave(newMenuItem)
+            } else {
+                focusRequesters[errorField]?.requestFocus()
+            }
         },
-        isSaveEnabled = name.isNotBlank() && rate.isNotBlank() && menuItemCatId != 0L  && menuId != 0L && taxId != 0L,
+        isSaveEnabled = name.isNotBlank() && rate.isNotBlank() && menuItemCatId != 1L && menuId != 1L && taxId != 1L,
         buttonText = if (menuItem != null) "Update" else "Add"
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 300.dp) // limit dialog height
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .heightIn(max = 450.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Common Menu Fields
 
             BarcodeInputField(
                 value = barcode,
@@ -520,212 +530,164 @@ fun MenuItemDialog(
                 onBarcodeScanned = { barcode = it },
                 onCameraClick = { showScanner = true }
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = name,
                 onValueChange = { name = it.uppercase() },
-                label = { Text("Name") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(nameFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                    capitalization = KeyboardCapitalization.Characters
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { nameTamilFocus.requestFocus() }
-                )
+                label = "Name *",
+                focusRequester = focusRequesters["name"]!!,
+                nextFocusRequester = focusRequesters["nameTamil"],
+                isError = nameError != null,
+                errorMessage = nameError,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = nameTamil,
                 onValueChange = { nameTamil = it },
-                label = { Text("Name (Tamil)") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(nameTamilFocus),
-                singleLine = true,
+                label = "Name (Tamil)",
+                focusRequester = focusRequesters["nameTamil"]!!,
+                nextFocusRequester = focusRequesters["rate"],
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { rateFocus.requestFocus() }
-                )
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-
-            OutlinedTextField(
+            FormTextField(
                 value = rate,
                 onValueChange = { rate = it },
-                label = { Text("Rate") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(rateFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { acRateFocus.requestFocus() }
-                )
+                label = "Rate *",
+                focusRequester = focusRequesters["rate"]!!,
+                nextFocusRequester = focusRequesters["acRate"],
+                isError = rateError != null,
+                errorMessage = rateError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = acRate,
                 onValueChange = { acRate = it },
-                label = { Text("AC Rate") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(acRateFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { parcelRateFocus.requestFocus() }
-                )
+                label = "AC Rate",
+                focusRequester = focusRequesters["acRate"]!!,
+                nextFocusRequester = focusRequesters["parcelRate"],
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = parcelRate,
                 onValueChange = { parcelRate = it },
-                label = { Text("Parcel Rate") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(parcelRateFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { parcelChargeFocus.requestFocus() }
-                )
+                label = "Parcel Rate *",
+                focusRequester = focusRequesters["parcelRate"]!!,
+                nextFocusRequester = focusRequesters["parcelCharge"],
+                isError = parcelRateError != null,
+                errorMessage = parcelRateError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = parcelCharge,
                 onValueChange = { parcelCharge = it },
-                label = { Text("Parcel Charge") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(parcelChargeFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { preparationTimeFocus.requestFocus() }
-                )
+                label = "Parcel Charge",
+                focusRequester = focusRequesters["parcelCharge"]!!,
+                nextFocusRequester = focusRequesters["preparationTime"],
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = preparationTime,
                 onValueChange = { preparationTime = it },
-                label = { Text("Preparation Time (min)") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(preparationTimeFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { minStockFocus.requestFocus() }
-                )
+                label = "Preparation Time (min)",
+                focusRequester = focusRequesters["preparationTime"]!!,
+                nextFocusRequester = if (isInventory == 1L) focusRequesters["hsnCode"] else focusRequesters["minStock"],
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            if (isInventory == 1L) {
+                FormTextField(
+                    value = hsnCode,
+                    onValueChange = { hsnCode = it },
+                    label = "HSN Code",
+                    focusRequester = focusRequesters["hsnCode"]!!,
+                    nextFocusRequester = focusRequesters["minStock"],
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    scrollState = scrollState,
+                    scope = scope
+                )
+            }
+
+            FormTextField(
                 value = minStock,
                 onValueChange = { minStock = it },
-                label = { Text("Min Stock") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(minStockFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { orderByFocus.requestFocus() }
-                )
+                label = "Min Stock",
+                focusRequester = focusRequesters["minStock"]!!,
+                nextFocusRequester = focusRequesters["orderBy"],
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
+            FormTextField(
                 value = orderBy.toString(),
-                onValueChange = { orderBy = it.toLongOrNull() ?: 0 },
-                label = { Text("Order By") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(orderByFocus),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }
-                )
+                onValueChange = { orderBy = it.toLongOrNull() ?: 0L },
+                label = "Order By",
+                focusRequester = focusRequesters["orderBy"]!!,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                onImeAction = { focusManager.clearFocus() },
+                scrollState = scrollState,
+                scope = scope
             )
 
-            // Dropdowns
             StringDropdown(
-                options = rateOptions,
+                options = listOf("YES", "NO"),
                 selectedOption = rateLock,
                 onOptionSelected = { rateLock = it },
                 label = "Rate Lock",
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
             TaxDropdown(
                 taxes = taxes,
                 onTaxSelected = { taxId = it.tax_id },
-                label = "Select Tax",
+                label = "Select Tax *",
                 modifier = Modifier.fillMaxWidth(),
                 selectedTax = taxes.find { it.tax_id == taxId }
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
             MenuDropdown(
                 menus = menus,
                 onMenuSelected = { menuId = it.menu_id },
-                label = "Select Menu",
+                label = "Select Menu *",
                 modifier = Modifier.fillMaxWidth(),
                 selectedMenu = menus.find { it.menu_id == menuId }
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
             MenuCategoryDropdown(
                 menus = menuCategories,
                 onMenuCategorySelected = { menuItemCatId = it.item_cat_id },
-                label = "Select Menu Category",
+                label = "Select Menu Category *",
                 modifier = Modifier.fillMaxWidth(),
                 selectedMenuCategory = menuCategories.find { it.item_cat_id == menuItemCatId }
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
             KitchenGroupDropdown(
                 menus = kitchenCategories,
                 onKitchenCategorySelected = { kitchenCatId = it.kitchen_cat_id },
-                label = "Select Kitchen Category",
+                label = "Select Kitchen Category ",
                 modifier = Modifier.fillMaxWidth(),
                 selectedKitchenCategory = kitchenCategories.find { it.kitchen_cat_id == kitchenCatId }
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
             StringDropdown(
                 options = listOf("YES", "NO"),
@@ -734,59 +696,20 @@ fun MenuItemDialog(
                 label = "Is Available",
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
-                    checked = isFavourite,
-                    onCheckedChange = { isFavourite = it }
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Switch(checked = isFavourite, onCheckedChange = { isFavourite = it })
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Is Favourite")
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
-            // Switch to enable Inventory
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(
-                    checked = isInventory == 1L,
-                    onCheckedChange = { isInventory = if (it) 1L else 0L }
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Switch(checked = isInventory == 1L, onCheckedChange = { isInventory = if (it) 1L else 0L })
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Inventory Enabled")
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
-            // Inventory-only fields
             if (isInventory == 1L) {
-                OutlinedTextField(
-                    value = hsnCode,
-                    onValueChange = { hsnCode = it },
-                    label = { Text("HSN Code") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(hsnCodeFocus),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(
-                        onNext = { minStockFocus.requestFocus() }
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = minStock,
-                    onValueChange = { minStock = it },
-                    label = { Text("Minimum Stock") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(minStockFocus),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(
-                        onNext = { orderByFocus.requestFocus() }
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
                 UnitDropdown(
                     menus = units,
                     onUnitSelected = { unitId = it.unit_id },
@@ -794,7 +717,6 @@ fun MenuItemDialog(
                     modifier = Modifier.fillMaxWidth(),
                     selectedUnit = units.find { it.unit_id == unitId }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
 
                 StringDropdown(
                     options = listOf("YES", "NO"),
@@ -803,7 +725,6 @@ fun MenuItemDialog(
                     label = "Is Raw",
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
 
                 StringDropdown(
                     options = listOf("YES", "NO"),
@@ -812,7 +733,6 @@ fun MenuItemDialog(
                     label = "Stock Maintain",
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -821,17 +741,66 @@ fun MenuItemDialog(
         Dialog(onDismissRequest = { showScanner = false }) {
             Box(Modifier.fillMaxSize()) {
                 CameraBarcodeScanner(
-                    onResult = {
-                        barcode = it
-                    },
-                    onClose = {
-                        showScanner = false
-                    }
+                    onResult = { barcode = it },
+                    onClose = { showScanner = false }
                 )
             }
         }
     }
 }
+
+@Composable
+fun FormTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier,
+    nextFocusRequester: FocusRequester? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    onImeAction: (() -> Unit)? = null,
+    scrollState: ScrollState? = null,
+    scope: CoroutineScope? = null
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    var yPosition by remember { mutableFloatStateOf(0f) }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onGloballyPositioned { coordinates ->
+                yPosition = coordinates.positionInParent().y
+            }
+            .onFocusChanged { focusState ->
+                if (focusState.isFocused && scrollState != null && scope != null) {
+                    scope.launch {
+                        // Scrolling to the field with a small offset
+                        val target = (yPosition - 40f).coerceAtLeast(0f)
+                        scrollState.animateScrollTo(target.roundToInt())
+                    }
+                }
+            },
+        singleLine = true,
+        isError = isError,
+        supportingText = errorMessage?.let { 
+            { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) } 
+        },
+        keyboardOptions = keyboardOptions,
+        keyboardActions = KeyboardActions(
+            onNext = { nextFocusRequester?.requestFocus() },
+            onDone = { onImeAction?.invoke() },
+            onSearch = { onImeAction?.invoke() }
+        ),
+        interactionSource = interactionSource
+    )
+}
+
 sealed class MenuItemSettingsUiState {
     object Loading : MenuItemSettingsUiState()
     data class Success(val menuItems: List<TblMenuItemResponse>) : MenuItemSettingsUiState()

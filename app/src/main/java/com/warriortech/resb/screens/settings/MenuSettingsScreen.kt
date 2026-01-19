@@ -1,11 +1,12 @@
 package com.warriortech.resb.screens.settings
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -13,7 +14,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
@@ -24,9 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,7 +42,9 @@ import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.master.MenuSettingsViewModel
 import com.warriortech.resb.util.ReusableBottomSheet
 import com.warriortech.resb.util.SuccessDialogWithButton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,8 +70,8 @@ fun MenuSettingsScreen(
     }
 
     LaunchedEffect(errorMessage) {
-        if (errorMessage!= null) {
-            if (errorMessage=="Menu Chart deleted successfully" || errorMessage=="Menu Chart updated successfully" || errorMessage=="Menu Chart added successfully") {
+        if (errorMessage != null) {
+            if (errorMessage == "Menu Chart deleted successfully" || errorMessage == "Menu Chart updated successfully" || errorMessage == "Menu Chart added successfully") {
                 sucess = true
             } else {
                 failed = true
@@ -83,7 +88,7 @@ fun MenuSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Menu Chart ", color = SurfaceLight) },
+                title = { Text("Menu Chart", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -160,7 +165,7 @@ fun MenuSettingsScreen(
                             .padding(paddingValues),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
-                    )  {
+                    ) {
                         items(state.menus) { menu ->
                             MenuCard(
                                 menu = menu,
@@ -181,7 +186,6 @@ fun MenuSettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Show error message
                     Text(
                         text = state.message,
                         color = MaterialTheme.colorScheme.error
@@ -245,7 +249,7 @@ fun MenuSettingsScreen(
             )
         }
 
-        if (failed){
+        if (failed) {
             SuccessDialogWithButton(
                 title = "Failure",
                 description = errorMessage.toString(),
@@ -288,9 +292,11 @@ fun MenuCard(
             }
 
             IconButton(onClick = { onEdit(menu) }) {
-                Icon(Icons.Default.Edit,
+                Icon(
+                    Icons.Default.Edit,
                     contentDescription = "Edit",
-                    tint = BluePrimary)
+                    tint = BluePrimary
+                )
             }
             IconButton(onClick = { onDelete(menu) }) {
                 Icon(
@@ -303,6 +309,7 @@ fun MenuCard(
     }
 }
 
+@SuppressLint("AutoboxingStateCreation")
 @Composable
 fun MenuDialog(
     menu: Menu?,
@@ -310,9 +317,19 @@ fun MenuDialog(
     onConfirm: (Menu) -> Unit,
     order: String
 ) {
-
-    val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+
+    // Centralized Focus Requesters
+    val focusRequesters = remember {
+        mapOf(
+            "name" to FocusRequester(),
+            "description" to FocusRequester(),
+            "startTime" to FocusRequester(),
+            "endTime" to FocusRequester()
+        )
+    }
 
     // State
     var name by remember { mutableStateOf(menu?.menu_name ?: "") }
@@ -321,19 +338,27 @@ fun MenuDialog(
     var endTime by remember { mutableStateOf(menu?.end_time?.toString() ?: "") }
     var isActive by remember { mutableStateOf(menu?.is_active ?: true) }
 
-    // Focus
-    val nameFocus = remember { FocusRequester() }
-    val descriptionFocus = remember { FocusRequester() }
-    val startTimeFocus = remember { FocusRequester() }
-    val endTimeFocus = remember { FocusRequester() }
+    // Validation States
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var descriptionError by remember { mutableStateOf<String?>(null) }
 
-    // BringIntoView
-    val nameBring = remember { BringIntoViewRequester() }
-    val descBring = remember { BringIntoViewRequester() }
-    val startBring = remember { BringIntoViewRequester() }
-    val endBring = remember { BringIntoViewRequester() }
+    fun validate(): String? {
+        if (name.isBlank()) {
+            nameError = "Name is required"
+            return "name"
+        } else nameError = null
 
-    val scrollState = rememberScrollState()
+        if (description.isBlank()) {
+            descriptionError = "Order By is required"
+            return "description"
+        } else descriptionError = null
+
+        return null
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequesters["name"]?.requestFocus()
+    }
 
     ReusableBottomSheet(
         onDismiss = onDismiss,
@@ -341,136 +366,92 @@ fun MenuDialog(
         isSaveEnabled = name.isNotBlank() && description.isNotBlank(),
         buttonText = if (menu == null) "Add" else "Update",
         onSave = {
-            onConfirm(
-                Menu(
-                    menu_id = menu?.menu_id ?: 0L,
-                    menu_name = name,
-                    order_by = description,
-                    start_time = startTime.toFloat(),
-                    end_time = endTime.toFloat(),
-                    is_active = isActive
+            val errorField = validate()
+            if (errorField == null) {
+                onConfirm(
+                    Menu(
+                        menu_id = menu?.menu_id ?: 0L,
+                        menu_name = name,
+                        order_by = description,
+                        start_time = startTime.toFloatOrNull() ?: 0f,
+                        end_time = endTime.toFloatOrNull() ?: 0f,
+                        is_active = isActive
+                    )
                 )
-            )
+            } else {
+                focusRequesters[errorField]?.requestFocus()
+            }
         }
     ) {
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()                 // 🔥 REQUIRED
-                .imePadding()                  // 🔥 REQUIRED
-                .navigationBarsPadding()
+                .fillMaxWidth()
+                .heightIn(max = 400.dp)
+                .verticalScroll(scrollState)
+                .imePadding()
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // NAME
-            OutlinedTextField(
+            FormTextField(
                 value = name,
                 onValueChange = { name = it.uppercase() },
-                label = { Text("Name") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(nameFocus)
-                    .bringIntoViewRequester(nameBring)
-                    .onFocusChanged {
-                        if (it.isFocused) {
-                            coroutineScope.launch {
-                                nameBring.bringIntoView()
-                            }
-                        }
-                    },
-                singleLine = true,
+                label = "Name *",
+                focusRequester = focusRequesters["name"]!!,
+                nextFocusRequester = focusRequesters["description"],
+                isError = nameError != null,
+                errorMessage = nameError,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { descriptionFocus.requestFocus() }
-                )
+                scrollState = scrollState,
+                scope = scope
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            // ORDER BY
-            OutlinedTextField(
+            FormTextField(
                 value = description,
                 onValueChange = { description = it.uppercase() },
-                label = { Text("Order By") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(descriptionFocus)
-                    .bringIntoViewRequester(descBring)
-                    .onFocusChanged {
-                        if (it.isFocused) {
-                            coroutineScope.launch {
-                                descBring.bringIntoView()
-                            }
-                        }
-                    },
-                singleLine = true,
+                label = "Order By *",
+                focusRequester = focusRequesters["description"]!!,
+                nextFocusRequester = focusRequesters["startTime"],
+                isError = descriptionError != null,
+                errorMessage = descriptionError,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { startTimeFocus.requestFocus() }
-                )
+                scrollState = scrollState,
+                scope = scope
             )
-
-            Spacer(Modifier.height(16.dp))
 
             Text(
                 text = "Menu Time Settings",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            // START TIME
-            OutlinedTextField(
+            FormTextField(
                 value = startTime,
                 onValueChange = { startTime = it },
-                label = { Text("Start Time") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(startTimeFocus)
-                    .bringIntoViewRequester(startBring)
-                    .onFocusChanged {
-                        if (it.isFocused) {
-                            coroutineScope.launch {
-                                startBring.bringIntoView()
-                            }
-                        }
-                    },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(
-                    onNext = { endTimeFocus.requestFocus() }
-                )
+                label = "Start Time",
+                focusRequester = focusRequesters["startTime"]!!,
+                nextFocusRequester = focusRequesters["endTime"],
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                scrollState = scrollState,
+                scope = scope
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            // END TIME
-            OutlinedTextField(
+            FormTextField(
                 value = endTime,
                 onValueChange = { endTime = it },
-                label = { Text("End Time") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(endTimeFocus)
-                    .bringIntoViewRequester(endBring)
-                    .onFocusChanged {
-                        if (it.isFocused) {
-                            coroutineScope.launch {
-                                endBring.bringIntoView()
-                            }
-                        }
-                    },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() } // ✅ correct
-                )
+                label = "End Time",
+                focusRequester = focusRequesters["endTime"]!!,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                onImeAction = { focusManager.clearFocus() },
+                scrollState = scrollState,
+                scope = scope
             )
 
-            Spacer(Modifier.height(16.dp))
-
-            // ACTIVE SWITCH
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Switch(
                     checked = isActive,
                     onCheckedChange = { isActive = it }
@@ -479,7 +460,7 @@ fun MenuDialog(
                 Text("Active")
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
         }
     }
 }

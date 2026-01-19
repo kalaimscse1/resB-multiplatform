@@ -1,16 +1,20 @@
 package com.warriortech.resb.screens.settings
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -20,6 +24,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -28,16 +36,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.warriortech.resb.model.Area
 import com.warriortech.resb.ui.components.MobileOptimizedCard
+import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.master.AreaViewModel
-import com.warriortech.resb.model.Area
-import com.warriortech.resb.ui.theme.BluePrimary
-import com.warriortech.resb.ui.viewmodel.master.AreaUiState
-import com.warriortech.resb.ui.viewmodel.master.MenuSettingsViewModel
+import com.warriortech.resb.util.ReusableBottomSheet
 import com.warriortech.resb.util.SuccessDialogWithButton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +55,7 @@ fun AreaSettingsScreen(
     viewModel: AreaViewModel = hiltViewModel(),
     drawerState: DrawerState,
     navController: NavHostController
-    ) {
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingArea by remember { mutableStateOf<Area?>(null) }
@@ -55,6 +64,7 @@ fun AreaSettingsScreen(
     var sucess by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
     // Handle messages
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
@@ -77,8 +87,8 @@ fun AreaSettingsScreen(
     }
 
     LaunchedEffect(errorMessage) {
-        if (errorMessage!= null) {
-            if (errorMessage=="Area deleted successfully") {
+        if (errorMessage != null) {
+            if (errorMessage == "Area deleted successfully") {
                 sucess = true
             } else {
                 failed = true
@@ -125,9 +135,9 @@ fun AreaSettingsScreen(
                 contentColor = SurfaceLight,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                val menuItems = uiState.areas
+                val areas = uiState.areas
                 Text(
-                    text = "Total: ${menuItems.size}",
+                    text = "Total: ${areas.size}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -174,7 +184,7 @@ fun AreaSettingsScreen(
             )
         }
 
-        if (failed){
+        if (failed) {
             SuccessDialogWithButton(
                 title = "Failure",
                 description = errorMessage.toString(),
@@ -189,9 +199,10 @@ fun AreaSettingsScreen(
     }
 
     if (showAddDialog) {
-        AddAreaDialog(
+        AreaDialog(
+            area = null,
             onDismiss = { showAddDialog = false },
-            onAdd = { name ->
+            onConfirm = { name , active ->
                 viewModel.addArea(name)
                 showAddDialog = false
             }
@@ -199,11 +210,11 @@ fun AreaSettingsScreen(
     }
 
     editingArea?.let { area ->
-        EditAreaDialog(
+        AreaDialog(
             area = area,
             onDismiss = { editingArea = null },
-            onUpdate = { updatedArea ->
-                viewModel.updateArea(updatedArea)
+            onConfirm = { name, active ->
+                viewModel.updateArea(area.copy(area_name = name, isActvice = active))
                 editingArea = null
             }
         )
@@ -234,15 +245,22 @@ fun AreaCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                Text(
+                    text = if (area.isActvice) "Active" else "Inactive",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (area.isActvice) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit,
+                    Icon(
+                        Icons.Default.Edit,
                         contentDescription = "Edit",
-                        tint = BluePrimary)
+                        tint = BluePrimary
+                    )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
@@ -256,224 +274,110 @@ fun AreaCard(
     }
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("AutoboxingStateCreation")
 @Composable
-fun AddAreaDialog(
+fun AreaDialog(
+    area: Area?,
     onDismiss: () -> Unit,
-    onAdd: (String) -> Unit
+    onConfirm: (String, Boolean) -> Unit = { _, _ -> },
+    onAdd: (String) -> Unit = { }
 ) {
-    var name by remember { mutableStateOf("") }
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    val nameFocus = remember { FocusRequester() }
+
+    // Centralized Focus Requesters
+    val focusRequesters = remember {
+        mapOf(
+            "name" to FocusRequester()
+        )
+    }
+
+    // State
+    var name by remember { mutableStateOf(area?.area_name ?: "") }
+    var isActive by remember { mutableStateOf(area?.isActvice ?: true) }
+
+    // Validation State
+    var nameError by remember { mutableStateOf<String?>(null) }
+
+    fun validate(): String? {
+        if (name.isBlank()) {
+            nameError = "Area Name is required"
+            return "name"
+        } else nameError = null
+        return null
+    }
 
     LaunchedEffect(Unit) {
-        nameFocus.requestFocus()
+        focusRequesters["name"]?.requestFocus()
     }
-    
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
-    val scope = rememberCoroutineScope()
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = {
-            // Small drag indicator at the top
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 40.dp, height = 4.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(50)
-                        )
-                )
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 20.dp)
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Title
-            Text(
-                text = "Add Area",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // Text fields
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it.uppercase() },
-                label = { Text("Area Name") },
-                placeholder = { Text("e.g. DINING AREA") },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Done,
-                    capitalization = KeyboardCapitalization.Characters
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { 
-                        focusManager.clearFocus()
-                        if (name.isNotBlank()) onAdd(name)
-                    }
-                )
-            )
-
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        onDismiss()
-                    }
-                }) {
-                    Text("Cancel")
+    ReusableBottomSheet(
+        onDismiss = onDismiss,
+        title = if (area == null) "Add Area" else "Edit Area",
+        isSaveEnabled = name.isNotBlank(),
+        buttonText = if (area == null) "Add" else "Update",
+        onSave = {
+            val errorField = validate()
+            if (errorField == null) {
+                if (area == null) {
+                    onAdd(name)
+                } else {
+                    onConfirm(name, isActive)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            onAdd(name)
-                        }
-                    },
-                    enabled = name.isNotBlank(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Add")
-                }
+            } else {
+                focusRequesters[errorField]?.requestFocus()
             }
         }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditAreaDialog(
-    area: Area,
-    onDismiss: () -> Unit,
-    onUpdate: (Area) -> Unit
-) {
-    var name by remember { mutableStateOf(area.area_name) }
-    var isActive by remember { mutableStateOf(area.isActvice) }
-    val focusManager = LocalFocusManager.current
-
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
-    val scope = rememberCoroutineScope()
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 40.dp, height = 4.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(50)
-                        )
-                )
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 20.dp)
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .heightIn(max = 400.dp)
+                .verticalScroll(scrollState)
+                .imePadding()
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Title
-            Text(
-                text = "Edit Area",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // Text field
-            OutlinedTextField(
+            FormTextField(
                 value = name,
                 onValueChange = { name = it.uppercase() },
-                label = { Text("Area Name") },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                label = "Area Name *",
+                focusRequester = focusRequesters["name"]!!,
+                isError = nameError != null,
+                errorMessage = nameError,
                 keyboardOptions = KeyboardOptions(
                     imeAction = ImeAction.Done,
                     capitalization = KeyboardCapitalization.Characters
                 ),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }
-                )
+                onImeAction = {
+                    val errorField = validate()
+                    if (errorField == null) {
+                        if (area == null) onAdd(name) else onConfirm(name, isActive)
+                    } else {
+                        focusRequesters[errorField]?.requestFocus()
+                    }
+                },
+                scrollState = scrollState,
+                scope = scope
             )
 
-            // Active checkbox
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Checkbox(
-                    checked = isActive,
-                    onCheckedChange = { isActive = it }
-                )
-                Text("Active")
+            if (area != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Switch(
+                        checked = isActive,
+                        onCheckedChange = { isActive = it }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Active")
+                }
             }
 
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        onDismiss()
-                    }
-                }) {
-                    Text("Cancel")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            onUpdate(area.copy(area_name = name, isActvice = isActive))
-                        }
-                    },
-                    enabled = name.isNotBlank(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Update")
-                }
-            }
+            Spacer(Modifier.height(12.dp))
         }
     }
 }

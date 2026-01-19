@@ -1,14 +1,18 @@
 package com.warriortech.resb.screens.settings
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -19,6 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -33,10 +40,11 @@ import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.master.MenuCategorySettingsViewModel
-import com.warriortech.resb.ui.viewmodel.master.MenuSettingsViewModel
 import com.warriortech.resb.util.ReusableBottomSheet
 import com.warriortech.resb.util.SuccessDialogWithButton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,8 +75,8 @@ fun MenuCategorySettingsScreen(
     }
 
     LaunchedEffect(errorMessage) {
-        if (errorMessage!= null) {
-            if (errorMessage=="Menu Category deleted successfully" || errorMessage=="Menu Category updated successfully" || errorMessage=="Menu Category added successfully") {
+        if (errorMessage != null) {
+            if (errorMessage == "Menu Category deleted successfully" || errorMessage == "Menu Category updated successfully" || errorMessage == "Menu Category added successfully") {
                 sucess = true
             } else {
                 failed = true
@@ -79,7 +87,7 @@ fun MenuCategorySettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("MenuCategory", color = SurfaceLight) },
+                title = { Text("Menu Category", color = SurfaceLight) },
                 navigationIcon = {
                     IconButton(
                         onClick = {
@@ -180,10 +188,6 @@ fun MenuCategorySettingsScreen(
 
 
         if (showAddDialog) {
-            val nameFocus = remember { FocusRequester() }
-            LaunchedEffect(showAddDialog) {
-                nameFocus.requestFocus()
-            }
             CategoryDialog(
                 category = null,
                 onDismiss = { showAddDialog = false },
@@ -193,16 +197,11 @@ fun MenuCategorySettingsScreen(
                         showAddDialog = false
                     }
                 },
-                order = order,
-                nameFocus = nameFocus
+                order = order
             )
         }
 
         editingCategory?.let { category ->
-            val nameFocus = remember { FocusRequester() }
-            LaunchedEffect(editingCategory) {
-                nameFocus.requestFocus()
-            }
             CategoryDialog(
                 category = category,
                 onDismiss = { editingCategory = null },
@@ -212,8 +211,7 @@ fun MenuCategorySettingsScreen(
                         editingCategory = null
                     }
                 },
-                order = order,
-                nameFocus = nameFocus
+                order = order
             )
         }
 
@@ -230,7 +228,7 @@ fun MenuCategorySettingsScreen(
             )
         }
 
-        if (failed){
+        if (failed) {
             SuccessDialogWithButton(
                 title = "Failure",
                 description = errorMessage.toString(),
@@ -265,12 +263,19 @@ fun CategoryCard(
                     text = category.item_cat_name,
                     style = MaterialTheme.typography.titleMedium
                 )
+                Text(
+                    text = if (category.is_active != false) "Active" else "Inactive",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (category.is_active != false) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                )
             }
 
             IconButton(onClick = { onEdit(category) }) {
-                Icon(Icons.Default.Edit,
+                Icon(
+                    Icons.Default.Edit,
                     contentDescription = "Edit",
-                    tint = BluePrimary)
+                    tint = BluePrimary
+                )
             }
             IconButton(onClick = { onDelete(category) }) {
                 Icon(
@@ -283,79 +288,120 @@ fun CategoryCard(
     }
 }
 
+@SuppressLint("AutoboxingStateCreation")
 @Composable
 fun CategoryDialog(
     category: MenuCategory?,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Boolean) -> Unit,
-    order: String,
-    nameFocus: FocusRequester = remember { FocusRequester() }
+    order: String
 ) {
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
+    // Centralized Focus Requesters
+    val focusRequesters = remember {
+        mapOf(
+            "name" to FocusRequester(),
+            "order" to FocusRequester()
+        )
+    }
+
+    // State
     var name by remember { mutableStateOf(category?.item_cat_name ?: "") }
     var orderBy by remember { mutableStateOf(category?.order_by ?: order) }
     var isActive by remember { mutableStateOf(category?.is_active != false) }
 
-    val orderFocus = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
+    // Validation States
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var orderError by remember { mutableStateOf<String?>(null) }
+
+    fun validate(): String? {
+        if (name.isBlank()) {
+            nameError = "Category Name is required"
+            return "name"
+        } else nameError = null
+
+        if (orderBy.isBlank()) {
+            orderError = "Order is required"
+            return "order"
+        } else orderError = null
+
+        return null
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequesters["name"]?.requestFocus()
+    }
 
     ReusableBottomSheet(
         onDismiss = onDismiss,
         title = if (category == null) "Add Category" else "Edit Category",
-        onSave = { onConfirm(name, orderBy, isActive) },
-        isSaveEnabled = name.isNotBlank(),
+        onSave = {
+            val errorField = validate()
+            if (errorField == null) {
+                onConfirm(name, orderBy, isActive)
+            } else {
+                focusRequesters[errorField]?.requestFocus()
+            }
+        },
+        isSaveEnabled = name.isNotBlank() && orderBy.isNotBlank(),
         buttonText = if (category == null) "Add" else "Update"
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = 400.dp)
+                .verticalScroll(scrollState)
                 .imePadding()
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // NAME
-            OutlinedTextField(
+            FormTextField(
                 value = name,
                 onValueChange = { name = it.uppercase() },
-                label = { Text("Name") },
-                placeholder = { Text("e.g. STARTERS") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(nameFocus),
-                singleLine = true,
+                label = "Category Name *",
+                focusRequester = focusRequesters["name"]!!,
+                nextFocusRequester = focusRequesters["order"],
+                isError = nameError != null,
+                errorMessage = nameError,
                 keyboardOptions = KeyboardOptions(
                     imeAction = ImeAction.Next,
                     capitalization = KeyboardCapitalization.Characters
                 ),
-                keyboardActions = KeyboardActions(
-                    onNext = { orderFocus.requestFocus() }
-                )
+                scrollState = scrollState,
+                scope = scope
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            // ORDER
-            OutlinedTextField(
+            FormTextField(
                 value = orderBy,
                 onValueChange = { orderBy = it.uppercase() },
-                label = { Text("Order") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(orderFocus),
-                singleLine = true,
+                label = "Order *",
+                focusRequester = focusRequesters["order"]!!,
+                isError = orderError != null,
+                errorMessage = orderError,
                 keyboardOptions = KeyboardOptions(
                     imeAction = ImeAction.Done,
                     capitalization = KeyboardCapitalization.Characters
                 ),
-                keyboardActions = KeyboardActions(
-                    onDone = { 
-                        focusManager.clearFocus()
+                onImeAction = {
+                    val errorField = validate()
+                    if (errorField == null) {
                         onConfirm(name, orderBy, isActive)
+                    } else {
+                        focusRequesters[errorField]?.requestFocus()
                     }
-                )
+                },
+                scrollState = scrollState,
+                scope = scope
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Switch(
                     checked = isActive,
                     onCheckedChange = { isActive = it }
@@ -363,6 +409,8 @@ fun CategoryDialog(
                 Spacer(Modifier.width(8.dp))
                 Text("Active")
             }
+
+            Spacer(Modifier.height(12.dp))
         }
     }
 }

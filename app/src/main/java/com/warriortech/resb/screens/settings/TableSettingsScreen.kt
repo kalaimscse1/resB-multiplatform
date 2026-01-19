@@ -1,11 +1,16 @@
 package com.warriortech.resb.screens.settings
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -21,6 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -37,11 +45,12 @@ import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
-import com.warriortech.resb.ui.viewmodel.master.MenuSettingsViewModel
 import com.warriortech.resb.ui.viewmodel.master.TableSettingsViewModel
-import kotlinx.coroutines.launch
 import com.warriortech.resb.util.AreaDropdown
 import com.warriortech.resb.util.StringDropdown
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,12 +123,12 @@ fun TableSettingsScreen(
                 contentColor = SurfaceLight,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                val menuItems = when (val state = uiState) {
-                    is TableSettingsUiState.Success -> state.tables
-                    else -> emptyList()
+                val tablesCount = when (val state = uiState) {
+                    is TableSettingsUiState.Success -> state.tables.size
+                    else -> 0
                 }
                 Text(
-                    text = "Total: ${menuItems.size}",
+                    text = "Total: $tablesCount",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -198,8 +207,7 @@ fun TableSettingsScreen(
                         scope.launch {
                             snackbarHostState.showSnackbar("Please select a valid area")
                         }
-                        return@TableDialog
-                    }else{
+                    } else {
                         scope.launch {
                             viewModel.addTable(table)
                             showAddDialog = false
@@ -257,9 +265,11 @@ fun TableItem(
 
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit,
+                    Icon(
+                        Icons.Default.Edit,
                         contentDescription = "Edit",
-                        tint = BluePrimary)
+                        tint = BluePrimary
+                    )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
@@ -273,6 +283,7 @@ fun TableItem(
     }
 }
 
+@SuppressLint("AutoboxingStateCreation")
 @Composable
 fun TableDialog(
     table: Table?,
@@ -280,92 +291,136 @@ fun TableDialog(
     onSave: (TblTable) -> Unit,
     areas: List<Area>
 ) {
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
+    // Centralized Focus Requesters
+    val focusRequesters = remember {
+        mapOf(
+            "name" to FocusRequester(),
+            "capacity" to FocusRequester()
+        )
+    }
+
     val acOptions = listOf("AC", "NON-AC")
     val tableStatusOptions = listOf("ACTIVE", "INACTIVE")
+    
     var tableNumber by remember { mutableStateOf(table?.table_name ?: "") }
     var capacity by remember { mutableStateOf(table?.seating_capacity?.toString() ?: "1") }
-    var areaId by remember { mutableStateOf(table?.area_id ?: 1) }
-    var isAc by remember { mutableStateOf(table?.is_ac ?: acOptions.firstOrNull()) }
+    var areaId: Long by remember { mutableLongStateOf(table?.area_id ?: 1) }
+    var isAc by remember { mutableStateOf(table?.is_ac ?: acOptions.first()) }
     var tableStatus by remember {
         mutableStateOf(
-            table?.table_status ?: tableStatusOptions.firstOrNull()
+            table?.table_status ?: tableStatusOptions.first()
         )
     }
     var isActive by remember { mutableStateOf(table?.is_active ?: true) }
-    val focusManager = LocalFocusManager.current
-    val nameFocus = remember { FocusRequester() }
-    val capacityFocus = remember { FocusRequester() }
+
+    // Validation States
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var capacityError by remember { mutableStateOf<String?>(null) }
+
+    fun validate(): String? {
+        if (tableNumber.isBlank()) {
+            nameError = "Table Name is required"
+            return "name"
+        } else nameError = null
+
+        if (capacity.isBlank() || capacity.toIntOrNull() == null) {
+            capacityError = "Valid Capacity is required"
+            return "capacity"
+        } else capacityError = null
+
+        return null
+    }
 
     LaunchedEffect(Unit) {
-        nameFocus.requestFocus()
+        focusRequesters["name"]?.requestFocus()
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (table != null) "Edit Table" else "Add Table") },
         text = {
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                OutlinedTextField(
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FormTextField(
                     value = tableNumber,
                     onValueChange = { tableNumber = it.uppercase() },
-                    label = { Text("Table Name") },
-                    placeholder = { Text("e.g. T1 or TABLE 1") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(nameFocus),
-                    singleLine = true,
+                    label = "Table Name *",
+                    focusRequester = focusRequesters["name"]!!,
+                    nextFocusRequester = focusRequesters["capacity"],
+                    isError = nameError != null,
+                    errorMessage = nameError,
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Next,
                         capitalization = KeyboardCapitalization.Characters
                     ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { capacityFocus.requestFocus() }
-                    )
+                    scrollState = scrollState,
+                    scope = scope
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+
                 AreaDropdown(
                     areas = areas,
                     modifier = Modifier.fillMaxWidth(),
                     label = "Select Area",
-                    selectedArea = areas.find { it.area_id == areaId },
+                    selectedArea = areas.find { it.area_id.toInt().toLong() == areaId },
                     onAreaSelected = { area ->
                         areaId = area.area_id
                     }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+
+                FormTextField(
                     value = capacity,
                     onValueChange = { capacity = it },
-                    label = { Text("Capacity") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(capacityFocus),
-                    singleLine = true,
+                    label = "Capacity *",
+                    focusRequester = focusRequesters["capacity"]!!,
+                    isError = capacityError != null,
+                    errorMessage = capacityError,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
                     ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { focusManager.clearFocus() }
-                    )
+                    onImeAction = {
+                        val errorField = validate()
+                        if (errorField == null) {
+                            val newTable = TblTable(
+                                table_id = table?.table_id ?: 0L,
+                                area_id = areaId,
+                                table_name = tableNumber,
+                                seating_capacity = capacity.toInt(),
+                                is_ac = isAc,
+                                table_status = tableStatus,
+                                table_availability = "AVAILABLE",
+                                is_active = isActive
+                            )
+                            onSave(newTable)
+                        } else {
+                            focusRequesters[errorField]?.requestFocus()
+                        }
+                    },
+                    scrollState = scrollState,
+                    scope = scope
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+
                 StringDropdown(
                     options = acOptions,
                     selectedOption = isAc,
-                    onOptionSelected = { selectedStatus ->
-                        isAc = selectedStatus // Update your status state
-                    },
+                    onOptionSelected = { isAc = it },
                     label = "AC Status",
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+
                 StringDropdown(
                     options = tableStatusOptions,
                     selectedOption = tableStatus,
-                    onOptionSelected = { selectedStatus ->
-                        tableStatus = selectedStatus // Update your status state
-                    },
+                    onOptionSelected = { tableStatus = it },
                     label = "Table Status",
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -374,19 +429,23 @@ fun TableDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val newTable = TblTable(
-                        table_id = table?.table_id ?: 0L,
-                        area_id = areaId,
-                        table_name = tableNumber,
-                        seating_capacity =  capacity.toInt(),
-                        is_ac =  isAc.toString(),
-                        table_status =  tableStatus.toString(),
-                        table_availability = "AVAILABLE",
-                        is_active =  isActive
-                    )
-                    onSave(newTable)
-                },
-                enabled = tableNumber.isNotBlank() && capacity.isNotBlank() && capacity.toIntOrNull() != null
+                    val errorField = validate()
+                    if (errorField == null) {
+                        val newTable = TblTable(
+                            table_id = table?.table_id ?: 0L,
+                            area_id = areaId,
+                            table_name = tableNumber,
+                            seating_capacity = capacity.toInt(),
+                            is_ac = isAc,
+                            table_status = tableStatus,
+                            table_availability = "AVAILABLE",
+                            is_active = isActive
+                        )
+                        onSave(newTable)
+                    } else {
+                        focusRequesters[errorField]?.requestFocus()
+                    }
+                }
             ) {
                 Text(if (table != null) "Update" else "Save")
             }
