@@ -244,6 +244,7 @@ fun KitchenCategoryDialog(
                     value = categoryName,
                     onValueChange = { categoryName = it.uppercase() },
                     label = { Text("Kitchen Category Name") },
+                    placeholder = { Text("e.g. MAIN KITCHEN") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(nameFocus),
