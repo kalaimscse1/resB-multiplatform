@@ -221,6 +221,12 @@ fun KitchenCategoryDialog(
 ) {
     var categoryName by remember { mutableStateOf(kitchenCategory?.kitchen_cat_name ?: "") }
     var isActive by remember { mutableStateOf(kitchenCategory?.is_active == 1L) }
+    val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -231,7 +237,27 @@ fun KitchenCategoryDialog(
                     value = categoryName,
                     onValueChange = { categoryName = it.uppercase() },
                     label = { Text("Kitchen Category Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        capitalization = KeyboardCapitalization.Characters
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            if (categoryName.isNotBlank()) {
+                                val newKitchenCategory = KitchenCategory(
+                                    kitchen_cat_id = kitchenCategory?.kitchen_cat_id ?: 0,
+                                    kitchen_cat_name = categoryName,
+                                    is_active = if (isActive) 1L else 0L
+                                )
+                                onSave(newKitchenCategory)
+                            }
+                        }
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(

@@ -170,6 +170,14 @@ fun AddEditCounterDialog(
     var counterName by remember { mutableStateOf(counter?.counter_name ?: "") }
     var ipAddress by remember { mutableStateOf(counter?.ip_address ?: "") }
     var isActive by remember { mutableStateOf(counter?.is_active ?: true) }
+    
+    val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
+    val ipFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
 
     ReusableBottomSheet(
         title = if (counter != null) "Edit Counter" else "Add Counter",
@@ -191,7 +199,15 @@ fun AddEditCounterDialog(
                 value = counterName,
                 onValueChange = { counterName = it.uppercase() },
                 label = { Text("Counter Name") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(nameFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Characters
+                ),
+                keyboardActions = KeyboardActions(onNext = { ipFocus.requestFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -199,7 +215,12 @@ fun AddEditCounterDialog(
                 value = ipAddress,
                 onValueChange = { ipAddress = it },
                 label = { Text("IP Address") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(ipFocus),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
             )
             Spacer(modifier = Modifier.height(8.dp))
 

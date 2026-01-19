@@ -208,6 +208,14 @@ fun PrinterDialog(
     var ipAddress by remember { mutableStateOf(printer?.ip_address ?: "") }
     var kitchenCatId by remember { mutableStateOf(printer?.kitchen_cat?.kitchen_cat_id ?: 1) }
     var isActive by remember { mutableStateOf(printer?.is_active ?: 1) }
+    
+    val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
+    val ipFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -226,13 +234,23 @@ fun PrinterDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.printer)) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { ipFocus.requestFocus() })
                 )
                 OutlinedTextField(
                     value = ipAddress,
                     onValueChange = { ipAddress = it },
                     label = { Text(stringResource(R.string.ip_address)) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(ipFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
                 KitchenGroupDropdown(
                     menus = kitchenCategories,

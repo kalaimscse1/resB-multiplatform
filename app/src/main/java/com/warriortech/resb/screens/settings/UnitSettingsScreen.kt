@@ -217,6 +217,13 @@ fun UnitDialog(
 ) {
     var unitName by remember { mutableStateOf(unit?.unit_name ?: "") }
     var isActive by remember { mutableStateOf(unit?.is_active == 1L) }
+    
+    val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -227,7 +234,15 @@ fun UnitDialog(
                     value = unitName,
                     onValueChange = { unitName = it.uppercase() },
                     label = { Text("Unit Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        capitalization = KeyboardCapitalization.Characters
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(

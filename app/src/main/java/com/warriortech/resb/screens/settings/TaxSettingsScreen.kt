@@ -222,6 +222,16 @@ fun TaxDialog(
     var taxPercentage by remember { mutableStateOf(tax?.tax_percentage?.toString() ?: "") }
     var cessPercentage by remember { mutableStateOf(tax?.cess_percentage?.toString() ?: "") }
     var isActive by remember { mutableStateOf(tax?.is_active ?: true) }
+    
+    val focusManager = LocalFocusManager.current
+    val nameFocus = remember { FocusRequester() }
+    val taxFocus = remember { FocusRequester() }
+    val cessFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        nameFocus.requestFocus()
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (tax != null) "Edit Tax" else "Add Tax") },
@@ -231,21 +241,42 @@ fun TaxDialog(
                     value = taxName,
                     onValueChange = { taxName = it },
                     label = { Text("Tax Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { taxFocus.requestFocus() })
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = taxPercentage,
                     onValueChange = { taxPercentage = it },
                     label = { Text("Tax Percentage") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(taxFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(onNext = { cessFocus.requestFocus() })
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = cessPercentage,
                     onValueChange = { cessPercentage = it },
                     label = { Text("Cess Percentage") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(cessFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
