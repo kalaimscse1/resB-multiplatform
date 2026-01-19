@@ -6,7 +6,13 @@ A comprehensive Android restaurant billing system built with Kotlin, Jetpack Com
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (Latest: December 30, 2025 - Update 2)
+## Recent Changes (Latest: January 19, 2026)
+- **SETTINGS KEYBOARD NAVIGATION IMPROVEMENTS**:
+  - Applied focus management and keyboard actions across ALL settings screens
+  - Enhanced screens: Kitchen Category, Tax, Counter, Unit, Printer, Area, Menu Category, Table
+  - Features: Automatic focus on dialog open, ImeAction.Next for multi-field navigation, ImeAction.Done for auto-saving, automatic capitalization, and keyboard visibility fixes with `imePadding`
+
+## Previous Changes (December 30, 2025 - Update 2)
 - **UI/UX FIXES & EXCEL IMPORT**:
   - Fixed Enter key behavior in Menu Category, Table, and Area dialogs - pressing Done now submits instead of creating newlines
   - Improved keyboard actions in Category dialog - pressing Done in Order field now submits form
