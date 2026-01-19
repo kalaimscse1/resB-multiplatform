@@ -309,6 +309,7 @@ fun TableDialog(
                     value = tableNumber,
                     onValueChange = { tableNumber = it.uppercase() },
                     label = { Text("Table Name") },
+                    placeholder = { Text("e.g. T1 or TABLE 1") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(nameFocus),

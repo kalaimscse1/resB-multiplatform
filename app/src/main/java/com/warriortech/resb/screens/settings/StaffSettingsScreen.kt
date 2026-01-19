@@ -219,6 +219,10 @@ fun AddStaffDialog(
     var isActive by remember { mutableStateOf(1L) }
     var isBlock by remember { mutableStateOf(false) }
 
+    var phoneError by remember { mutableStateOf<String?>(null) }
+    var commissionError by remember { mutableStateOf<String?>(null) }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Staff") },
@@ -235,7 +239,10 @@ fun AddStaffDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { /* dropdown focus is tricky */ })
                 )
                 RoleDropdown(
                     modifier = Modifier.fillMaxWidth(),
@@ -248,31 +255,61 @@ fun AddStaffDialog(
                     value = address,
                     onValueChange = { address = it },
                     label = { Text("Address") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = { phone = it },
+                    onValueChange = { 
+                        phone = it
+                        phoneError = if (it.length < 10 && it.isNotBlank()) "Invalid phone number" else null
+                    },
                     label = { Text("Phone") },
-                    modifier = Modifier.fillMaxWidth()
+                    isError = phoneError != null,
+                    supportingText = { phoneError?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 OutlinedTextField(
                     value = userName,
                     onValueChange = { userName = it },
                     label = { Text("UserName") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 OutlinedTextField(
                     value = commission,
-                    onValueChange = { commission = it },
+                    onValueChange = { 
+                        commission = it
+                        commissionError = if (it.toDoubleOrNull() == null && it.isNotBlank()) "Invalid number" else null
+                    },
                     label = { Text("Commission") },
-                    modifier = Modifier.fillMaxWidth()
+                    isError = commissionError != null,
+                    supportingText = { commissionError?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
                 CounterDropdown(
                     modifier = Modifier.fillMaxWidth(),

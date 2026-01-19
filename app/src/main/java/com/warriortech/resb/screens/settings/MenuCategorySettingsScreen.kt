@@ -316,6 +316,7 @@ fun CategoryDialog(
                 value = name,
                 onValueChange = { name = it.uppercase() },
                 label = { Text("Name") },
+                placeholder = { Text("e.g. STARTERS") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(nameFocus),
