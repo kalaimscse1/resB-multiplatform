@@ -463,10 +463,9 @@ fun MenuItemDialog(
     var showScanner by remember { mutableStateOf(false) }
 
 
-    LaunchedEffect(showAddDialog, editingMenuItem) {
-        if (showAddDialog || editingMenuItem != null) {
+    LaunchedEffect(Unit) {
+
             nameFocus.requestFocus()
-        }
     }
 
     ReusableBottomSheet(
@@ -509,7 +508,7 @@ fun MenuItemDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 400.dp) // limit dialog height
+                .heightIn(max = 300.dp) // limit dialog height
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
