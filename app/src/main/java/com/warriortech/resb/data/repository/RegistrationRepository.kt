@@ -44,4 +44,8 @@ class RegistrationRepository @Inject constructor(
     suspend fun addRestaurantProfile(profile: RestaurantProfile) :RestaurantProfile?{
         return apiService.addRestaurantProfile(profile,profile.company_code).body()
     }
+
+    suspend fun sendEmailOtp(mailId:String,otp:String):String{
+        return apiService.sendMailOtp(mailId,otp,"KTS-COMPANY_MASTER")
+    }
 }

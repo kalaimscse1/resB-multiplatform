@@ -1,38 +1,34 @@
 package com.warriortech.resb.screens
 
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.R
 import com.warriortech.resb.network.SessionManager
-import com.warriortech.resb.ui.components.MobilePasswordOptimizedTextField
-import com.warriortech.resb.ui.theme.GradientStart
+import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.viewmodel.login.RegistrationViewModel
 import com.warriortech.resb.util.MobileUtils
-import com.warriortech.resb.util.StringDropdown
-import com.warriortech.resb.util.SubscriptionManager
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,25 +40,19 @@ fun RegistrationScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val registrationResult by viewModel.registrationResult.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val configuration = LocalContext.current
-    val isTablet = MobileUtils.isTablet(configuration)
+    val context = LocalContext.current
+    val isTablet = MobileUtils.isTablet(context)
 
-    var showInstallDatePicker by remember { mutableStateOf(false) }
-    val installDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = System.currentTimeMillis()
-    )
-    val orderPlan = listOf("Trail", "CLosed")
-    var passwordVisible by remember { mutableStateOf(false) }
+    var otpInput by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.loadCompanyCode()
     }
-    // Handle registration result
+
     LaunchedEffect(registrationResult) {
         registrationResult?.let { message ->
             snackbarHostState.showSnackbar(message)
-            if (message=="Registration successful!") {
-                // Navigate to login screen after successful registration
+            if (message == "Registration successful!") {
                 navController.navigate("login") {
                     popUpTo("registration") { inclusive = true }
                 }
@@ -75,361 +65,209 @@ fun RegistrationScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.register)) },
+                title = { Text(stringResource(R.string.register), color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = GradientStart
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryGreen)
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(if (isTablet) 32.dp else 16.dp)
-                .imePadding()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(if (isTablet) 32.dp else 16.dp)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Text(
+                    text = "Business Registration",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryGreen
+                )
+
+                Text(
+                    text = "Enter your details to register and verify your account.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(
-                        text = "Company Information",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.companyMasterCode,
-                        onValueChange = viewModel::updateCompanyMasterCode,
-                        label = { Text("Company Master Code *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.companyName,
-                        onValueChange = viewModel::updateCompanyName,
-                        label = { Text("Company Name *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.ownerName,
-                        onValueChange = viewModel::updateOwnerName,
-                        label = { Text("Owner Name *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-//                    OutlinedTextField(
-//                        value = uiState.databaseName,
-//                        onValueChange = viewModel::updateDatabaseName,
-//                        label = { Text("Database Name *") },
-//                        modifier = Modifier.fillMaxWidth(),
-//                        singleLine = true
-//                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Address Information",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.address1,
-                        onValueChange = viewModel::updateAddress1,
-                        label = { Text("Address Line 1 *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.address2,
-                        onValueChange = viewModel::updateAddress2,
-                        label = { Text("Address Line 2 *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         OutlinedTextField(
-                            value = uiState.place,
-                            onValueChange = viewModel::updatePlace,
-                            label = { Text("Place ") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            value = uiState.mailId,
+                            onValueChange = viewModel::updateMailId,
+                            label = { Text("Email ID *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                            singleLine = true,
+                            isError = uiState.emailError != null,
+                            enabled = !uiState.isOtpSent
                         )
 
-                        OutlinedTextField(
-                            value = uiState.pincode,
-                            onValueChange = viewModel::updatePincode,
-                            label = { Text("PinCode ") },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.state,
-                            onValueChange = viewModel::updateState,
-                            label = { Text("State *") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = uiState.country,
-                            onValueChange = viewModel::updateCountry,
-                            label = { Text("Country *") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Contact Information",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.contactNo,
-                        onValueChange = viewModel::updateContactNo,
-                        label = { Text("Contact Number *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.mailId,
-                        onValueChange = viewModel::updateMailId,
-                        label = { Text("Email ID *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true
-                    )
-
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Subscription Details",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-
-                    OutlinedTextField(
-                        value = uiState.year,
-                        onValueChange = viewModel::updateYear,
-                        label = { Text("Year *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
-                    )
-//
-//                    OutlinedTextField(
-//                        value = uiState.orderPlan,
-//                        onValueChange = viewModel::updateOrderPlan,
-//                        label = { Text("Order Plan *") },
-//                        modifier = Modifier.fillMaxWidth(),
-//                        singleLine = true
-//                    )
-                    StringDropdown(
-                        options = orderPlan,
-                        selectedOption = uiState.orderPlan,
-                        onOptionSelected = { selectedStatus ->
-                            viewModel.updateOrderPlan(selectedStatus) // Update your selectedStatus // Update your status state
-                        },
-                        label = "Order Plan *",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    // Install Date with DatePicker
-                    OutlinedTextField(
-                        value = uiState.installDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                        onValueChange = { },
-                        label = { Text("Install Date *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        readOnly = true,
-                        trailingIcon = {
-                            IconButton(onClick = { showInstallDatePicker = true }) {
-                                Icon(
-                                    Icons.Default.CalendarToday,
-                                    contentDescription = "Select Date"
-                                )
-                            }
+                        if (uiState.emailError != null) {
+                            Text(
+                                text = uiState.emailError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
-                    )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
                         OutlinedTextField(
-                            value = uiState.subscriptionDays.toString(),
-                            onValueChange = { days ->
-                                viewModel.updateSubscriptionDays(days)
-                                // Calculate and save subscription end date
-                                val subscriptionDays = days.toLongOrNull() ?: 0
-                                val endDate = LocalDate.now().plusDays(subscriptionDays)
-                                val subscriptionManager = SubscriptionManager(sessionManager)
-                                subscriptionManager.saveSubscriptionEndDate(endDate)
-                                viewModel.updateExpiryDate(
-                                    LocalDate.now().plusDays(subscriptionDays)
-                                        .toString()
-                                )
-                            },
-                            label = { Text("Subscription Days *") },
-                            modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true
+                            value = uiState.ownerName,
+                            onValueChange = viewModel::updateOwnerName,
+                            label = { Text("Owner Name *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            singleLine = true,
+                            enabled = !uiState.isOtpSent
                         )
 
                         OutlinedTextField(
-                            value = uiState.expiryDate,
-                            onValueChange = viewModel::updateExpiryDate,
-                            label = { Text("Expiry Date ") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            value = uiState.companyName,
+                            onValueChange = viewModel::updateCompanyName,
+                            label = { Text("Company Name *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
+                            singleLine = true,
+                            enabled = !uiState.isOtpSent
                         )
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = uiState.isBlock,
-                            onCheckedChange = viewModel::updateIsBlock
+                        OutlinedTextField(
+                            value = uiState.contactNo,
+                            onValueChange = viewModel::updateContactNo,
+                            label = { Text("Contact Number *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                            singleLine = true,
+                            enabled = !uiState.isOtpSent
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Block Account")
-                    }
 
-                    Row(
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = uiState.country,
+                                onValueChange = viewModel::updateCountry,
+                                label = { Text("Country *") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                enabled = !uiState.isOtpSent
+                            )
+                            OutlinedTextField(
+                                value = uiState.state,
+                                onValueChange = viewModel::updateState,
+                                label = { Text("State *") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                enabled = !uiState.isOtpSent
+                            )
+                        }
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = uiState.isOtpSent,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                     ) {
-                        MobilePasswordOptimizedTextField(
-                            value = uiState.password,
-                            onValueChange = { viewModel.updatePassword(it) },
-                            label = "Password",
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Lock,
-                                    contentDescription = "Password",
-                                    tint = MaterialTheme.colorScheme.primary
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "OTP Verification",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Enter the 6-digit OTP sent to your email",
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center
+                            )
+                            OutlinedTextField(
+                                value = otpInput,
+                                onValueChange = { if (it.length <= 6) otpInput = it },
+                                label = { Text("6-Digit OTP") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.width(180.dp),
+                                textStyle = LocalTextStyle.current.copy(
+                                    textAlign = TextAlign.Center,
+                                    letterSpacing = 4.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            },
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                val image =
-                                    if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                                val description =
-                                    if (passwordVisible) "Hide password" else "Show password"
-
-                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                    Icon(imageVector = image, contentDescription = description)
+                            )
+                            Button(
+                                onClick = { viewModel.verifyOtpAndRegister(otpInput) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                enabled = otpInput.length == 6 && !uiState.isLoading
+                            ) {
+                                if (uiState.isLoading) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                } else {
+                                    Text("Verify & Register")
                                 }
                             }
-                        )
-                    }
-                }
-
-            }
-
-            Button(
-                onClick = { viewModel.registerCompany() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !uiState.isLoading
-            ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Register Company")
-                }
-            }
-        }
-    }
-
-    // Install Date Picker Dialog
-    if (showInstallDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showInstallDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        installDatePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
-                            viewModel.updateInstallDate(selectedDate)
                         }
-                        showInstallDatePicker = false
                     }
-                ) {
-                    Text("OK")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showInstallDatePicker = false }) {
-                    Text("Cancel")
+
+                if (!uiState.isOtpSent) {
+                    Button(
+                        onClick = { viewModel.sendOtp() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                        enabled = !uiState.isLoading && validateFields(uiState)
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        } else {
+                            Text("Get OTP", style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                } else {
+                    TextButton(onClick = { viewModel.sendOtp() }) {
+                        Text("Resend OTP", color = PrimaryGreen)
+                    }
                 }
             }
-        ) {
-            DatePicker(
-                state = installDatePickerState,
-                modifier = Modifier.verticalScroll(rememberScrollState())
-            )
         }
     }
+}
+
+private fun validateFields(state: com.warriortech.resb.ui.viewmodel.login.RegistrationUiState): Boolean {
+    return state.mailId.isNotBlank() &&
+            android.util.Patterns.EMAIL_ADDRESS.matcher(state.mailId).matches() &&
+            state.ownerName.isNotBlank() &&
+            state.companyName.isNotBlank() &&
+            state.contactNo.isNotBlank() &&
+            state.country.isNotBlank() &&
+            state.state.isNotBlank()
 }

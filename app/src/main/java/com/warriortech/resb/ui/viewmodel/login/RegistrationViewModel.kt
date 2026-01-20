@@ -128,93 +128,138 @@ class RegistrationViewModel @Inject constructor(
         }
     }
 
-    fun registerCompany() {
-        val state = _uiState.value
-
-        if (!validateForm(state)) {
-            _registrationResult.value = "Please fill all required fields"
+    fun sendOtp() {
+        val email = _uiState.value.mailId
+        if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _uiState.value = _uiState.value.copy(emailError = "Invalid Email Address")
             return
         }
-
-        _uiState.value = _uiState.value.copy(isLoading = true)
-        if (state.password == "kingtec2025#") {
-            viewModelScope.launch {
-                try {
-                    val request = RegistrationRequest(
-                        company_master_code = state.companyMasterCode,
-                        company_name = state.companyName,
-                        owner_name = state.ownerName,
-                        address1 = state.address1,
-                        address2 = state.address2,
-                        place = state.place,
-                        pincode = state.pincode,
-                        contact_no = state.contactNo,
-                        mail_id = state.mailId,
-                        country = state.country,
-                        state = state.state,
-                        year = state.year,
-                        database_name = state.databaseName,
-                        order_plan = state.orderPlan,
-                        install_date = state.installDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                        subscription_days = state.subscriptionDays,
-                        expiry_date = state.expiryDate,
-                        is_block = state.isBlock
+        
+        _uiState.value = _uiState.value.copy(isLoading = true, emailError = null)
+        
+        viewModelScope.launch {
+            try {
+                // Generate a 6-digit OTP
+                val generatedOtp = (100000..999999).random().toString()
+                
+                // In a real application, you would call an API here to send the OTP email.
+                // For this simulation, we'll store it in state.
+                val emailSent = registrationRepository.sendEmailOtp(email, generatedOtp)
+                if (emailSent.isNotEmpty()){
+                    _uiState.value = _uiState.value.copy(
+                        generatedOtp = generatedOtp,
+                        isOtpSent = true,
+                        isLoading = false
                     )
-                    val response = registrationRepository.registerCompany(request)
-                    response.collect { result ->
-                        result.fold(
-                            onSuccess = { res ->
-
-                                val profile = RestaurantProfile(
-                                    company_code = res.company_master_code,
-                                    company_name = res.company_name,
-                                    owner_name = res.owner_name,
-                                    address1 = res.address1,
-                                    address2 = res.address2,
-                                    place = res.place,
-                                    pincode = res.pincode,
-                                    contact_no = res.contact_no,
-                                    mail_id = res.mail_id,
-                                    country = res.country,
-                                    state = res.state,
-                                    currency = "Rs",
-                                    tax_no = "",
-                                    decimal_point = 2L,
-                                    upi_id = "",
-                                    upi_name = ""
-                                )
-                                sessionManager.saveEmail(res.mail_id)
-                                sessionManager.saveRestaurantProfile(profile)
-                                sessionManager.saveCompanyCode(res.company_master_code)
-                                createCompany(res)
-                                _registrationResult.value = "Registration successful!"
-                            },
-                            onFailure = { error ->
-                                _registrationResult.value = error.message
-                            }
-                        )
-                    }
-                } catch (e: Exception) {
-                    _registrationResult.value = "Registration failed: ${e.message}"
-                } finally {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    _registrationResult.value = "OTP sent to $email "
                 }
+
+
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                _registrationResult.value = "Failed to send OTP: ${e.message}"
             }
-        } else {
-            _registrationResult.value = "Invalid Admin Password!"
-            _uiState.value = _uiState.value.copy(isLoading = false)
         }
     }
 
-    /**
-     * Creates a restaurant profile after successful registration.
-     * @param response The registration response containing company details.
-     */
+    fun verifyOtpAndRegister(otp: String) {
+        if (otp == _uiState.value.generatedOtp) {
+            _uiState.value = _uiState.value.copy(isOtpVerified = true)
+            registerCompanyInternal()
+        } else {
+            _registrationResult.value = "Invalid OTP. Please try again."
+        }
+    }
+
+    private fun registerCompanyInternal() {
+        val state = _uiState.value
+
+        _uiState.value = _uiState.value.copy(isLoading = true)
+        
+        // Auto-process hidden fields
+        val companyName = state.companyName
+        val ownerName = state.ownerName
+        val contactNo = state.contactNo
+        val mailId = state.mailId
+        val country = state.country
+        val stateName = state.state
+        
+        val address1 = "N/A"
+        val address2 = "N/A"
+        val place = "N/A"
+        val pincode = "000000"
+        val year = LocalDate.now().year.toString()
+        val orderPlan = "TRAIL"
+        val subscriptionDays = 30L
+        val expiryDate = LocalDate.now().plusDays(subscriptionDays).toString()
+
+        viewModelScope.launch {
+            try {
+                val request = RegistrationRequest(
+                    company_master_code = state.companyMasterCode,
+                    company_name = companyName,
+                    owner_name = ownerName,
+                    address1 = address1,
+                    address2 = address2,
+                    place = place,
+                    pincode = pincode,
+                    contact_no = contactNo,
+                    mail_id = mailId,
+                    country = country,
+                    state = stateName,
+                    year = year,
+                    database_name = state.companyMasterCode,
+                    order_plan = orderPlan,
+                    install_date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    subscription_days = subscriptionDays,
+                    expiry_date = expiryDate,
+                    is_block = false
+                )
+                val response = registrationRepository.registerCompany(request)
+                response.collect { result ->
+                    result.fold(
+                        onSuccess = { res ->
+                            val profile = RestaurantProfile(
+                                company_code = res.company_master_code,
+                                company_name = res.company_name,
+                                owner_name = res.owner_name,
+                                address1 = res.address1,
+                                address2 = res.address2,
+                                place = res.place,
+                                pincode = res.pincode,
+                                contact_no = res.contact_no,
+                                mail_id = res.mail_id,
+                                country = res.country,
+                                state = res.state,
+                                currency = "Rs",
+                                tax_no = "",
+                                decimal_point = 2L,
+                                upi_id = "",
+                                upi_name = ""
+                            )
+                            sessionManager.saveEmail(res.mail_id)
+                            sessionManager.saveRestaurantProfile(profile)
+                            sessionManager.saveCompanyCode(res.company_master_code)
+                            createCompany(res)
+                            _registrationResult.value = "Registration successful!"
+                        },
+                        onFailure = { error ->
+                            _registrationResult.value = error.message
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                _registrationResult.value = "Registration failed: ${e.message}"
+            } finally {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
     private fun createCompany(response: Registration) {
         viewModelScope.launch {
             try {
                 val res = response
-
                 val profile = RestaurantProfile(
                     company_code = res.company_master_code,
                     company_name = res.company_name,
@@ -246,21 +291,6 @@ class RegistrationViewModel @Inject constructor(
             }
         }
     }
-
-    private fun validateForm(state: RegistrationUiState): Boolean {
-        return state.companyMasterCode.isNotBlank() &&
-                state.companyName.isNotBlank() &&
-                state.ownerName.isNotBlank() &&
-                state.address1.isNotBlank() &&
-                state.address2.isNotBlank() &&
-                state.contactNo.isNotBlank() &&
-                state.country.isNotBlank() &&
-                state.state.isNotBlank() &&
-                state.year.isNotBlank() &&
-                state.orderPlan.isNotBlank() &&
-                state.expiryDate.isNotBlank() &&
-                state.password.isNotBlank()
-    }
 }
 
 data class RegistrationUiState(
@@ -285,4 +315,7 @@ data class RegistrationUiState(
     val isLoading: Boolean = false,
     val password: String = "",
     val emailError: String? = null,
+    val generatedOtp: String = "",
+    val isOtpSent: Boolean = false,
+    val isOtpVerified: Boolean = false
 )

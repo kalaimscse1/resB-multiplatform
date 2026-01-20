@@ -386,7 +386,7 @@ fun MenuDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 400.dp)
+                .heightIn(max = 300.dp)
                 .verticalScroll(scrollState)
                 .imePadding()
                 .navigationBarsPadding(),

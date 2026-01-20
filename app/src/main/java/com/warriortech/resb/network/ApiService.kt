@@ -1279,4 +1279,14 @@ interface ApiService {
         @Query("toDate") toDate: String
     ): Response<List<TblLedgerDetailsIdResponse>>
 
+    /**
+     * OTP Management
+     */
+
+    @POST("notify/sendMailOtp")
+    suspend fun sendMailOtp(
+        @Query("to") mailId: String,
+        @Query("msg") otp: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): String
 }
