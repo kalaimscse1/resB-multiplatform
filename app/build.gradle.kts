@@ -120,6 +120,7 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.logging.interceptor)
+    implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
     implementation("com.google.accompanist:accompanist-swiperefresh:0.30.1")
 
 //    implementation(libs.esc.pos.usb.net.android)

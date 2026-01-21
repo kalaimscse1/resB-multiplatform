@@ -487,7 +487,7 @@ fun MenuItemDialog(
                     rate = rate.toDoubleOrNull() ?: 0.0,
                     ac_rate = acRate.toDoubleOrNull() ?: 0.0,
                     parcel_rate = parcelRate.toDoubleOrNull() ?: 0.0,
-                    parcel_charge = parcelCharge.toDoubleOrNull() ?: 0.0,
+                    parcel_charge = 0.0,
                     tax_id = taxId,
                     cess_specific = 0.0,
                     kitchen_cat_id = kitchenCatId,
@@ -584,7 +584,7 @@ fun MenuItemDialog(
                 onValueChange = { parcelRate = it },
                 label = "Parcel Rate *",
                 focusRequester = focusRequesters["parcelRate"]!!,
-                nextFocusRequester = focusRequesters["parcelCharge"],
+                nextFocusRequester = focusRequesters["preparationTime"],
                 isError = parcelRateError != null,
                 errorMessage = parcelRateError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
@@ -592,23 +592,23 @@ fun MenuItemDialog(
                 scope = scope
             )
 
-            FormTextField(
-                value = parcelCharge,
-                onValueChange = { parcelCharge = it },
-                label = "Parcel Charge",
-                focusRequester = focusRequesters["parcelCharge"]!!,
-                nextFocusRequester = focusRequesters["preparationTime"],
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                scrollState = scrollState,
-                scope = scope
-            )
+//            FormTextField(
+//                value = parcelCharge,
+//                onValueChange = { parcelCharge = it },
+//                label = "Parcel Charge",
+//                focusRequester = focusRequesters["parcelCharge"]!!,
+//                nextFocusRequester = focusRequesters["preparationTime"],
+//                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+//                scrollState = scrollState,
+//                scope = scope
+//            )
 
             FormTextField(
                 value = preparationTime,
                 onValueChange = { preparationTime = it },
                 label = "Preparation Time (min)",
                 focusRequester = focusRequesters["preparationTime"]!!,
-                nextFocusRequester = if (isInventory == 1L) focusRequesters["hsnCode"] else focusRequesters["minStock"],
+                nextFocusRequester = if (isInventory == 1L) focusRequesters["hsnCode"] else focusRequesters["orderBy"],
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 scrollState = scrollState,
                 scope = scope
@@ -625,18 +625,19 @@ fun MenuItemDialog(
                     scrollState = scrollState,
                     scope = scope
                 )
+
+                FormTextField(
+                    value = minStock,
+                    onValueChange = { minStock = it },
+                    label = "Min Stock",
+                    focusRequester = focusRequesters["minStock"]!!,
+                    nextFocusRequester = focusRequesters["orderBy"],
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    scrollState = scrollState,
+                    scope = scope
+                )
             }
 
-            FormTextField(
-                value = minStock,
-                onValueChange = { minStock = it },
-                label = "Min Stock",
-                focusRequester = focusRequesters["minStock"]!!,
-                nextFocusRequester = focusRequesters["orderBy"],
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                scrollState = scrollState,
-                scope = scope
-            )
 
             FormTextField(
                 value = orderBy.toString(),

@@ -214,7 +214,7 @@ fun AreaSettingsScreen(
             area = area,
             onDismiss = { editingArea = null },
             onConfirm = { name, active ->
-                viewModel.updateArea(area.copy(area_name = name, isActvice = active))
+                viewModel.updateArea(area.copy(area_name = name))
                 editingArea = null
             }
         )
@@ -362,21 +362,6 @@ fun AreaDialog(
                 scrollState = scrollState,
                 scope = scope
             )
-
-            if (area != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Switch(
-                        checked = isActive,
-                        onCheckedChange = { isActive = it }
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Active")
-                }
-            }
-
             Spacer(Modifier.height(12.dp))
         }
     }

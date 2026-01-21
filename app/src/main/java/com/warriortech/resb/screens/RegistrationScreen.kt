@@ -43,7 +43,8 @@ fun RegistrationScreen(
     val context = LocalContext.current
     val isTablet = MobileUtils.isTablet(context)
 
-    var otpInput by remember { mutableStateOf("") }
+    var emailOtpInput by remember { mutableStateOf("") }
+    var mobileOtpInput by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.loadCompanyCode()
@@ -155,7 +156,7 @@ fun RegistrationScreen(
                         OutlinedTextField(
                             value = uiState.contactNo,
                             onValueChange = viewModel::updateContactNo,
-                            label = { Text("Contact Number *") },
+                            label = { Text("WhatsApp Number with Country Code *") },
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
@@ -204,27 +205,42 @@ fun RegistrationScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Enter the 6-digit OTP sent to your email",
+                                text = "Enter the 6-digit OTPs sent to your email and mobile",
                                 style = MaterialTheme.typography.bodySmall,
                                 textAlign = TextAlign.Center
                             )
+                            
                             OutlinedTextField(
-                                value = otpInput,
-                                onValueChange = { if (it.length <= 6) otpInput = it },
-                                label = { Text("6-Digit OTP") },
+                                value = emailOtpInput,
+                                onValueChange = { if (it.length <= 6) emailOtpInput = it },
+                                label = { Text("Email OTP") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.width(180.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 textStyle = LocalTextStyle.current.copy(
                                     textAlign = TextAlign.Center,
                                     letterSpacing = 4.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             )
+
+                            OutlinedTextField(
+                                value = mobileOtpInput,
+                                onValueChange = { if (it.length <= 6) mobileOtpInput = it },
+                                label = { Text("Mobile OTP") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = LocalTextStyle.current.copy(
+                                    textAlign = TextAlign.Center,
+                                    letterSpacing = 4.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+
                             Button(
-                                onClick = { viewModel.verifyOtpAndRegister(otpInput) },
+                                onClick = { viewModel.verifyOtpsAndRegister(emailOtpInput, mobileOtpInput) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
-                                enabled = otpInput.length == 6 && !uiState.isLoading
+                                enabled = emailOtpInput.length == 6 && mobileOtpInput.length == 6 && !uiState.isLoading
                             ) {
                                 if (uiState.isLoading) {
                                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)

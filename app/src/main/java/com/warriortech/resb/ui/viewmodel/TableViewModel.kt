@@ -37,12 +37,15 @@ class TableViewModel @Inject constructor(
     // Tables state flow
     private val _tablesState = MutableStateFlow<TablesState>(TablesState.Loading)
     val tablesState: StateFlow<TablesState> = _tablesState
+    
     private val _area = MutableStateFlow<List<Area>>(emptyList())
     val areas: StateFlow<List<Area>> = _area
 
-
     // Selected section
     private val _selectedSection = MutableStateFlow<Long?>(null)
+    
+    // Refresh trigger to force reload even if section ID hasn't changed
+    private val refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
 
     // Table selection mode
     private val _isSelectionMode = MutableStateFlow(false)
@@ -57,6 +60,38 @@ class TableViewModel @Inject constructor(
     sealed class SelectionAction {
         object ChangeTable : SelectionAction()
         object MergeTable : SelectionAction()
+    }
+
+    init {
+        CurrencySettings.update(
+            symbol = sessionManager.getRestaurantProfile()?.currency ?: "",
+            decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
+        )
+        
+        // Setup reactive pipeline once
+        setupTablesPipeline()
+        
+        // Initial trigger
+        refreshTrigger.tryEmit(Unit)
+    }
+
+    private fun setupTablesPipeline() {
+        combine(_selectedSection, refreshTrigger) { section, _ -> section }
+            .flatMapLatest { section ->
+                if (section != null && section != 0L) {
+                    tableRepository.getTablesBySection(section)
+                } else {
+                    tableRepository.getActiveTables()
+                }
+            }
+            .onStart { _tablesState.value = TablesState.Loading }
+            .catch { e ->
+                _tablesState.value = TablesState.Error(e.message ?: "Unknown error occurred")
+            }
+            .onEach { tables ->
+                _tablesState.value = TablesState.Success(tables)
+            }
+            .launchIn(viewModelScope)
     }
 
     fun enableSelectionMode(action: SelectionAction, initialTableId: Long) {
@@ -76,12 +111,11 @@ class TableViewModel @Inject constructor(
         
         val currentSelection = _selectedTables.value
         if (currentSelection.contains(tableId)) {
-            if (currentSelection.size > 1) { // Keep at least one table selected (the source)
+            if (currentSelection.size > 1) { 
                 _selectedTables.value = currentSelection - tableId
             }
         } else {
             if (_selectionAction.value == SelectionAction.ChangeTable) {
-                // Change table only allows one source and one destination
                 _selectedTables.value = setOf(currentSelection.first(), tableId)
             } else {
                 _selectedTables.value = currentSelection + tableId
@@ -98,7 +132,6 @@ class TableViewModel @Inject constructor(
                 try {
                     val success = when (action) {
                         SelectionAction.ChangeTable -> {
-
                             tableRepository.changeTable(tables[0], tables[1])
                         }
                         SelectionAction.MergeTable -> {
@@ -106,7 +139,7 @@ class TableViewModel @Inject constructor(
                         }
                     }
                     if (success) {
-                        loadTables()
+                        refreshTrigger.emit(Unit)
                     } else {
                         _tablesState.value = TablesState.Error("Action failed on server")
                     }
@@ -118,74 +151,39 @@ class TableViewModel @Inject constructor(
         }
     }
 
-    init {
-        CurrencySettings.update(
-            symbol = sessionManager.getRestaurantProfile()?.currency ?: "",
-            decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
-        )
-    }
-
     fun loadTables() {
-        // Load tables when section changes or just all tables if no section selected
         viewModelScope.launch {
-            _area.value = tableRepository.getAllAreas().filter { it.area_name != "--" }
-            _selectedSection
-                .flatMapLatest { section ->
-                    if (section != null) {
-                        tableRepository.getTablesBySection(section)
-
-                    } else {
-                        tableRepository.getActiveTables()
-                    }
-                }
-                .catch { e ->
-                    _tablesState.value = TablesState.Error(e.message ?: "Unknown error occurred")
-                }
-                .collect { tables ->
-                    _tablesState.value = TablesState.Success(
-                        tables
-                    )
-                }
+            try {
+                val allAreas = tableRepository.getAllAreas().filter { it.area_name != "--" }
+                _area.value = allAreas
+                refreshTrigger.emit(Unit)
+            } catch (e: Exception) {
+                // Silently handle refresh errors or update UI
+            }
         }
     }
 
-    /**
-     * Set the selected section filter
-     */
     fun setSection(section: Long?) {
-        _selectedSection.value = section
+        if (_selectedSection.value != section) {
+            _selectedSection.value = section
+        }
     }
 
-    /**
-     * Load all tables without section filter
-     */
     fun loadAllTables() {
-        _selectedSection.value = null
+        setSection(null)
     }
 
-    /**
-     * Update table status (works offline)
-     */
     fun updateTableStatus(tableId: Long, status: String) {
         viewModelScope.launch {
             try {
-                val updatedTable = tableRepository.updateTableStatus(tableId, status)
-
-                // If we're offline, show appropriate message
-                if (_connectionState.value == ConnectionState.Unavailable) {
-                    // Table status updated locally, will sync when online
-                } else {
-                    // Table status updated on server
-                }
+                tableRepository.updateTableStatus(tableId, status)
+                refreshTrigger.emit(Unit)
             } catch (e: Exception) {
                 // Handle error
             }
         }
     }
 
-    /**
-     * State holder for tables screen
-     */
     sealed class TablesState {
         object Loading : TablesState()
         data class Success(val tables: List<TableStatusResponse>) : TablesState()

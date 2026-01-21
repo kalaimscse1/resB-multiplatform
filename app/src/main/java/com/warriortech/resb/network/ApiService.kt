@@ -2,6 +2,7 @@ package com.warriortech.resb.network
 
 import com.warriortech.resb.model.*
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -1288,5 +1289,5 @@ interface ApiService {
         @Query("to") mailId: String,
         @Query("msg") otp: String,
         @Header("X-Tenant-ID") tenantId: String
-    ): String
+    ): Response<ResponseBody>
 }

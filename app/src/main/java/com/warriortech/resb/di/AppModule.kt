@@ -36,6 +36,7 @@ import com.warriortech.resb.data.repository.VoucherRepository
 import com.warriortech.resb.data.sync.SyncManager
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
+import com.warriortech.resb.network.WhatsAppApi
 import com.warriortech.resb.notification.NotificationHelper
 import com.warriortech.resb.util.NetworkMonitor
 import com.warriortech.resb.util.PrinterHelper
@@ -49,6 +50,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -174,6 +176,18 @@ object AppModule {
             .build()
             .create(ApiService::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideWhatsAppApiService(okHttpClient: OkHttpClient): WhatsAppApi {
+        return Retrofit.Builder()
+            .baseUrl("https://eco.hashwa.in/")
+            .client(okHttpClient)
+            .addConverterFactory(ScalarsConverterFactory.create())
+            .build()
+            .create(WhatsAppApi::class.java)
+    }
+
 
     @Provides
     @Singleton

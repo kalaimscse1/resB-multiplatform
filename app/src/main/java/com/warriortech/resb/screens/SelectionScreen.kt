@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ScrollableTabRow
 import androidx.compose.material.Tab
+import androidx.compose.material.TabRow
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fastfood
@@ -58,10 +59,6 @@ import java.time.format.DateTimeFormatter
 
 import androidx.activity.compose.BackHandler
 
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectionScreen(
@@ -97,12 +94,20 @@ fun SelectionScreen(
         pageCount = { displayableAreas.size }
     )
     val currentArea = displayableAreas.getOrNull(pagerState.currentPage)
-    val role = sessionManager.getUser()?.role ?: ""
-    val areaId = sessionManager.getUser()?.area_name ?: ""
-    var selectedArea by remember { mutableStateOf<String?>(areaId) }
-
+    val user = sessionManager.getUser()
+    val role = user?.role ?: ""
+    val areaId = user?.area_name ?: ""
+    
     // auto-refresh
     LaunchedEffect(Unit) {
+        // Initial setup for non-admin roles to focus on their assigned area
+        if (role != "ADMIN" && role != "RESBADMIN" && role != "CHEF") {
+            user?.area_id?.let { assignedAreaId ->
+                if (assignedAreaId != 0L) {
+                    viewModel.setSection(assignedAreaId)
+                }
+            }
+        }
         while (true) {
             viewModel.loadTables()
             delay(7 * 1000)
@@ -110,8 +115,10 @@ fun SelectionScreen(
     }
 
     LaunchedEffect(pagerState.currentPage) {
-        currentArea?.let {
-            viewModel.setSection(it.area_id)
+        if (role == "ADMIN" || role == "RESBADMIN" || role == "CHEF") {
+            currentArea?.let {
+                viewModel.setSection(it.area_id)
+            }
         }
     }
 
@@ -230,7 +237,7 @@ fun SelectionScreen(
                         when (val currentTablesState = tablesState) {
                             is TableViewModel.TablesState.Loading -> {
                                 Box(Modifier.fillMaxSize(), Alignment.Center) {
-                                    CircularProgressIndicator()
+                                    CircularProgressIndicator(color = PrimaryGreen)
                                 }
                             }
                             is TableViewModel.TablesState.Success -> {
@@ -261,26 +268,50 @@ fun SelectionScreen(
                     }
                 }
             } else {
-                if (areas.isNotEmpty()) {
-                    Tab(
-                        selected = true,
-                        onClick = {
-                            selectedArea = sessionManager.getUser()?.area_name
-                            viewModel.setSection(sessionManager.getUser()?.area_id)
-                        },
-                        text = { Text(areaId) }
-                    )
+                // Fix for non-admin roles: wrap single Tab in TabRow and ensure filtered load
+                if (areaId.isNotEmpty()) {
+                    TabRow(
+                        selectedTabIndex = 0,
+                        backgroundColor = SecondaryGreen,
+                        contentColor = SurfaceLight
+                    ) {
+                        Tab(
+                            selected = true,
+                            onClick = { 
+                                user?.area_id?.let { viewModel.setSection(it) }
+                            },
+                            text = { 
+                                Text(
+                                    text = areaId, 
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = SurfaceLight
+                                ) 
+                            }
+                        )
+                    }
                 }
 
                 when (val currentTablesState = tablesState) {
                     is TableViewModel.TablesState.Loading -> {
-                        Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+                        Box(Modifier.fillMaxSize(), Alignment.Center) {
+                            CircularProgressIndicator(color = PrimaryGreen)
+                        }
                     }
                     is TableViewModel.TablesState.Success -> {
-                        val filteredTables = currentTablesState.tables.filter { it.area_name == areaId }
+                        // Filter tables by user's assigned area
+                        val filteredTables = if (areaId.isNotEmpty()) {
+                            currentTablesState.tables.filter { it.area_name == areaId }
+                        } else {
+                            currentTablesState.tables
+                        }
+
                         if (filteredTables.isEmpty()) {
                             Box(Modifier.fillMaxSize(), Alignment.Center) {
-                                Text("No tables available.", textAlign = TextAlign.Center)
+                                Text(
+                                    text = if (areaId.isNotEmpty()) "No tables available in $areaId." else "No tables available.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         } else {
                             ResponsiveTableGrid(
@@ -365,160 +396,6 @@ fun ResponsiveTableGrid(
     }
 }
 
-//@Composable
-//fun TableItem(
-//    table: TableStatusResponse,
-//    onClick: () -> Unit,
-//    sessionManager: SessionManager,
-//    time: String,
-//    staff: String
-//) {
-//    val configuration = LocalConfiguration.current
-//    val screenWidthDp = configuration.screenWidthDp
-//    val tableSize = when {
-//        screenWidthDp < 600 -> 100.dp   // phone
-//        screenWidthDp < 840 -> 130.dp   // small tablet
-//        else -> 160.dp                  // large tablet
-//    }
-//
-//    val color = when (table.table_availability) {
-//        "AVAILABLE" -> TextSecondary
-//        "OCCUPIED" -> SuccessGreen
-//        "RESERVED" -> MaterialTheme.colorScheme.tertiaryContainer
-//        else -> MaterialTheme.colorScheme.surfaceVariant
-//    }
-//
-//    val borderColor: Color = color
-//    val cornerRadius: Dp = 12.dp
-//    val borderWidth: Dp = 6.dp
-//
-//    Surface(
-//        modifier = Modifier
-//            .width(tableSize)
-//            .height(tableSize)
-//            .clickable(onClick = onClick)
-//            .border(1.dp, borderColor, RoundedCornerShape(cornerRadius)),
-//        shape = RoundedCornerShape(12.dp),
-//        tonalElevation = 8.dp,
-//        color = ghostWhite
-//    ) {
-//        Box(
-//            modifier = Modifier
-//                .clip(RoundedCornerShape(cornerRadius))
-//                .drawWithContent {
-//                    drawContent()
-//                    val stroke = borderWidth.toPx()
-//                    val width = size.width
-//                    drawRoundRect(
-//                        color = borderColor,
-//                        topLeft = Offset(0f, 0f),
-//                        size = Size(width, stroke),
-//                        cornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx())
-//                    )
-//                }
-//        ) {
-//            Column(
-//                modifier = Modifier
-//                    .fillMaxSize()
-//                    .padding(8.dp),
-//                horizontalAlignment = Alignment.CenterHorizontally,
-//                verticalArrangement = Arrangement.SpaceBetween
-//            ) {
-//                if (table.grandTotal>0){
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        horizontalArrangement = Arrangement.SpaceBetween
-//                    ) {
-//                        Text(table.staff_name, color = Color.White, fontSize = 12.sp)
-//                        Text("${table.seating_capacity} Seats", color = Color.White, fontSize = 12.sp)
-//                    }
-//                }
-//                else{
-//                    Text(
-//                        "${table.seating_capacity} Seats",
-//                        color = Color(0xFF005B9F),
-//                        fontSize = 12.sp,
-//                        textAlign = TextAlign.Center
-//                    )
-//                }
-//
-//                Text(
-//                    text = table.table_name.padStart(2, '0'),
-//                    fontSize = 28.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = if (table.grandTotal>0) Color.White else Color(0xFF005B9F)
-//                )
-//
-//                if (table.grandTotal>0){
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        horizontalArrangement = Arrangement.SpaceBetween
-//                    ) {
-//                        Text(table.order_time, color = Color.White, fontSize = 12.sp)
-//                        Text(CurrencySettings.format(table.grandTotal), color = Color.White, fontSize = 12.sp)
-//                    }
-//                }
-//                // 🟢 Table name + seats
-////                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-////                    Text(
-////                        text = table.table_name,
-////                        style = MaterialTheme.typography.titleMedium.copy(
-////                            fontSize = when {
-////                                screenWidthDp < 600 -> 14.sp
-////                                else -> 16.sp
-////                            },
-////                            fontWeight = FontWeight.Bold
-////                        ),
-////                        textAlign = TextAlign.Center
-////                    )
-////                    Spacer(Modifier.height(4.dp))
-////                    Text(
-////                        text = "${table.seating_capacity} Seats",
-////                        style = MaterialTheme.typography.bodySmall.copy(
-////                            fontSize = when {
-////                                screenWidthDp < 600 -> 12.sp
-////                                else -> 13.sp
-////                            }
-////                        )
-////                    )
-////                }
-//
-//                // 🟣 Time - Amount/New - Staff
-////                Row(
-////                    modifier = Modifier
-////                        .fillMaxWidth()
-////                        .padding(horizontal = 4.dp),
-////                    verticalAlignment = Alignment.CenterVertically
-////                ) {
-////                    Text(
-////                        text = table.order_time,
-////                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-////                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-////                        modifier = Modifier.weight(0.4f)
-////                    )
-////
-////                    Text(
-////                        text = if (table.grandTotal > 0)
-////                            CurrencySettings.format(table.grandTotal)
-////                        else "New",
-////                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-////                        color = if (table.grandTotal > 0) ErrorRed else DarkGreen,
-////                        textAlign = TextAlign.Center,
-////                        modifier = Modifier.weight(1.2f)
-////                    )
-////
-//                    Text(
-//                        text = table.staff_name,
-//                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-//                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-//                        textAlign = TextAlign.End,
-//                        modifier = Modifier.weight(0.4f)
-//                    )
-////                }
-//            }
-//        }
-//    }
-//}
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
@@ -599,7 +476,6 @@ fun TableItem(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-//                        Text(table.order_time, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                             Text(
                                 text = table.order_time,
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
@@ -631,7 +507,6 @@ fun TableItem(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-//                        Text(table.staff_name, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                             Text(
                                 text = table.staff_name,
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 8.sp),
@@ -706,108 +581,3 @@ fun TableItem(
         }
     }
 }
-//
-///**
-// * 🕒 Format order time (e.g. "2025-10-14T13:45:22" → "01:45 PM")
-// */
-//fun formatOrderTime(orderTime: String?): String {
-//    return try {
-//        val parser = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-//        val formatter = DateTimeFormatter.ofPattern("hh:mm a")
-//        LocalDateTime.parse(orderTime, parser).format(formatter)
-//    } catch (e: Exception) {
-//        ""
-//    }
-//}
-//
-//@Composable
-//fun TableItem(
-//    table: TableStatusResponse,
-//    onClick: () -> Unit,
-//    sessionManager: SessionManager
-//) {
-//    val configuration = LocalConfiguration.current
-//    val screenWidthDp = configuration.screenWidthDp
-//    val tableSize = when {
-//        screenWidthDp < 600 -> 100.dp
-//        screenWidthDp < 840 -> 130.dp
-//        else -> 160.dp
-//    }
-//
-//    val borderColor = when (table.table_availability) {
-//        "AVAILABLE" -> Color(0xFF4CAF50) // green
-//        "OCCUPIED" -> Color(0xFFEF5350) // red
-//        "RESERVED" -> Color(0xFFFFA726) // orange
-//        else -> Color(0xFFB0BEC5)
-//    }
-//
-//    val isOccupied = table.grandTotal > 0
-//    val backgroundColor = if (isOccupied) borderColor else Color(0xFFF9F9F9)
-//    val contentColor = if (isOccupied) Color.White else Color(0xFF005B9F)
-//
-//    Surface(
-//        modifier = Modifier
-//            .width(tableSize)
-//            .height(tableSize)
-//            .clickable(onClick = onClick)
-//            .border(BorderStroke(2.dp, borderColor), RoundedCornerShape(12.dp)),
-//        color = backgroundColor,
-//        shape = RoundedCornerShape(12.dp),
-//        tonalElevation = 6.dp
-//    ) {
-//        Column(
-//            modifier = Modifier
-//                .fillMaxSize()
-//                .padding(8.dp),
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.SpaceBetween
-//        ) {
-//            // Top row
-//            if (isOccupied) {
-//                Row(
-//                    modifier = Modifier.fillMaxWidth(),
-//                    horizontalArrangement = Arrangement.SpaceBetween
-//                ) {
-//                    Text(table.staff_name, color = contentColor, fontSize = 11.sp)
-//                    Text("${table.seating_capacity} Seats", color = contentColor, fontSize = 11.sp)
-//                }
-//            } else {
-//                Text(
-//                    "${table.seating_capacity} Seats",
-//                    color = contentColor,
-//                    fontSize = 12.sp,
-//                    textAlign = TextAlign.Center
-//                )
-//            }
-//
-//            // Table name
-//            Text(
-//                text = table.table_name.padStart(2, '0'),
-//                fontSize = 26.sp,
-//                fontWeight = FontWeight.Bold,
-//                color = contentColor,
-//                textAlign = TextAlign.Center
-//            )
-//
-//            // Bottom row
-//            if (isOccupied) {
-//                Row(
-//                    modifier = Modifier.fillMaxWidth(),
-//                    horizontalArrangement = Arrangement.SpaceBetween
-//                ) {
-//                    Text(
-//                        table.order_time,
-//                        color = contentColor,
-//                        fontSize = 11.sp
-//                    )
-//                    Text(
-//                        CurrencySettings.format(table.grandTotal),
-//                        color = contentColor,
-//                        fontSize = 11.sp,
-//                        fontWeight = FontWeight.Bold
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
