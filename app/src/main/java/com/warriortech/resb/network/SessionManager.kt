@@ -32,6 +32,8 @@ class SessionManager @Inject constructor(
         private const val KEY_USER_LOGIN = "user_login"
         private const val MAIL_ID="mail_id"
         private const val BLUETOOTH="bluetooth_printer"
+        private const val KEY_BASE_URL = "base_url"
+        private const val DEFAULT_BASE_URL = "http://72.61.172.248:5050/api/"
     }
 
     private lateinit var prefs: SharedPreferences
@@ -73,8 +75,8 @@ class SessionManager @Inject constructor(
 
     fun saveUserLogin(userLogin: Boolean) {
         checkInitialization()
-        val userLogin = if (userLogin) "true" else "false"
-        prefs.edit { putString(KEY_USER_LOGIN, userLogin) }
+        val userLoginValue = if (userLogin) "true" else "false"
+        prefs.edit { putString(KEY_USER_LOGIN, userLoginValue) }
     }
 
     fun saveBluetoothPrinter(macAddress: BluetoothDevice) {
@@ -237,6 +239,22 @@ class SessionManager @Inject constructor(
     fun getLastNotificationDate(): String? {
         checkInitialization()
         return prefs.getString("last_notification_date", null)
+    }
+
+    /**
+     * Save base URL
+     */
+    fun saveBaseUrl(url: String) {
+        checkInitialization()
+        prefs.edit { putString(KEY_BASE_URL, url) }
+    }
+
+    /**
+     * Get base URL
+     */
+    fun getBaseUrl(): String {
+        checkInitialization()
+        return prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL) ?: DEFAULT_BASE_URL
     }
 
     /**

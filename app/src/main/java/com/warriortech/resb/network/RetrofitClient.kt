@@ -10,26 +10,38 @@ import java.util.concurrent.TimeUnit
  * Singleton object for creating and managing the Retrofit client
  */
 object RetrofitClient {
-//    const val BASE_URL = "http://72.61.172.248:5055/api/" // Replace with your actual API URL
-    const val BASE_URL = "http://72.61.172.248:5050/api/"
-    // Create OkHttpClient with logging and timeout settings
-
+    var currentBaseUrl: String = "http://72.61.172.248:5050/api/"
+    private var retrofit: Retrofit? = null
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // OkHttpClient with timeouts
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(logging)
-        .connectTimeout(120, TimeUnit.SECONDS) // connection timeout
-        .readTimeout(120, TimeUnit.SECONDS)    // socket read timeout
-        .writeTimeout(120, TimeUnit.SECONDS)   // socket write timeout
+        .connectTimeout(120, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(120, TimeUnit.SECONDS)
         .build()
-    val apiService: ApiService = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(ApiService::class.java)
+
+    fun updateBaseUrl(newUrl: String) {
+        if (currentBaseUrl != newUrl) {
+            currentBaseUrl = newUrl
+            retrofit = null // Reset retrofit to recreate with new URL
+        }
+    }
+
+    private fun getRetrofit(): Retrofit {
+        if (retrofit == null) {
+            retrofit = Retrofit.Builder()
+                .baseUrl(currentBaseUrl)
+                .client(okHttpClient)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+        }
+        return retrofit!!
+    }
+
+    val apiService: ApiService
+        get() = getRetrofit().create(ApiService::class.java)
 }

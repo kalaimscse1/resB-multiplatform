@@ -69,7 +69,7 @@ class AreaRepository @Inject constructor(
                         TblArea(
                             area_id = it.area_id.toInt(),
                             area_name = it.area_name,
-                            is_active = it.isActvice,
+                            is_active = it.is_active,
                             is_synced = SyncStatus.SYNCED,
                             last_synced_at = System.currentTimeMillis()
                         )

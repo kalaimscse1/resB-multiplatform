@@ -341,7 +341,7 @@ class SyncWorker @AssistedInject constructor(
                     val areaRequest = Area(
                         area_id = area.area_id.toLong(),
                         area_name = area.area_name ?: "",
-                        isActvice = area.is_active ?: true,
+                        is_active = area.is_active ?: 1L,
                     )
 
                     val response = if (area.is_synced == SyncStatus.PENDING_UPDATE) {
@@ -389,7 +389,7 @@ class SyncWorker @AssistedInject constructor(
                         TblArea(
                             area_id = remote.area_id.toInt(),
                             area_name = remote.area_name,
-                            is_active = remote.isActvice,
+                            is_active = remote.is_active,
                             is_synced = SyncStatus.SYNCED,
                             last_synced_at = System.currentTimeMillis()
                         )

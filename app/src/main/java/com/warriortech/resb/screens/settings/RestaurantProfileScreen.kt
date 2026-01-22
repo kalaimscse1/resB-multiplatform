@@ -435,7 +435,7 @@ fun CompanySettingDialog(
         Spacer(modifier = Modifier.height(8.dp))
         if (uploadSuccess.value) {
             val imageUrl =
-                "${RetrofitClient.BASE_URL}logo/getLogo/${sessionManager.getCompanyCode()}"
+                "${RetrofitClient.currentBaseUrl}logo/getLogo/${sessionManager.getCompanyCode()}"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically

@@ -14,12 +14,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.IconButton
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Scaffold
+//noinspection UsingMaterialAndMaterial3Libraries
+import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
@@ -31,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -46,12 +52,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.warriortech.resb.network.RetrofitClient
 import com.warriortech.resb.network.SessionManager
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -65,6 +75,10 @@ fun LoginScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     var passwordVisible by remember { mutableStateOf(false) }
     val code = sessionManager.getCompanyCode() ?: ""
+
+    var showIpDialog by remember { mutableStateOf(false) }
+    var showSettingsIcon by remember { mutableStateOf(false) }
+    var ipInput by remember { mutableStateOf("") }
 
     // Detect keyboard height in dp
     val imeHeight = WindowInsets.ime.getBottom(LocalDensity.current)
@@ -89,14 +103,71 @@ fun LoginScreen(
         }
     }
 
+    if (showIpDialog) {
+        AlertDialog(
+            onDismissRequest = { showIpDialog = false },
+            title = { Text("Server Configuration") },
+            text = {
+                Column {
+                    Text("Enter Server API URL:", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = ipInput,
+                        onValueChange = { ipInput = it },
+                        label = { Text("Base URL") },
+                        placeholder = { Text("192.168.1.1:5050") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (ipInput.isNotBlank()) {
+                        sessionManager.saveBaseUrl("http://$ipInput/api/")
+                        RetrofitClient.updateBaseUrl("http://$ipInput/api/")
+                        coroutineScope.launch {
+                            scaffoldState.snackbarHostState.showSnackbar("Base URL updated")
+                        }
+                    }
+                    showIpDialog = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showIpDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
-        scaffoldState = scaffoldState
+        scaffoldState = scaffoldState,
+        topBar = {
+            TopAppBar(
+                title = { },
+                backgroundColor = Color.Transparent,
+                elevation = 0.dp,
+                actions = {
+                    if (showSettingsIcon) {
+                        IconButton(onClick = { showIpDialog = true }) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Server Settings",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = animatedPadding) // animate upward shift
                 .padding(horizontal = Dimensions.spacingL),
@@ -110,6 +181,13 @@ fun LoginScreen(
                 modifier = Modifier
                     .size(200.dp)
                     .padding(bottom = Dimensions.spacingL)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                showSettingsIcon = !showSettingsIcon
+                            }
+                        )
+                    }
             )
 
             // Welcome text
@@ -212,6 +290,7 @@ fun LoginScreen(
                         onClick = onRegisterClick,
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !uiState.value.isLoading
+
                     ) {
                         Text(
                             text = stringResource(R.string.register),

@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.DeliveryDining
 import androidx.compose.material.icons.filled.Exposure
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Kitchen
@@ -498,6 +499,31 @@ fun AppNavigation(
                 tableName = "TAKEAWAY"
             )
         }
+
+        composable("delivery_menu") {
+            MenuScreen(
+                isTakeaway = "DELIVERY",
+                tableStatId = false,
+                tableId = 1L,
+                onBackPressed = { navController.popBackStack() },
+                onOrderPlaced = {
+                    navController.navigate("delivery_menu") {
+                        popUpTo("delivery_menu") { inclusive = true }
+                    }
+                    selectedTable = null
+                },
+                drawerState = drawerState,
+                onBillPlaced = { items, orderId ->
+                    selectedItems = items
+                    navController.navigate("billing_screen/${orderId}")
+                },
+                navController = navController,
+                sessionManager = sessionManager,
+                tableName = "DELIVERY"
+            )
+        }
+
+
         composable("billing_screen/{orderMasterId}") { backStackEntry ->
             BillingScreen(
                 navController = navController,
@@ -983,7 +1009,7 @@ fun DrawerContent(
 ) {
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination
     val role = sessionManager.getUser()?.role ?: ""
-    val imageUrl = "${RetrofitClient.BASE_URL}logo/getLogo/${sessionManager.getCompanyCode()}"
+    val imageUrl = "${RetrofitClient.currentBaseUrl}logo/getLogo/${sessionManager.getCompanyCode()}"
     val companyName = sessionManager.getRestaurantProfile()?.company_name ?: "Resb"
     val setting = sessionManager.getGeneralSetting()
 
@@ -1261,6 +1287,21 @@ fun DrawerContent(
                                 },
                                 selected = currentDestination?.route == "takeaway_menu",
                                 onClick = { onDestinationClicked("takeaway_menu") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Delivery") else Text("") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.Default.DeliveryDining,
+                                        contentDescription = null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "delivery_menu",
+                                onClick = { onDestinationClicked("delivery_menu") },
                                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                 colors = subMenuColors
                             )

@@ -200,7 +200,7 @@ fun MenuScreen(
                 title = {
                     Column {
                         Text(
-                            if (effectiveStatus != "TAKEAWAY" && effectiveStatus != "DELIVERY") "Menu -${tableName}" else "Menu ",
+                            if (effectiveStatus != "TAKEAWAY" && effectiveStatus != "DELIVERY") "Menu -${tableName}" else tableName ,
                             style = MaterialTheme.typography.titleLarge,
                             color = SurfaceLight
                         )

@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class TblArea(
     @PrimaryKey(autoGenerate = true) val area_id: Int,
     val area_name: String?,
-    val is_active: Boolean?,
+    val is_active: Long?,
     val is_synced: SyncStatus = SyncStatus.PENDING_SYNC,
     val last_synced_at: Long? = null
 )

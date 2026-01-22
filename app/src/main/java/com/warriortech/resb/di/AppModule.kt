@@ -46,6 +46,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -155,22 +157,43 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(sessionManager: SessionManager): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
+        val baseUrlInterceptor = Interceptor { chain ->
+            val originalRequest = chain.request()
+            val originalUrl = originalRequest.url
+            
+            // Do not intercept WhatsApp API requests
+            if (originalUrl.host == "eco.hashwa.in") {
+                return@Interceptor chain.proceed(originalRequest)
+            }
+
+            val newBaseUrlString = sessionManager.getBaseUrl()
+            val newBaseUrl = newBaseUrlString.toHttpUrlOrNull() ?: return@Interceptor chain.proceed(originalRequest)
+
+            val newUrl = originalUrl.newBuilder()
+                .scheme(newBaseUrl.scheme)
+                .host(newBaseUrl.host)
+                .port(newBaseUrl.port)
+                .build()
+
+            chain.proceed(originalRequest.newBuilder().url(newUrl).build())
+        }
+
         return OkHttpClient.Builder()
             .addInterceptor(logging)
+            .addInterceptor(baseUrlInterceptor)
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideApiService(okHttpClient: OkHttpClient): ApiService {
+    fun provideApiService(okHttpClient: OkHttpClient, sessionManager: SessionManager): ApiService {
         return Retrofit.Builder()
-//            .baseUrl("http://72.61.172.248:5055/api/")
-            .baseUrl("http://72.61.172.248:5050/api/") // Replace with your actual API base URL
+            .baseUrl(sessionManager.getBaseUrl())
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

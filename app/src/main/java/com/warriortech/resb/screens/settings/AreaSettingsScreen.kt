@@ -2,15 +2,10 @@ package com.warriortech.resb.screens.settings
 
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.IconButton
@@ -24,10 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -44,9 +35,7 @@ import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.master.AreaViewModel
 import com.warriortech.resb.util.ReusableBottomSheet
 import com.warriortech.resb.util.SuccessDialogWithButton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -205,6 +194,10 @@ fun AreaSettingsScreen(
             onConfirm = { name , active ->
                 viewModel.addArea(name)
                 showAddDialog = false
+            },
+            onAdd = { name ->
+                viewModel.addArea(name)
+                showAddDialog = false
             }
         )
     }
@@ -246,9 +239,9 @@ fun AreaCard(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (area.isActvice) "Active" else "Inactive",
+                    text = if (area.is_active==1L) "Active" else "Inactive",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (area.isActvice) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    color = if (area.is_active==1L) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
             }
             Row(
@@ -279,7 +272,7 @@ fun AreaCard(
 fun AreaDialog(
     area: Area?,
     onDismiss: () -> Unit,
-    onConfirm: (String, Boolean) -> Unit = { _, _ -> },
+    onConfirm: (String, Long) -> Unit = { _, _ -> },
     onAdd: (String) -> Unit = { }
 ) {
     val scrollState = rememberScrollState()
@@ -295,7 +288,7 @@ fun AreaDialog(
 
     // State
     var name by remember { mutableStateOf(area?.area_name ?: "") }
-    var isActive by remember { mutableStateOf(area?.isActvice ?: true) }
+    var isActive by remember { mutableStateOf(area?.is_active ?: 1L) }
 
     // Validation State
     var nameError by remember { mutableStateOf<String?>(null) }

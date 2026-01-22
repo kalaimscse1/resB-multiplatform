@@ -58,9 +58,9 @@ class OrderScreenViewModel @Inject constructor(
                         status = order.order_status,
                         timestamp = formatTimestamp(order.order_date),
                         orderType = when {
-                            order.table_id == 1L -> "TAKEAWAY"
-                            order.table_id == 0L -> "DELIVERY"
-                            order.table_id > 1L -> "DINE_IN"
+                            order.is_take_away -> "TAKEAWAY"
+                            order.is_delivery -> "DELIVERY"
+                            order.is_dine_in -> "DINE_IN"
                             else -> "UNKNOWN"
                         }
                     )
