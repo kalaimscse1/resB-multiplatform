@@ -336,6 +336,8 @@ fun PaymentMethodCard(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    viewModel.updateCardAmount(0.0)
+                    viewModel.updateUpiAmount(0.0)
                 }
 
                 "CARD" -> {
@@ -349,6 +351,8 @@ fun PaymentMethodCard(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    viewModel.updateCashAmount(0.0)
+                    viewModel.updateUpiAmount(0.0)
                 }
 
                 "UPI" -> {
@@ -362,9 +366,14 @@ fun PaymentMethodCard(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    viewModel.updateCashAmount(0.0)
+                    viewModel.updateCardAmount(0.0)
                 }
 
                 "OTHERS" -> {
+                    viewModel.updateCashAmount(0.0)
+                    viewModel.updateCardAmount(0.0)
+                    viewModel.updateUpiAmount(0.0)
                     val cashValue = remember(uiState.cashAmount) {
                         if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString()
                     }
