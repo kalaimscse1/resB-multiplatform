@@ -501,8 +501,15 @@ class BillingViewModel @Inject constructor(
     fun processPayment(voucherType: String) {
         val currentState = _uiState.value
         val paymentMethod = currentState.selectedPaymentMethod
+        val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
         val amount = when (paymentMethod?.name) {
-            "CASH" -> if (currentState.cashAmount == 0.0) currentState.amountToPay else currentState.cashAmount
+            "CASH" -> {
+                if (isTendered) {
+                    currentState.amountToPay // When tendered is true, we always pay the full amount due in cash
+                } else {
+                    if (currentState.cashAmount == 0.0) currentState.amountToPay else currentState.cashAmount
+                }
+            }
             "CARD" -> if (currentState.cardAmount == 0.0) currentState.amountToPay else currentState.cardAmount
             "UPI" -> if (currentState.upiAmount == 0.0) currentState.amountToPay else currentState.upiAmount
             "OTHERS" -> currentState.cashAmount + currentState.cardAmount + currentState.upiAmount
@@ -540,12 +547,13 @@ class BillingViewModel @Inject constructor(
                 ),
                 billNo = _billNo.value,
                 totals = Triple(
-                    currentState.cashAmount,
+                    if (isTendered && paymentMethod.name == "CASH") currentState.amountToPay else currentState.cashAmount,
                     currentState.cardAmount,
                     currentState.upiAmount
                 ),
                 voucherType = voucherType,
-                total = currentState.amountToPay
+                total = currentState.amountToPay,
+                tenderedAmt = currentState.amountReceived
             ).collect { result ->
                 result.fold(
                     onSuccess = { response ->
@@ -738,7 +746,7 @@ class BillingViewModel @Inject constructor(
 
     fun updateAmountReceived(amount: Double) {
         _uiState.update { currentState ->
-            val change = amount - currentState.totalAmount
+            val change = amount - currentState.amountToPay
             currentState.copy(
                 amountReceived = amount,
                 changeAmount = maxOf(0.0, change)

@@ -88,9 +88,11 @@ class BillRepository @Inject constructor(
         billNo: String,
         voucherType: String,
         totals: Triple<Double, Double, Double> = Triple(0.0, 0.0, 0.0), // cash, card, upi
-        total: Double = 0.0
+        total: Double = 0.0,
+        tenderedAmt: Double = 0.0
     ): Flow<Result<TblBillingResponse>> = flow {
         try {
+            val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
             var bill: TblBillingResponse? = null
             if (billNo != "--") {
                 apiService.resetDue(
@@ -155,7 +157,8 @@ class BillRepository @Inject constructor(
                 round_off = 0.0,
                 rounded_amt = order.sumOf { it.grand_total },
                 others = 0.0,
-                change = 0.0
+                change = if (isTendered && tenderedAmt > 0) tenderedAmt - receivedAmt else 0.0,
+                tendered_amt = tenderedAmt
             )
 
 
@@ -176,7 +179,7 @@ class BillRepository @Inject constructor(
 
             apiService.createAuditing(
                 TblAuditingRequest(
-                    id =5,
+                    id = 5,
                     modify_date = getCurrentDateModern(),
                     modify_time = getCurrentTimeModern(),
                     groups = "NEW",
@@ -187,7 +190,7 @@ class BillRepository @Inject constructor(
                     member_id = billNumber["bill_no"] ?: "",
                     narration = "BILL-${billNumber["bill_no"] ?: ""}",
                     credit = response.body()?.grand_total ?: 0.0,
-                    debit =0.0
+                    debit = 0.0
                 ),
                 sessionManager.getCompanyCode() ?: ""
             )
@@ -327,7 +330,8 @@ class BillRepository @Inject constructor(
 //          change = if (paymentMethod.name == "CASH") receivedAmt - orderMaster.sumOf { it.grand_total } else 0.0,
             change = 0.0,
             note = "",
-            is_active = 1L
+            is_active = 1L,
+            tendered_amt = bill.tendered_amt
         )
         if (sessionManager.getGeneralSetting()?.is_accounts == true) {
             val ledgerDetails = apiService.getLedgerDetailsByEntryNo(
@@ -353,7 +357,7 @@ class BillRepository @Inject constructor(
         }
         apiService.createAuditing(
             TblAuditingRequest(
-                id =5,
+                id = 5,
                 modify_date = getCurrentDateModern(),
                 modify_time = getCurrentTimeModern(),
                 groups = "MODIFY",
@@ -364,7 +368,7 @@ class BillRepository @Inject constructor(
                 member_id = bill.bill_no,
                 narration = "BILL-${bill.bill_no}",
                 credit = if (bill.grand_total < request.grand_total) request.grand_total - bill.grand_total else 0.0,
-                debit = if (bill.grand_total > request.grand_total) bill.grand_total- request.grand_total else 0.0
+                debit = if (bill.grand_total > request.grand_total) bill.grand_total - request.grand_total else 0.0
             ),
             sessionManager.getCompanyCode() ?: ""
         )
@@ -378,7 +382,7 @@ class BillRepository @Inject constructor(
         val response = apiService.deleteByBillNo(billNo, sessionManager.getCompanyCode() ?: "")
         apiService.createAuditing(
             TblAuditingRequest(
-                id =5,
+                id = 5,
                 modify_date = getCurrentDateModern(),
                 modify_time = getCurrentTimeModern(),
                 groups = "DELETE",
@@ -388,7 +392,7 @@ class BillRepository @Inject constructor(
                 member = "${bill.voucher.voucher_id}",
                 member_id = bill.bill_no,
                 narration = "BILL-${bill.bill_no}",
-                credit =  0.0,
+                credit = 0.0,
                 debit = 0.0
             ),
             sessionManager.getCompanyCode() ?: ""

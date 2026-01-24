@@ -56,6 +56,9 @@ data class OrderMaster(
     var order_status: String,
     var is_delivered: Boolean,
     var is_merge: Boolean,
+    var note : String,
+    var delivery_time: String,
+    var delivery_boy_id: Long,
     var is_active: Long
 )
 
@@ -110,6 +113,10 @@ data class TblOrderResponse(
     var order_status:String,
     var is_delivered:Boolean,
     var is_merge:Boolean,
+    var note : String,
+    var delivery_time: String,
+    var delivery_boy_id: Long,
+    var delivery_boy_name:String,
     var is_active:Long,
     var kot_number:Int?=null
 )

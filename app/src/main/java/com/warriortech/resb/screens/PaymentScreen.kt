@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -181,7 +180,8 @@ fun PaymentScreen(
                     viewModel.updateAmountToPay(amountToPayFromRoute ?: 0.0)
                     viewModel.processPayment(voucherType = voucherType ?: "BILL")
                 },
-                customer = customers.find { it.customer_id == customer?.customer_id }
+                customer = customers.find { it.customer_id == customer?.customer_id },
+                sessionManager = sessionManager
             )
         }
     ) { paddingValues ->
@@ -302,7 +302,8 @@ fun PaymentScreen(
                                 viewModel.setCustomer(it)
                             },
                             customers = customers,
-                            voucherType = voucherType
+                            voucherType = voucherType,
+                            isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
                         )
                     }
                 }
@@ -380,26 +381,39 @@ fun CustomerSelectionDialog(
 fun PaymentBottomBar(
     uiState: BillingPaymentUiState,
     onConfirmPayment: (Boolean) -> Unit,
-    customer: TblCustomer? = null
+    customer: TblCustomer? = null,
+    sessionManager: SessionManager
 ) {
+    val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
     val totalAmount = uiState.amountToPay
-    val hasManualEntry = when (uiState.selectedPaymentMethod?.name) {
-        "CASH" -> uiState.cashAmount > 0.0
+    val method = uiState.selectedPaymentMethod?.name.orEmpty()
+
+    val hasManualEntry = when (method) {
+        "CASH" -> if (isTendered) uiState.amountReceived > 0.0 else uiState.cashAmount > 0.0
         "CARD" -> uiState.cardAmount > 0.0
         "UPI" -> uiState.upiAmount > 0.0
         "OTHERS" -> (uiState.cashAmount + uiState.cardAmount + uiState.upiAmount) > 0.0
         "DUE" -> true
         else -> false
     }
-    var paidAmount = when (uiState.selectedPaymentMethod?.name) {
-        "CASH" -> if (uiState.cashAmount == 0.0) uiState.amountToPay else uiState.cashAmount
-        "CARD" -> if (uiState.cardAmount == 0.0) uiState.amountToPay else uiState.cardAmount
-        "UPI" -> if (uiState.upiAmount == 0.0) uiState.amountToPay else uiState.upiAmount
+    
+    val paidAmount = when (method) {
+        "CASH" -> {
+            if (isTendered) {
+                if (uiState.amountReceived == 0.0) totalAmount
+                else if (uiState.amountReceived >= totalAmount) totalAmount
+                else uiState.amountReceived
+            } else {
+                if (uiState.cashAmount == 0.0) totalAmount else uiState.cashAmount
+            }
+        }
+        "CARD" -> if (uiState.cardAmount == 0.0) totalAmount else uiState.cardAmount
+        "UPI" -> if (uiState.upiAmount == 0.0) totalAmount else uiState.upiAmount
         "OTHERS" -> uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
-        else -> uiState.amountToPay
+        else -> totalAmount
     }
+    
     val scope = rememberCoroutineScope()
-    val method = uiState.selectedPaymentMethod?.name.orEmpty()
     val isIdle = uiState.paymentProcessingState == PaymentProcessingState.Idle
     val hasCustomer = customer?.customer_id != null
 

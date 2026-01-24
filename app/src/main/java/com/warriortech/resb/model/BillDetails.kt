@@ -26,7 +26,8 @@ data class TblBillingRequest(
     var pending_amt: Double,
     var change: Double,
     var note: String,
-    var is_active: Long
+    var is_active: Long,
+    var tendered_amt:Double
 )
 
 data class TblBillingResponse(
@@ -55,7 +56,8 @@ data class TblBillingResponse(
     var pending_amt: Double,
     var change: Double,
     var note: String,
-    var is_active: Long
+    var is_active: Long,
+    var tendered_amt:Double
 )
 
 data class BillItem(

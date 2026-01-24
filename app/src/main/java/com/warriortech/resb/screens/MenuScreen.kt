@@ -164,7 +164,7 @@ fun MenuScreen(
                 effectiveStatus.toString()
             ) else viewModel.getOrderTotal(effectiveStatus.toString()),
             onConfirm = {
-                viewModel.placeOrder(tableId, effectiveStatus)
+                viewModel.placeOrder(tableId, effectiveStatus,5)
                 showConfirmDialog = false
             },
             onDismiss = { showConfirmDialog = false },

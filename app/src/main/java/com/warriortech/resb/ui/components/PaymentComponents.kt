@@ -71,181 +71,6 @@ fun PaymentSummaryCard(uiState: BillingPaymentUiState) {
     }
 }
 
-//@Composable
-//fun PaymentMethodCard(
-//    uiState: BillingPaymentUiState,
-//    onPaymentMethodChange: (String) -> Unit,
-//    viewModel: BillingViewModel,
-//    customers: List<TblCustomer>,
-//    onCustomer: (TblCustomer) -> Unit,
-//    voucherType: String? = null
-//) {
-//    val paidAmount = uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
-//    val totalAmount = uiState.amountToPay
-//    // Memoize the text field values to prevent unnecessary string conversions
-//
-//    val cash = remember(uiState.amountToPay) {
-//        if (uiState.cashAmount == 0.0) uiState.amountToPay.toString() else uiState.cashAmount.toString()
-//    }
-//    val card = remember(uiState.amountToPay) {
-//        if (uiState.cardAmount == 0.0) uiState.amountToPay.toString() else uiState.cardAmount.toString()
-//    }
-//    val upi = remember(uiState.amountToPay) {
-//        if (uiState.upiAmount == 0.0) uiState.amountToPay.toString() else uiState.upiAmount.toString()
-//    }
-//    // Memoize the text field values to prevent unnecessary string conversions
-//    val cashValue = remember(uiState.cashAmount) {
-//        if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString()
-//    }
-//    val cardValue = remember(uiState.cardAmount) {
-//        if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString()
-//    }
-//    val upiValue = remember(uiState.upiAmount) {
-//        if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString()
-//    }
-//
-//    val showCustomerDropdown =
-//        uiState.selectedPaymentMethod?.name == "DUE" ||
-//                paidAmount < totalAmount
-//    // Cache the payment methods list to prevent recreation on every recomposition
-//    val paymentMethods = remember {
-//        if (voucherType == "DUE") {
-//            listOf(
-//                "CASH" to Icons.Default.Money,
-//                "CARD" to Icons.Default.CreditCard,
-//                "UPI" to Icons.Default.QrCode,
-//                "OTHERS" to Icons.Default.MoreHoriz
-//            )
-//        } else
-//            listOf(
-//                "CASH" to Icons.Default.Money,
-//                "CARD" to Icons.Default.CreditCard,
-//                "UPI" to Icons.Default.QrCode,
-//                "DUE" to Icons.Default.AccountBalanceWallet,
-//                "OTHERS" to Icons.Default.MoreHoriz
-//            )
-//    }
-//    viewModel.loadCustomers()
-//    ModernCard(
-//        modifier = Modifier.fillMaxWidth()
-//    ) {
-//        Column(
-//            modifier = Modifier.padding(20.dp)
-//        ) {
-//            Row(
-//                verticalAlignment = Alignment.CenterVertically,
-//                modifier = Modifier.fillMaxWidth()
-//            ) {
-//                Icon(
-//                    Icons.Default.Payment,
-//                    contentDescription = "Payment Method",
-//                    tint = MaterialTheme.colorScheme.primary,
-//                    modifier = Modifier.size(28.dp)
-//                )
-//                Spacer(modifier = Modifier.width(12.dp))
-//                Text(
-//                    "Payment Method",
-//                    style = MaterialTheme.typography.headlineSmall,
-//                    fontWeight = FontWeight.Bold
-//                )
-//            }
-//
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            paymentMethods.forEach { (method, icon) ->
-//                // Use remember to create stable callback to prevent unnecessary recompositions
-//                val onSelectMethod = remember(method) { { onPaymentMethodChange(method) } }
-//                PaymentMethodOption(
-//                    method = method,
-//                    icon = icon,
-//                    isSelected = uiState.selectedPaymentMethod?.name == method,
-//                    onSelect = onSelectMethod
-//                )
-//
-//                if (method != paymentMethods.last().first) {
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                }
-//            }
-//
-//            if (uiState.selectedPaymentMethod?.name == "CASH") {
-//                Spacer(modifier = Modifier.height(16.dp))
-//                OutlinedTextField(
-//                    value = cash.toString(),
-//                    onValueChange = { viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0) },
-//                    label = { Text("Cash Amount") },
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//
-//            if (uiState.selectedPaymentMethod?.name == "CARD") {
-//                Spacer(modifier = Modifier.height(16.dp))
-//                OutlinedTextField(
-//                    value = card,
-//                    onValueChange = { viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0) },
-//                    label = { Text("Card Amount") },
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//
-//            if (uiState.selectedPaymentMethod?.name == "UPI") {
-//                Spacer(modifier = Modifier.height(16.dp))
-//                OutlinedTextField(
-//                    value = upi,
-//                    onValueChange = { viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0) },
-//                    label = { Text("UPI Amount") },
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//
-//            if (showCustomerDropdown) {
-//                Spacer(modifier = Modifier.height(16.dp))
-//                CustomerDropdown(
-//                    customers = customers,
-//                    selectedCustomer = uiState.customer,
-//                    onCustomerSelected = {
-//                        viewModel.updateSelectedCustomer(it)
-//                        onCustomer(it)
-//                    },
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//
-//            if (uiState.selectedPaymentMethod?.name == "OTHERS") {
-//                Spacer(modifier = Modifier.height(16.dp))
-//
-//                OutlinedTextField(
-//                    value = cashValue,
-//                    onValueChange = { viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0) },
-//                    label = { Text("Cash") },
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//
-//                OutlinedTextField(
-//                    value = cardValue,
-//                    onValueChange = { viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0) },
-//                    label = { Text("Card") },
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//
-//                OutlinedTextField(
-//                    value = upiValue,
-//                    onValueChange = { viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0) },
-//                    label = { Text("UPI") },
-//                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//        }
-//    }
-//}
-
 @Composable
 fun PaymentMethodCard(
     uiState: BillingPaymentUiState,
@@ -253,7 +78,8 @@ fun PaymentMethodCard(
     viewModel: BillingViewModel,
     customers: List<TblCustomer>,
     onCustomer: (TblCustomer) -> Unit,
-    voucherType: String? = null
+    voucherType: String? = null,
+    isTendered: Boolean
 ) {
     val paidAmount = uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
     val totalAmount = uiState.amountToPay
@@ -284,7 +110,13 @@ fun PaymentMethodCard(
     // Auto-fill on first selection (Option B)
     LaunchedEffect(uiState.selectedPaymentMethod) {
         when (uiState.selectedPaymentMethod?.name) {
-            "CASH" -> if (uiState.cashAmount == 0.0) viewModel.updateCashAmount(totalAmount)
+            "CASH" -> {
+                if (isTendered) {
+                    if (uiState.amountReceived == 0.0) viewModel.updateAmountReceived(totalAmount)
+                } else {
+                    if (uiState.cashAmount == 0.0) viewModel.updateCashAmount(totalAmount)
+                }
+            }
             "CARD" -> if (uiState.cardAmount == 0.0) viewModel.updateCardAmount(totalAmount)
             "UPI" -> if (uiState.upiAmount == 0.0) viewModel.updateUpiAmount(totalAmount)
         }
@@ -327,15 +159,35 @@ fun PaymentMethodCard(
 
                 "CASH" -> {
                     Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = CurrencySettings.formatPlain(uiState.cashAmount).takeIf { uiState.cashAmount != 0.0 } ?: "",
-                        onValueChange = {
-                            viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0)
-                        },
-                        label = { Text("Cash Amount") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (isTendered) {
+                        OutlinedTextField(
+                            value = if (uiState.amountReceived == 0.0) "" else uiState.amountReceived.toString(),
+                            onValueChange = {
+                                viewModel.updateAmountReceived(it.toDoubleOrNull() ?: 0.0)
+                            },
+                            label = { Text("Amount Received") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = CurrencySettings.format(uiState.changeAmount),
+                            onValueChange = { },
+                            label = { Text("Change") },
+                            readOnly = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        OutlinedTextField(
+                            value = CurrencySettings.formatPlain(uiState.cashAmount).takeIf { uiState.cashAmount != 0.0 } ?: "",
+                            onValueChange = {
+                                viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0)
+                            },
+                            label = { Text("Cash Amount") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     viewModel.updateCardAmount(0.0)
                     viewModel.updateUpiAmount(0.0)
                 }

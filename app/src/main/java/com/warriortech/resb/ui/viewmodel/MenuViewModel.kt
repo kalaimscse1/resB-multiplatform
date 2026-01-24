@@ -266,7 +266,7 @@ class MenuViewModel @Inject constructor(
         _orderState.value = OrderUiState.Idle
     }
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun placeOrder(tableId: Long, tableStatus1: String?) {
+    fun placeOrder(tableId: Long, tableStatus1: String?,deliveryBoyId: Long?) {
         viewModelScope.launch {
             if (_selectedItems.value.isEmpty()) {
                 _orderState.value = OrderUiState.Error("No items selected")
@@ -284,7 +284,8 @@ class MenuViewModel @Inject constructor(
                 }
                 orderRepository.placeOrUpdateOrder(
                     tableId, orderItems,
-                    tableStatus1.toString(), existingOrderId.value
+                    tableStatus1.toString(), existingOrderId.value,
+                    deliveryBoyId= deliveryBoyId
                 ).collect { result ->
                     result.fold(
                         onSuccess = { order ->
@@ -325,7 +326,8 @@ class MenuViewModel @Inject constructor(
                 }
                 orderRepository.placeOrUpdateOrder(
                     tableId, orderItems,
-                    tableStatus1.toString()
+                    tableStatus1.toString(),
+                    deliveryBoyId=deliveryBoyId
                 ).collect { result ->
                     result.fold(
                         onSuccess = { order ->

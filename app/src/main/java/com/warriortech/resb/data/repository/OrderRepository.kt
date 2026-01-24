@@ -1,6 +1,8 @@
 package com.warriortech.resb.data.repository
 
+import android.Manifest
 import android.annotation.SuppressLint
+import androidx.annotation.RequiresPermission
 import com.warriortech.resb.data.local.dao.OrderDao
 import com.warriortech.resb.data.local.dao.TableDao
 import com.warriortech.resb.data.local.dao.TblOrderDetailsDao
@@ -55,7 +57,8 @@ class OrderRepository @Inject constructor(
         tableId: Long,
         itemsToPlace: List<OrderItem>,
         tableStatus: String,
-        existingOpenOrderMasterId: String? = null // Allow passing it if already known
+        existingOpenOrderMasterId: String? = null,
+        deliveryBoyId: Long? = null,// Allow passing it if already known
     ): Flow<Result<TblOrderResponse>> = flow {
         if (itemsToPlace.isEmpty()) {
             emit(Result.failure(IllegalArgumentException("Cannot place an order with no items.")))
@@ -111,7 +114,10 @@ class OrderRepository @Inject constructor(
                     is_active = 1,
                     order_master_id = newOrderMasterApiId["order_master_id"]
                         ?: "", // Use ID from getOrderNo
-                    is_delivered = false
+                    is_delivered = false,
+                    note = "",
+                    delivery_time = "",
+                    delivery_boy_id = deliveryBoyId ?: 5
                 )
                 val response = apiService.createOrder(
                     orderRequest,
@@ -282,7 +288,8 @@ class OrderRepository @Inject constructor(
         tableId: Long,
         itemsToPlace: List<OrderItem>,
         tableStatus: String,
-        existingOpenOrderMasterId: String? = null // Allow passing it if already known
+        existingOpenOrderMasterId: String? = null ,
+        deliveryBoyId: Long? = null,// Allow passing it if already known
     ): Flow<Result<List<TblOrderDetailsResponse>>> = flow {
         if (itemsToPlace.isEmpty()) {
             emit(Result.failure(IllegalArgumentException("Cannot place an order with no items.")))
@@ -331,7 +338,10 @@ class OrderRepository @Inject constructor(
                     is_merge = false,
                     is_active = 1,
                     order_master_id = newOrderMasterApiId["order_master_id"] ?: "",
-                    is_delivered = false
+                    is_delivered = false,
+                    note = "",
+                    delivery_time = "",
+                    delivery_boy_id = deliveryBoyId ?: 5
                 )
                 val response = apiService.createOrder(
                     orderRequest,
@@ -850,7 +860,7 @@ class OrderRepository @Inject constructor(
     }
 
     @SuppressLint("SuspiciousIndentation")
-    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     suspend fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
         flow  { // Changed Flow type to Flow<Result<PrintResponse>>
             try {
