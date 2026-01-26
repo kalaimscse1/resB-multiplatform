@@ -273,6 +273,19 @@ class BillRepository @Inject constructor(
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun printBillWithLocalTemplate(bill: Bill, ipAddress: String): Flow<Result<String>> = flow {
+        try {
+            val target = if (sessionManager.getBluetoothPrinter() != null) "BLUETOOTH" else "TCP"
+            val address = if (target == "BLUETOOTH") sessionManager.getBluetoothPrinter().toString() else ipAddress
+            
+            printerHelper.printBillWithTemplate(bill, "BILL", target, address)
+            emit(Result.success("Print successful"))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
     suspend fun fetchBillPreview(bill: Bill): Bitmap? = try {
         val res = apiService.getBillPreview(bill, sessionManager.getCompanyCode() ?: "")
         if (res.isSuccessful) {

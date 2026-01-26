@@ -271,9 +271,13 @@ object AppModule {
 
 
     @Provides
-    @Singleton // Or another appropriate scope if needed
-    fun providePrinterHelper(@ApplicationContext context: Context /*, other dependencies */): PrinterHelper {
-        return PrinterHelper(context /*, other dependencies */) // Assuming PrinterHelper needs Context
+    @Singleton
+    fun providePrinterHelper(
+        @ApplicationContext context: Context,
+        printTemplateDao: PrintTemplateDao,
+        sessionManager: SessionManager
+    ): PrinterHelper {
+        return PrinterHelper(context, printTemplateDao,sessionManager)
     }
 
     @Provides

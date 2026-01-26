@@ -9,14 +9,26 @@ interface PrintTemplateDao {
     @Query("SELECT * FROM tbl_print_template WHERE is_active = 1")
     fun getAllTemplates(): Flow<List<PrintTemplateEntity>>
 
+    @Query("SELECT * FROM tbl_print_template WHERE document_type = :type AND is_default = 1 AND is_active = 1 LIMIT 1")
+    suspend fun getDefaultTemplate(type: String): PrintTemplateEntity?
+
+    @Query("UPDATE tbl_print_template SET is_default = 0 WHERE document_type = :type")
+    suspend fun clearDefault(type: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplate(template: PrintTemplateEntity): Long
+
+    @Query("SELECT * FROM tbl_print_template_section WHERE template_id = :templateId AND is_active = 1 ORDER BY sort_order")
+    suspend fun getSectionsForTemplateSync(templateId: Int): List<PrintTemplateSectionEntity>
 
     @Query("SELECT * FROM tbl_print_template_section WHERE template_id = :templateId ORDER BY sort_order")
     fun getSectionsForTemplate(templateId: Int): Flow<List<PrintTemplateSectionEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSection(section: PrintTemplateSectionEntity): Long
+
+    @Query("SELECT * FROM tbl_print_template_line WHERE section_id = :sectionId AND is_active = 1 ORDER BY sort_order")
+    suspend fun getLinesForSectionSync(sectionId: Int): List<PrintTemplateLineEntity>
 
     @Query("SELECT * FROM tbl_print_template_line WHERE section_id = :sectionId ORDER BY sort_order")
     fun getLinesForSection(sectionId: Int): Flow<List<PrintTemplateLineEntity>>
@@ -32,6 +44,9 @@ interface PrintTemplateDao {
 
     @Query("UPDATE tbl_print_template_section SET is_active = 0 WHERE section_id = :sectionId")
     suspend fun deleteSection(sectionId: Int)
+
+    @Query("SELECT * FROM tbl_print_template_column WHERE line_id = :lineId ORDER BY sort_order")
+    suspend fun getColumnsForLineSync(lineId: Int): List<PrintTemplateColumnEntity>
 
     @Query("SELECT * FROM tbl_print_template_column WHERE line_id = :lineId ORDER BY sort_order")
     fun getColumnsForLine(lineId: Int): Flow<List<PrintTemplateColumnEntity>>

@@ -661,61 +661,62 @@ class BillingViewModel @Inject constructor(
             val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
             if (isReceipt) {
                 val ip = orderRepository.getIpAddress("COUNTER")
-                val printResponse = billRepository.printBill(bill, ip)
-                printResponse.collect { result ->
+                
+                // First try printing with local template
+                billRepository.printBillWithLocalTemplate(bill, ip).collect { result ->
                     result.fold(
                         onSuccess = { message ->
-                            delay(2000)
-                            val transactionId = UUID.randomUUID().toString()
-                            val paidOrder = PaidOrder(
-                                items = currentState.billedItems,
-                                tableStatus = currentState.tableStatus,
-                                subtotal = currentState.subtotal,
-                                taxAmount = currentState.taxAmount,
-                                discount = currentState.discountFlat,
-                                totalAmount = currentState.totalAmount,
-                                paidAmount = amount,
-                                paymentMethod = paymentMethod.name,
-                                transactionId = transactionId,
-                                timestamp = System.currentTimeMillis()
-                            )
-                            _uiState.update {
-                                it.copy(
-                                    paymentProcessingState = PaymentProcessingState.Success(
-                                        paidOrder,
-                                        transactionId
-                                    )
+                            handlePrintSuccess(currentState, amount, paymentMethod)
+                        },
+                        onFailure = { localError ->
+                            Log.e("Print", "Local template print failed, falling back to server: ${localError.message}")
+                            // Fallback to server-side print if local fails
+                            val printResponse = billRepository.printBill(bill, ip)
+                            printResponse.collect { serverResult ->
+                                serverResult.fold(
+                                    onSuccess = { message ->
+                                        handlePrintSuccess(currentState, amount, paymentMethod)
+                                    },
+                                    onFailure = { error ->
+                                        _uiState.update { it.copy(errorMessage = "Failed to print bill: ${error.message}") }
+                                    }
                                 )
                             }
-                        },
-                        onFailure = { error ->
-                            _uiState.update { it.copy(errorMessage = "Failed to print bill: ${error.message}") }
                         }
                     )
                 }
             } else {
-                val transactionId = UUID.randomUUID().toString()
-                val paidOrder = PaidOrder(
-                    items = currentState.billedItems,
-                    tableStatus = currentState.tableStatus,
-                    subtotal = currentState.subtotal,
-                    taxAmount = currentState.taxAmount,
-                    discount = currentState.discountFlat,
-                    totalAmount = currentState.totalAmount,
-                    paidAmount = amount,
-                    paymentMethod = paymentMethod.name,
-                    transactionId = transactionId,
-                    timestamp = System.currentTimeMillis()
-                )
-                _uiState.update {
-                    it.copy(
-                        paymentProcessingState = PaymentProcessingState.Success(
-                            paidOrder,
-                            transactionId
-                        )
-                    )
-                }
+                handlePrintSuccess(currentState, amount, paymentMethod)
             }
+        }
+    }
+
+    private suspend fun handlePrintSuccess(
+        currentState: BillingPaymentUiState,
+        amount: Double,
+        paymentMethod: PaymentMethod
+    ) {
+        delay(2000)
+        val transactionId = UUID.randomUUID().toString()
+        val paidOrder = PaidOrder(
+            items = currentState.billedItems,
+            tableStatus = currentState.tableStatus,
+            subtotal = currentState.subtotal,
+            taxAmount = currentState.taxAmount,
+            discount = currentState.discountFlat,
+            totalAmount = currentState.totalAmount,
+            paidAmount = amount,
+            paymentMethod = paymentMethod.name,
+            transactionId = transactionId,
+            timestamp = System.currentTimeMillis()
+        )
+        _uiState.update {
+            it.copy(
+                paymentProcessingState = PaymentProcessingState.Success(
+                    paidOrder,
+                    transactionId
+                )
+            )
         }
     }
 
