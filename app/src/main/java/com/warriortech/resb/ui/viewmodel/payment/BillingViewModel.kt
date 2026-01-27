@@ -172,7 +172,7 @@ class BillingViewModel @Inject constructor(
      * Central function to recalc totals based on billed items
      */
 
-    private fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
+     fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
 
         val subtotal = items.entries.sumOf { (menuItem, qty) -> menuItem.rate * qty }
         val taxAmount = items.entries.sumOf { (menuItem, qty) ->
@@ -553,7 +553,9 @@ class BillingViewModel @Inject constructor(
                 ),
                 voucherType = voucherType,
                 total = currentState.amountToPay,
-                tenderedAmt = currentState.amountReceived
+                tenderedAmt = currentState.amountReceived,
+                discount = currentState.discountFlat,
+                otherCharges = currentState.otherChrages
             ).collect { result ->
                 result.fold(
                     onSuccess = { response ->

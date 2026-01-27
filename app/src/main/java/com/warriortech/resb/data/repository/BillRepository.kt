@@ -89,7 +89,9 @@ class BillRepository @Inject constructor(
         voucherType: String,
         totals: Triple<Double, Double, Double> = Triple(0.0, 0.0, 0.0), // cash, card, upi
         total: Double = 0.0,
-        tenderedAmt: Double = 0.0
+        tenderedAmt: Double = 0.0,
+        discount: Double = 0.0,
+        otherCharges: Double = 0.0
     ): Flow<Result<TblBillingResponse>> = flow {
         try {
             val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
@@ -143,7 +145,7 @@ class BillRepository @Inject constructor(
                 tax_amt = order.sumOf { it.tax_amount },
                 cess = order.sumOf { it.cess },
                 cess_specific = order.sumOf { it.cess_specific },
-                grand_total = order.sumOf { it.grand_total },
+                grand_total = total,
                 cash = if (paymentMethod.name == "CASH") receivedAmt else totals.first,
                 card = if (paymentMethod.name == "CARD") receivedAmt else totals.second,
                 upi = if (paymentMethod.name == "UPI") receivedAmt else totals.third,
@@ -152,11 +154,11 @@ class BillRepository @Inject constructor(
                 pending_amt = if (paymentMethod.name == "DUE") receivedAmt else if (voucherType == "DUE" || receivedAmt < total) total - receivedAmt else 0.0,
                 note = "",
                 is_active = 1L,
-                disc_amt = 0.0,
-                delivery_amt = 0.0,
+                disc_amt = discount,
+                delivery_amt = otherCharges,
                 round_off = 0.0,
-                rounded_amt = order.sumOf { it.grand_total },
-                others = 0.0,
+                rounded_amt = total,
+                others = otherCharges,
                 change = if (isTendered && tenderedAmt > 0) tenderedAmt - receivedAmt else 0.0,
                 tendered_amt = tenderedAmt
             )

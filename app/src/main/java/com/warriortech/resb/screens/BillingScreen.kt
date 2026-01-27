@@ -93,7 +93,8 @@ fun BillingScreen(
     navController: NavHostController,
     viewModel: BillingViewModel = hiltViewModel(),
     orderDetailsResponse: List<TblOrderDetailsResponse>? = null,
-    orderMasterId: String? = null
+    orderMasterId: String? = null,
+    onProceedToBilling: (orderDetailsResponse: Map<TblMenuItemResponse, Int>) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -168,6 +169,7 @@ fun BillingScreen(
         },
         bottomBar = {
             BillingBottomBar(uiState = uiState, orderMasterId = orderMasterId) {
+                onProceedToBilling(uiState.billedItems)
                 navController.navigate("payment_screen/${uiState.totalAmount}/${uiState.orderMasterId}/${"--"}/${0L}/${""}") {
                     launchSingleTop = true
                     restoreState = true
@@ -288,7 +290,6 @@ fun BillingContent(
                 }
                 ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
-            item { ModernDivider(modifier = Modifier.padding(vertical = 8.dp)) }
         } else {
             item {
                 Text(
@@ -299,70 +300,6 @@ fun BillingContent(
                     textAlign = TextAlign.Center
                 )
             }
-        }
-
-        item {
-            EditableBillingRow(
-                label = "Subtotal",
-                amount = uiState.subtotal,
-                currencyFormatter = currencyFormatter
-            )
-        }
-
-        item {
-            EditableBillingRow(
-                label = "Tax Amount",
-                amount = uiState.taxAmount,
-                currencyFormatter = currencyFormatter
-            )
-        }
-        if (uiState.cessAmount > 0) {
-            item {
-                EditableBillingRow(
-                    label = "Cess Amount",
-                    amount = uiState.cessAmount,
-                    currencyFormatter = currencyFormatter
-                )
-            }
-        }
-        if (uiState.cessSpecific > 0) {
-            item {
-                EditableBillingRow(
-                    label = "Cess Specific",
-                    amount = uiState.cessSpecific,
-                    currencyFormatter = currencyFormatter
-                )
-            }
-        }
-
-        item {
-            EditableBillingRow(
-                label = "Discount",
-                amount = uiState.discountFlat,
-                currencyFormatter = currencyFormatter,
-                isEditable = true,
-                onValueChange = onDiscountChange
-            )
-        }
-
-        item {
-            EditableBillingRow(
-                label = "Other Charges",
-                amount = uiState.otherChrages,
-                currencyFormatter = currencyFormatter,
-                isEditable = true,
-                onValueChange = onOtherChargesChange
-            )
-        }
-
-        item {
-            ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
-            BillingSummaryRow(
-                label = "Total Amount",
-                amount = uiState.totalAmount,
-                currencyFormatter = currencyFormatter,
-                isTotal = true
-            )
         }
     }
 }

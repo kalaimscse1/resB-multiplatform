@@ -17,13 +17,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.warriortech.resb.model.TblCustomer
+import com.warriortech.resb.screens.BillingSummaryRow
+import com.warriortech.resb.screens.EditableBillingRow
 import com.warriortech.resb.ui.viewmodel.payment.BillingViewModel
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.CustomerDropdown
+import java.text.NumberFormat
+import java.util.Locale
 import kotlin.toString
 
 @Composable
-fun PaymentSummaryCard(uiState: BillingPaymentUiState) {
+fun PaymentSummaryCard(uiState: BillingPaymentUiState, viewModel: BillingViewModel) {
+    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
+
     ModernCard(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -49,24 +55,116 @@ fun PaymentSummaryCard(uiState: BillingPaymentUiState) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                EditableBillingRow(
+                    label = "Subtotal",
+                    amount = uiState.subtotal,
+                    currencyFormatter = currencyFormatter
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                EditableBillingRow(
+                    label = "Tax Amount",
+                    amount = uiState.taxAmount,
+                    currencyFormatter = currencyFormatter
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (uiState.cessAmount > 0) {
+
+                    EditableBillingRow(
+                        label = "Cess Amount",
+                        amount = uiState.cessAmount,
+                        currencyFormatter = currencyFormatter
+                    )
+
+                }
+                if (uiState.cessSpecific > 0) {
+
+                    EditableBillingRow(
+                        label = "Cess Specific",
+                        amount = uiState.cessSpecific,
+                        currencyFormatter = currencyFormatter
+                    )
+
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                EditableBillingRow(
+                    label = "Discount",
+                    amount = uiState.discountFlat,
+                    currencyFormatter = currencyFormatter,
+                    isEditable = true,
+                    onValueChange = {
+                        viewModel.updateDiscountFlat(it)
+                    }
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "Total",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    CurrencySettings.format(uiState.amountToPay),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                EditableBillingRow(
+                    label = "Other Charges",
+                    amount = uiState.otherChrages,
+                    currencyFormatter = currencyFormatter,
+                    isEditable = true,
+                    onValueChange = {
+                        viewModel.updateOtherCharges(it)
+                    }
                 )
             }
+            ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                BillingSummaryRow(
+                    label = "Total Amount",
+                    amount = uiState.totalAmount,
+                    currencyFormatter = currencyFormatter,
+                    isTotal = true
+                )
+            }
+
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.SpaceBetween,
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Text(
+//                    "Total",
+//                    style = MaterialTheme.typography.titleLarge,
+//                    fontWeight = FontWeight.Bold
+//                )
+//                Text(
+//                    CurrencySettings.format(uiState.amountToPay),
+//                    style = MaterialTheme.typography.titleLarge,
+//                    fontWeight = FontWeight.Bold,
+//                    color = MaterialTheme.colorScheme.primary
+//                )
+//            }
         }
     }
 }
@@ -117,6 +215,7 @@ fun PaymentMethodCard(
                     if (uiState.cashAmount == 0.0) viewModel.updateCashAmount(totalAmount)
                 }
             }
+
             "CARD" -> if (uiState.cardAmount == 0.0) viewModel.updateCardAmount(totalAmount)
             "UPI" -> if (uiState.upiAmount == 0.0) viewModel.updateUpiAmount(totalAmount)
         }
@@ -179,7 +278,8 @@ fun PaymentMethodCard(
                         )
                     } else {
                         OutlinedTextField(
-                            value = CurrencySettings.formatPlain(uiState.cashAmount).takeIf { uiState.cashAmount != 0.0 } ?: "",
+                            value = CurrencySettings.formatPlain(uiState.cashAmount)
+                                .takeIf { uiState.cashAmount != 0.0 } ?: "",
                             onValueChange = {
                                 viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0)
                             },
@@ -195,7 +295,8 @@ fun PaymentMethodCard(
                 "CARD" -> {
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = CurrencySettings.formatPlain(uiState.cardAmount).takeIf { uiState.cardAmount != 0.0 } ?: "",
+                        value = CurrencySettings.formatPlain(uiState.cardAmount)
+                            .takeIf { uiState.cardAmount != 0.0 } ?: "",
                         onValueChange = {
                             viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0)
                         },
@@ -210,7 +311,8 @@ fun PaymentMethodCard(
                 "UPI" -> {
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = CurrencySettings.formatPlain(uiState.upiAmount).takeIf { uiState.upiAmount != 0.0 } ?: "",
+                        value = CurrencySettings.formatPlain(uiState.upiAmount)
+                            .takeIf { uiState.upiAmount != 0.0 } ?: "",
                         onValueChange = {
                             viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0)
                         },
@@ -247,7 +349,7 @@ fun PaymentMethodCard(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value =  cardValue,
+                        value = cardValue,
                         onValueChange = {
                             viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0)
                         },
@@ -257,7 +359,7 @@ fun PaymentMethodCard(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value =upiValue,
+                        value = upiValue,
                         onValueChange = {
                             viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0)
                         },

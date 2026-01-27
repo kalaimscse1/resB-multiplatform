@@ -528,7 +528,10 @@ fun AppNavigation(
             BillingScreen(
                 navController = navController,
                 orderDetailsResponse = selectedItems,
-                orderMasterId = backStackEntry.arguments?.getString("orderMasterId")
+                orderMasterId = backStackEntry.arguments?.getString("orderMasterId"),
+                onProceedToBilling = {
+                    selecteItems = it
+                }
             )
         }
 
@@ -547,7 +550,8 @@ fun AppNavigation(
                 sessionManager = sessionManager,
                 billNo = it.arguments?.getString("bill_no") ?: "",
                 customerId = it.arguments?.getString("customerId")?.toLongOrNull() ?: 0L,
-                voucherType = it.arguments?.getString("voucherType") ?: ""
+                voucherType = it.arguments?.getString("voucherType") ?: "",
+                orderDetailsResponse = selecteItems
             )
         }
 

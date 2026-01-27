@@ -58,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblCustomer
+import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.screens.settings.CustomerDialog
 import com.warriortech.resb.ui.components.PaymentMethodCard
@@ -84,7 +85,8 @@ fun PaymentScreen(
     billNo: String? = null,
     customerId: Long? = null,
     voucherType: String? = null,
-    sessionManager: SessionManager
+    sessionManager: SessionManager,
+    orderDetailsResponse: Map<TblMenuItemResponse, Int>? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val customers by viewModel.customers.collectAsStateWithLifecycle()
@@ -105,7 +107,8 @@ fun PaymentScreen(
         }
     }
 
-    LaunchedEffect(key1 = amountToPayFromRoute, key2 = orderMasterId) {
+    LaunchedEffect(key1 = amountToPayFromRoute, key2 = orderMasterId, key3 = orderDetailsResponse) {
+        orderDetailsResponse?.let { viewModel.recalcTotals(it) }
         amountToPayFromRoute?.let { viewModel.updateAmountToPay(it.toDouble()) }
         orderMasterId?.let { viewModel.updateOrderMasterId(it) }
     }
@@ -289,7 +292,7 @@ fun PaymentScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
-                        PaymentSummaryCard(uiState = uiState)
+                        PaymentSummaryCard(uiState = uiState, viewModel = viewModel)
                     }
 
                     item {
