@@ -485,7 +485,7 @@ fun TableItem(
                             )
                             Text("₹${table.grandTotal.toInt()}",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                color = ErrorRed,
+                                color = if(table.bill_no.isEmpty()) ErrorRed else BluePrimary,
                                 textAlign = TextAlign.End,
                                 modifier = Modifier.weight(1f),
                                 fontWeight = FontWeight.Bold
@@ -542,7 +542,7 @@ fun TableItem(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(table.order_time, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                            Text(CurrencySettings.format(table.grandTotal), color = ErrorRed, fontSize = 12.sp,fontWeight = FontWeight.Bold,)
+                            Text(CurrencySettings.format(table.grandTotal), color = if(table.bill_no.isEmpty()) ErrorRed else BluePrimary, fontSize = 12.sp,fontWeight = FontWeight.Bold,)
                         }
 
 

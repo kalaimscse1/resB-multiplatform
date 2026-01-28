@@ -32,6 +32,7 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.math.round
 
 data class PaymentMethod(
     val id: String,
@@ -71,7 +72,8 @@ data class BillingPaymentUiState(
     val cashAmount: Double = 0.0,
     val cardAmount: Double = 0.0,
     val upiAmount: Double = 0.0,
-    val customer: TblCustomer? = null
+    val customer: TblCustomer? = null,
+    val roundOff:Double=0.0
 )
 
 @HiltViewModel
@@ -138,6 +140,9 @@ class BillingViewModel @Inject constructor(
         }
     }
 
+    fun updateBillState(bill:BillingPaymentUiState){
+        _uiState.update { bill }
+    }
     fun addCustomer(customer: TblCustomer) {
         viewModelScope.launch {
             try {
@@ -173,6 +178,7 @@ class BillingViewModel @Inject constructor(
      */
 
      fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
+        val isRoundOffEnabled = sessionManager.getGeneralSetting()?.is_round_off == true
 
         val subtotal = items.entries.sumOf { (menuItem, qty) -> menuItem.rate * qty }
         val taxAmount = items.entries.sumOf { (menuItem, qty) ->
@@ -200,8 +206,11 @@ class BillingViewModel @Inject constructor(
         }
 
         val discountFlat = _uiState.value.discountFlat
-        val totalAmount = subtotal + taxAmount + cessAmount + cessSpecific - discountFlat
-
+        val otherCharges = _uiState.value.otherChrages
+        val finalTotal = subtotal + taxAmount + otherCharges - discountFlat
+        val totalAmount = if (isRoundOffEnabled) round(finalTotal) else finalTotal
+        val roundOff = totalAmount - finalTotal
+        Log.d("Pay", "recalcTotals: $totalAmount,$subtotal,$taxAmount,$cessAmount,$cessSpecific")
         return _uiState.value.copy(
             billedItems = items,
             subtotal = subtotal,
@@ -209,7 +218,8 @@ class BillingViewModel @Inject constructor(
             cessAmount = cessAmount,
             cessSpecific = cessSpecific,
             totalAmount = totalAmount,
-            amountToPay = totalAmount
+            amountToPay = totalAmount,
+            roundOff = roundOff
         )
     }
 
@@ -419,25 +429,35 @@ class BillingViewModel @Inject constructor(
     }
 
     fun updateDiscountFlat(discount: Double) {
+        val isRoundOffEnabled = sessionManager.getGeneralSetting()?.is_round_off == true
+
         _uiState.update { currentState ->
             val newTotalAmount =
                 calculateTotal(currentState.subtotal, currentState.taxAmount, discount) + currentState.otherChrages
+            val totalAmount = if (isRoundOffEnabled) round(newTotalAmount) else newTotalAmount
+            val roundOff = totalAmount - newTotalAmount
             currentState.copy(
                 discountFlat = discount,
-                totalAmount = newTotalAmount,
-                amountToPay = newTotalAmount
+                totalAmount = totalAmount,
+                amountToPay = totalAmount,
+                roundOff = roundOff
             )
         }
     }
 
     fun updateOtherCharges(charges: Double) {
+        val isRoundOffEnabled = sessionManager.getGeneralSetting()?.is_round_off == true
+
         _uiState.update { currentState ->
             val newTotalAmount =
                 calculateTotal(currentState.subtotal, currentState.taxAmount, currentState.discountFlat) + charges
+            val totalAmount = if (isRoundOffEnabled) round(newTotalAmount) else newTotalAmount
+            val roundOff = totalAmount - newTotalAmount
             currentState.copy(
                 otherChrages = charges,
-                totalAmount = newTotalAmount,
-                amountToPay = newTotalAmount
+                totalAmount = totalAmount,
+                amountToPay = totalAmount,
+                roundOff = roundOff
             )
         }
     }
@@ -447,7 +467,7 @@ class BillingViewModel @Inject constructor(
     }
 
     private fun calculateTotal(subtotal: Double, taxAmount: Double, discountFlat: Double): Double {
-        return subtotal + taxAmount - discountFlat
+        return (subtotal + taxAmount) - discountFlat
     }
 
     private fun loadAvailablePaymentMethods() {
@@ -555,7 +575,8 @@ class BillingViewModel @Inject constructor(
                 total = currentState.amountToPay,
                 tenderedAmt = currentState.amountReceived,
                 discount = currentState.discountFlat,
-                otherCharges = currentState.otherChrages
+                otherCharges = currentState.otherChrages,
+                roundOff = currentState.roundOff
             ).collect { result ->
                 result.fold(
                     onSuccess = { response ->

@@ -31,5 +31,6 @@ data class GeneralSettings(
     var remark2: String,
     var business_date: String,
     var is_accounts: Boolean,
-    var is_inventory: Boolean
+    var is_inventory: Boolean,
+    var is_draft_bill: Boolean
 )

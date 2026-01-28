@@ -47,5 +47,7 @@ data class TableStatusResponse(
     var is_active: Boolean,
     var grandTotal: Double,
     var staff_name:String,
-    var order_time:String
+    var order_time:String,
+    var bill_no:String,
+    var order_master_id:String
 )

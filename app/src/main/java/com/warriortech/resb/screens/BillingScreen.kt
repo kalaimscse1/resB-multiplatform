@@ -168,13 +168,16 @@ fun BillingScreen(
             )
         },
         bottomBar = {
-            BillingBottomBar(uiState = uiState, orderMasterId = orderMasterId) {
-                onProceedToBilling(uiState.billedItems)
-                navController.navigate("payment_screen/${uiState.totalAmount}/${uiState.orderMasterId}/${"--"}/${0L}/${""}") {
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            }
+            BillingBottomBar(
+                uiState = uiState,
+                orderMasterId = orderMasterId,
+                onProceedToPayment = {
+                    navController.navigate("payment_screen/${uiState.totalAmount}/${uiState.orderMasterId}/${"--"}/${0L}/${""}") {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                    onProceedToBilling(uiState.billedItems)
+                })
         }
     ) { paddingValues ->
         BillingContent(
@@ -241,6 +244,7 @@ fun PreviewBillDialog(
         }
     )
 }
+
 @Composable
 fun BillingContent(
     modifier: Modifier = Modifier,

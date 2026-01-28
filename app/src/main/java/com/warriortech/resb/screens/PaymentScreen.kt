@@ -1,5 +1,6 @@
 package com.warriortech.resb.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -106,10 +107,24 @@ fun PaymentScreen(
             viewModel.updateBillNo(billNo)
         }
     }
+    LaunchedEffect(key1=orderDetailsResponse) {
+        Log.d("PaymentScreen", "$orderDetailsResponse")
+        orderDetailsResponse?.let {
+            val value = viewModel.recalcTotals(it)
+           viewModel.updateBillState( uiState.copy(
+                billedItems = value.billedItems,
+                subtotal = value.subtotal,
+                taxAmount = value.taxAmount,
+                cessAmount = value.cessAmount,
+                cessSpecific = value.cessSpecific,
+                totalAmount = value.totalAmount,
+                amountToPay = value.totalAmount,
+                roundOff = value.roundOff
+            )) }
+    }
 
-    LaunchedEffect(key1 = amountToPayFromRoute, key2 = orderMasterId, key3 = orderDetailsResponse) {
-        orderDetailsResponse?.let { viewModel.recalcTotals(it) }
-        amountToPayFromRoute?.let { viewModel.updateAmountToPay(it.toDouble()) }
+    LaunchedEffect(key1 = amountToPayFromRoute, key2 = orderMasterId) {
+        amountToPayFromRoute?.let { viewModel.updateAmountToPay(it) }
         orderMasterId?.let { viewModel.updateOrderMasterId(it) }
     }
 
@@ -180,7 +195,7 @@ fun PaymentScreen(
             PaymentBottomBar(
                 uiState = uiState,
                 onConfirmPayment = {
-                    viewModel.updateAmountToPay(amountToPayFromRoute ?: 0.0)
+                    viewModel.updateAmountToPay(uiState.totalAmount)
                     viewModel.processPayment(voucherType = voucherType ?: "BILL")
                 },
                 customer = customers.find { it.customer_id == customer?.customer_id },

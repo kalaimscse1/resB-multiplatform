@@ -16,6 +16,7 @@ import com.warriortech.resb.util.getCurrentTimeModern
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import kotlin.math.round
 
 class BillRepository @Inject constructor(
     private val apiService: ApiService,
@@ -91,10 +92,12 @@ class BillRepository @Inject constructor(
         total: Double = 0.0,
         tenderedAmt: Double = 0.0,
         discount: Double = 0.0,
-        otherCharges: Double = 0.0
+        otherCharges: Double = 0.0,
+        roundOff: Double=0.0
     ): Flow<Result<TblBillingResponse>> = flow {
         try {
             val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
+
             var bill: TblBillingResponse? = null
             if (billNo != "--") {
                 apiService.resetDue(
@@ -110,9 +113,10 @@ class BillRepository @Inject constructor(
 
             val tenant = sessionManager.getCompanyCode() ?: ""
 
+            // total already includes otherCharges from ViewModel
 
             val billNumber = when {
-                paymentMethod.name == "DUE" || voucherType == "DUE" || receivedAmt < total -> apiService.getBillNoByCounterId(
+                paymentMethod.name == "DUE" || voucherType == "DUE" || (receivedAmt+discount) < total -> apiService.getBillNoByCounterId(
                     sessionManager.getUser()?.counter_id!!, "DUE", tenant
                 )
 
@@ -124,7 +128,7 @@ class BillRepository @Inject constructor(
             val voucher = apiService.getVoucherByCounterId(
                 sessionManager.getUser()?.counter_id!!,
                 tenant,
-                if (paymentMethod.name == "DUE" || voucherType == "DUE" || receivedAmt < total) "DUE" else "BILL"
+                if (paymentMethod.name == "DUE" || voucherType == "DUE" || (receivedAmt+discount) < total) "DUE" else "BILL"
             ).body()
 
             val orderResponse = apiService.getOpenOrderDetailsForTable(orderMasterId, tenant)
@@ -149,16 +153,16 @@ class BillRepository @Inject constructor(
                 cash = if (paymentMethod.name == "CASH") receivedAmt else totals.first,
                 card = if (paymentMethod.name == "CARD") receivedAmt else totals.second,
                 upi = if (paymentMethod.name == "UPI") receivedAmt else totals.third,
-                due = if (paymentMethod.name == "DUE") receivedAmt else if (voucherType == "DUE" || receivedAmt < total) total - receivedAmt else 0.0,
+                due = if (paymentMethod.name == "DUE") receivedAmt else if (voucherType == "DUE" || (receivedAmt+discount) < total) total - receivedAmt else 0.0,
                 received_amt = if (paymentMethod.name == "DUE") 0.0 else receivedAmt,
                 pending_amt = if (paymentMethod.name == "DUE") receivedAmt else if (voucherType == "DUE" || receivedAmt < total) total - receivedAmt else 0.0,
                 note = "",
                 is_active = 1L,
                 disc_amt = discount,
                 delivery_amt = otherCharges,
-                round_off = 0.0,
+                round_off = roundOff,
                 rounded_amt = total,
-                others = otherCharges,
+                others = 0.0,
                 change = if (isTendered && tenderedAmt > 0) tenderedAmt - receivedAmt else 0.0,
                 tendered_amt = tenderedAmt
             )

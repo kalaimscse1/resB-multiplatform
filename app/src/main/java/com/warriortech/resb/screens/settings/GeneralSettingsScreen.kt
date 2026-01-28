@@ -185,6 +185,8 @@ fun GeneralSettingDialog(
     var businessDate by remember { mutableStateOf(setting?.business_date ?: "") }
     var isAccounts by remember { mutableStateOf(setting?.is_accounts ?: false) }
     var isInventory by remember { mutableStateOf(setting?.is_inventory ?: false) }
+    var isDraftBill by remember { mutableStateOf(setting?.is_draft_bill ?: false) }
+
 
     Column {
         OutlinedTextField(
@@ -476,6 +478,17 @@ fun GeneralSettingDialog(
             Spacer(modifier = Modifier.width(8.dp))
             Text("Inventory Module Enabled")
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Switch(
+                checked = isDraftBill,
+                onCheckedChange = { isDraftBill = it }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Draft Bill")
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
         Button(
@@ -511,7 +524,8 @@ fun GeneralSettingDialog(
                     remark2 = remark2,
                     business_date = businessDate,
                     is_accounts = isAccounts,
-                    is_inventory = isInventory
+                    is_inventory = isInventory,
+                    is_draft_bill = isDraftBill
                 )
                 onSave(newSetting)
             }

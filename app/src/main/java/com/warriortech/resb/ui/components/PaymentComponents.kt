@@ -83,30 +83,6 @@ fun PaymentSummaryCard(uiState: BillingPaymentUiState, viewModel: BillingViewMod
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (uiState.cessAmount > 0) {
-
-                    EditableBillingRow(
-                        label = "Cess Amount",
-                        amount = uiState.cessAmount,
-                        currencyFormatter = currencyFormatter
-                    )
-
-                }
-                if (uiState.cessSpecific > 0) {
-
-                    EditableBillingRow(
-                        label = "Cess Specific",
-                        amount = uiState.cessSpecific,
-                        currencyFormatter = currencyFormatter
-                    )
-
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 EditableBillingRow(
                     label = "Discount",
                     amount = uiState.discountFlat,
@@ -131,6 +107,18 @@ fun PaymentSummaryCard(uiState: BillingPaymentUiState, viewModel: BillingViewMod
                     onValueChange = {
                         viewModel.updateOtherCharges(it)
                     }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                EditableBillingRow(
+                    label = "RoundOff",
+                    amount = uiState.roundOff,
+                    currencyFormatter = currencyFormatter
                 )
             }
             ModernDivider(modifier = Modifier.padding(vertical = 8.dp))

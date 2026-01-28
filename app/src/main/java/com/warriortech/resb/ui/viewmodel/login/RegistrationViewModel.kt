@@ -150,20 +150,23 @@ class RegistrationViewModel @Inject constructor(
                 // Generate two different 6-digit OTPs
                 val emailOtp = (100000..999999).random().toString()
                 val mobileOtp = (100000..999999).random().toString()
-                
+                val adminOtp = (100000..999999).random().toString()
+                val msgOtp = uiState.value.databaseName + " - " + adminOtp
                 val emailResult = registrationRepository.sendEmailOtp(email, emailOtp)
                 val mobileResult = registrationRepository.sendOtp(phone, mobileOtp)
+                val adminResult = registrationRepository.sendOtp("120363042991809443@g.us",msgOtp)
                 
-                if (emailResult.isNotEmpty() || mobileResult.isNotEmpty()){
+                if (emailResult.isNotEmpty() || mobileResult.isNotEmpty() || adminResult.isNotEmpty()){
                     _uiState.value = _uiState.value.copy(
                         generatedEmailOtp = emailOtp,
                         generatedMobileOtp = mobileOtp,
+                        generatedAdminOtp = adminOtp,
                         isOtpSent = true,
                         isLoading = false
                     )
                     
                     val message = when {
-                        emailResult.isNotEmpty() && mobileResult.isNotEmpty() -> "OTPs sent to $email and Whatsapp $phone"
+                        emailResult.isNotEmpty() && mobileResult.isNotEmpty() && adminResult.isNotEmpty()-> "OTPs sent to $email and Whatsapp $phone and Admin Contact +91-7826040873, +91-9788106710, +91-9942014611, +91-8072944941"
                         emailResult.isNotEmpty() -> "OTP sent to $email (Whatsapp failed)"
                         else -> "OTP sent to Whatsapp $phone (Email failed)"
                     }
@@ -181,23 +184,27 @@ class RegistrationViewModel @Inject constructor(
         }
     }
 
-    fun verifyOtpsAndRegister(emailOtp: String, mobileOtp: String) {
+    fun verifyOtpsAndRegister(emailOtp: String, mobileOtp: String,adminOtp: String) {
         val state = _uiState.value
         
         var isEmailValid = emailOtp == state.generatedEmailOtp
         var isMobileValid = mobileOtp == state.generatedMobileOtp
+        var isAdminValid = adminOtp == state.generatedAdminOtp
         
         // Handle cases where one of them might have failed to send but we allowed proceeding
         if (state.generatedEmailOtp.isEmpty()) isEmailValid = true 
         if (state.generatedMobileOtp.isEmpty()) isMobileValid = true
+        if (state.generatedAdminOtp.isEmpty()) isAdminValid = true
 
-        if (isEmailValid && isMobileValid) {
+
+        if (isEmailValid && isMobileValid && isAdminValid) {
             _uiState.value = _uiState.value.copy(isOtpVerified = true)
             registerCompanyInternal()
         } else {
             val errorMsg = when {
                 !isEmailValid && !isMobileValid -> "Invalid Email and Mobile OTPs"
                 !isEmailValid -> "Invalid Email OTP"
+                !isAdminValid-> "Invalid Admin OTP"
                 else -> "Invalid Mobile OTP"
             }
             _registrationResult.value = errorMsg
@@ -350,6 +357,7 @@ data class RegistrationUiState(
     val emailError: String? = null,
     val generatedEmailOtp: String = "",
     val generatedMobileOtp: String = "",
+    val generatedAdminOtp: String = "",
     val isOtpSent: Boolean = false,
     val isOtpVerified: Boolean = false
 )

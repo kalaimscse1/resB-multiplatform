@@ -38,7 +38,7 @@ fun UnpaidBillsScreen(
     viewModel: UnpaidBillsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var fromDate by remember { mutableStateOf(LocalDate.now().minusDays(30)) }
+    var fromDate by remember { mutableStateOf(LocalDate.now()) }
     var toDate by remember { mutableStateOf(LocalDate.now()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var isFromDatePicker by remember { mutableStateOf(true) }

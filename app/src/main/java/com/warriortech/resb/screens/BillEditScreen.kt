@@ -118,6 +118,9 @@ fun BillEditScreen(
                                 BillInfoRow("Staff", bill.staff.staff_name)
                                 BillInfoRow("Order Amount", CurrencySettings.format(bill.order_amt))
                                 BillInfoRow("Tax Amount", CurrencySettings.format(bill.tax_amt))
+                                BillInfoRow("Discount", CurrencySettings.format(bill.disc_amt))
+                                BillInfoRow("Other Charges", CurrencySettings.format(bill.others))
+                                BillInfoRow("Round Off", CurrencySettings.format(bill.round_off))
                                 BillInfoRow("Grand Total", CurrencySettings.format(bill.grand_total))
                             }
                         }

@@ -50,7 +50,7 @@ fun PaidBillsScreen(
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var billToDelete by remember { mutableStateOf<TblBillingResponse?>(null) }
-    var fromDate by remember { mutableStateOf(LocalDate.now().minusDays(30)) }
+    var fromDate by remember { mutableStateOf(LocalDate.now()) }
     var toDate by remember { mutableStateOf(LocalDate.now()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var isFromDatePicker by remember { mutableStateOf(true) }
