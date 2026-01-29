@@ -49,6 +49,7 @@ data class PrintTemplateLineEntity(
     val display_text: String?,
     val align_type: String, // LEFT / CENTER / RIGHT
     val font_size: String, // SMALL / NORMAL / LARGE
+    val font_name: String?, // FONT_A / FONT_B
     val is_bold: Boolean = false,
     val is_underline: Boolean = false,
     val max_width_pct: Int?,

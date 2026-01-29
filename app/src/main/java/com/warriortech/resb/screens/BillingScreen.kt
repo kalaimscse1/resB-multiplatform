@@ -1,10 +1,15 @@
 package com.warriortech.resb.screens
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Print
@@ -32,8 +37,13 @@ import com.warriortech.resb.ui.theme.SecondaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.util.CurrencySettings
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import com.warriortech.resb.model.Bill
+import com.warriortech.resb.model.BillItem
+import com.warriortech.resb.network.SessionManager
+import com.warriortech.resb.ui.viewmodel.payment.TemplatePreviewData
 
 
 @Composable
@@ -94,6 +104,7 @@ fun BillingScreen(
     viewModel: BillingViewModel = hiltViewModel(),
     orderDetailsResponse: List<TblOrderDetailsResponse>? = null,
     orderMasterId: String? = null,
+    sessionManager: SessionManager,
     onProceedToBilling: (orderDetailsResponse: Map<TblMenuItemResponse, Int>) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,6 +114,7 @@ fun BillingScreen(
     val orderDetails by viewModel._originalOrderDetails.collectAsStateWithLifecycle()
     var previewDialog by remember { mutableStateOf(false) }
     val preview by viewModel.preview.collectAsStateWithLifecycle()
+    val templatePreview by viewModel.templatePreview.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = orderDetailsResponse, key2 = orderMasterId) {
         when {
@@ -158,7 +170,7 @@ fun BillingScreen(
                         Icon(
                             Icons.Default.Print,
                             contentDescription = "Print",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = SurfaceLight
                         )
                     }
                 },
@@ -199,23 +211,25 @@ fun BillingScreen(
         )
 
     }
-    if (previewDialog && preview != null) {
-        preview?.let {
-            PreviewBillDialog(
-                preview = it,
-                onDismiss = {
-                    previewDialog = false
-                    viewModel.clearPreview()
-                }
-            )
-        }
+    if (previewDialog && (preview != null || templatePreview != null)) {
+        PreviewBillDialog(
+            bitmapPreview = preview,
+            templatePreview = templatePreview,
+            sessionManager = sessionManager,
+            onDismiss = {
+                previewDialog = false
+                viewModel.clearPreview()
+            }
+        )
     }
 
 }
 
 @Composable
 fun PreviewBillDialog(
-    preview: Bitmap,
+    bitmapPreview: Bitmap?,
+    templatePreview: TemplatePreviewData?,
+    sessionManager: SessionManager,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -231,18 +245,130 @@ fun PreviewBillDialog(
             Text("Bill Preview", style = MaterialTheme.typography.titleLarge)
         },
         text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Image(
-                    bitmap = preview.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Box(modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)) {
+                if (templatePreview != null) {
+                    TemplateBasedPreviewContent(templatePreview, sessionManager)
+                } else if (bitmapPreview != null) {
+                    Image(
+                        bitmap = bitmapPreview.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                    )
+                }
             }
         }
     )
+}
+
+@Composable
+fun TemplateBasedPreviewContent(data: TemplatePreviewData, sessionManager: SessionManager) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .background(Color.White)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        data.sections.forEach { sectionData ->
+            sectionData.lines.forEach { lineData ->
+                val line = lineData.line
+                if (line.is_repeatable && sectionData.section.section_type.uppercase() == "BODY") {
+                    data.bill.items.forEach { billItem ->
+                        RenderLineRow(lineData, data.bill, billItem, sessionManager)
+                    }
+                } else {
+                    RenderLineRow(lineData, data.bill, null, sessionManager)
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        }
+    }
+}
+
+@Composable
+fun RenderLineRow(
+    lineData: com.warriortech.resb.ui.viewmodel.payment.TemplatePreviewLine,
+    bill: Bill,
+    item: BillItem?,
+    sessionManager: SessionManager
+) {
+    val line = lineData.line
+    val columns = lineData.columns
+    
+    if (columns.isEmpty()) {
+        val text = resolvePreviewValue(line.field_key, bill, item, sessionManager)
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = when (line.align_type.uppercase()) {
+                "CENTER" -> TextAlign.Center
+                "RIGHT" -> TextAlign.End
+                else -> TextAlign.Start
+            },
+            fontWeight = if (line.is_bold) FontWeight.Bold else FontWeight.Normal,
+            style = MaterialTheme.typography.bodySmall
+        )
+    } else {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            columns.sortedBy { it.sort_order }.forEach { column ->
+                val text = resolvePreviewValue(column.field_key, bill, item, sessionManager)
+                Text(
+                    text = text,
+                    modifier = Modifier.weight(column.width_pct.toFloat()),
+                    textAlign = when (column.align_type.uppercase()) {
+                        "CENTER" -> TextAlign.Center
+                        "RIGHT" -> TextAlign.End
+                        else -> TextAlign.Start
+                    },
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
+
+fun resolvePreviewValue(key: String, bill: Bill, item: BillItem?, sessionManager: SessionManager): String {
+    val profile = sessionManager.getRestaurantProfile()
+    val settings = sessionManager.getGeneralSetting()
+    val cleanKey = key.uppercase().trim().replace(" ", "_")
+    
+    return when {
+        cleanKey == "BUSINESS_NAME" || cleanKey == "RESTAURANT_NAME" || cleanKey == "COMPANY_VALUE" -> profile?.company_name ?: ""
+        cleanKey == "BUSINESS_ADDRESS" || cleanKey == "ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
+        cleanKey == "ADDRESS1" || cleanKey == "ADDRESS1_VALUE" -> profile?.address1 ?: ""
+        cleanKey == "ADDRESS2" || cleanKey == "ADDRESS2_VALUE" -> profile?.address2 ?: ""
+        cleanKey == "PLACE" || cleanKey == "PLACE_VALUE" -> profile?.place ?: ""
+        cleanKey == "PINCODE" || cleanKey == "PINCODE_VALUE" -> profile?.pincode ?: ""
+        cleanKey == "PHONE" || cleanKey == "CONTACT_NO" || cleanKey == "BUSINESS_PHONE" -> profile?.contact_no ?: ""
+        cleanKey == "GSTIN" || cleanKey == "GST_NO" || cleanKey == "TAX_NO" || cleanKey == "BUSINESS_GSTIN" -> profile?.tax_no ?: ""
+        cleanKey == "BILL_VALUE" -> bill.billNo
+        cleanKey == "DATE_VALUE" -> bill.date
+        cleanKey == "TIME_VALUE" -> bill.time
+        cleanKey == "ORDER_VALUE" -> bill.orderNo
+        cleanKey == "TABLE_VALUE" -> bill.tableNo
+        cleanKey == "COUNTER_VALUE" -> bill.counter
+        cleanKey == "SUBTOTAL" -> String.format("%.2f", bill.subtotal)
+        cleanKey == "TOTAL" -> String.format("%.2f", bill.total)
+        cleanKey == "DISCOUNT" -> String.format("%.2f", bill.discount)
+        cleanKey == "TAX_AMT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
+        cleanKey == "RECEIVED_AMT" -> String.format("%.2f", bill.received_amt)
+        cleanKey == "PENDING_AMT" -> String.format("%.2f", bill.pending_amt)
+        cleanKey == "CUST_NAME" -> bill.custName
+        cleanKey == "CUST_NO" -> bill.custNo
+        cleanKey == "CUST_ADDRESS" -> bill.custAddress
+        cleanKey == "CUST_GSTIN" -> bill.custGstin
+        cleanKey == "ITEM_VALUE" -> item?.itemName ?: ""
+        cleanKey == "QTY_VALUE" -> item?.qty?.toString() ?: ""
+        cleanKey == "RATE" || cleanKey == "PRICE_VALUE" -> String.format("%.2f", item?.price ?: 0.0)
+        cleanKey == "AMT_VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
+        cleanKey == "SN" -> item?.sn?.toString() ?: ""
+        cleanKey == "FOOTER" || cleanKey == "BILL_FOOTER" || cleanKey == "THANK_VALUE" -> settings?.bill_footer ?: ""
+        cleanKey == "SEPARATOR" -> "--------------------------------"
+        cleanKey == "DOUBLE_SEPARATOR" -> "================================"
+        key.startsWith("FIXED:") -> key.removePrefix("FIXED:")
+        else -> key
+    }
 }
 
 @Composable

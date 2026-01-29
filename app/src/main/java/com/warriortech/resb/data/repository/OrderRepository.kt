@@ -699,7 +699,16 @@ class OrderRepository @Inject constructor(
             tax_name = ""
         )
     }
-
+    @SuppressLint("DefaultLocale")
+    fun Double.roundTo2(): Double {
+        val dec = sessionManager.getDecimalPlaces()
+        return if (dec == 2L)
+            BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
+        else if (dec == 3L)
+            BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
+        else
+            BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
+    }
     suspend fun updateOrderDetails(
         orderId: String?,
         items: List<OrderItem>,
@@ -814,16 +823,7 @@ class OrderRepository @Inject constructor(
     }
 
 
-    @SuppressLint("DefaultLocale")
-    fun Double.roundTo2(): Double {
-        val dec = sessionManager.getDecimalPlaces()
-        return if (dec == 2L)
-            BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
-        else if (dec == 3L)
-            BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
-        else
-            BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
-    }
+
 
     /**
      * Get all orders

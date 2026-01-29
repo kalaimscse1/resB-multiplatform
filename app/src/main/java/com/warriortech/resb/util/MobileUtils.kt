@@ -1,5 +1,6 @@
 package com.warriortech.resb.util
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.util.DisplayMetrics
@@ -10,6 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 object MobileUtils {
 
@@ -120,3 +123,4 @@ data class ScreenSizeInfo(
     val isExpanded: Boolean,
     val isLandscape: Boolean
 )
+

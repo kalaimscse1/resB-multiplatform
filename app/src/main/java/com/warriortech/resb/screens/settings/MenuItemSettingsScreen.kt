@@ -77,6 +77,7 @@ fun MenuItemSettingsScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingMenuItem by remember { mutableStateOf<TblMenuItemResponse?>(null) }
+    var menuItemToDelete by remember { mutableStateOf<TblMenuItemResponse?>(null) }
 
     var searchMode by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -252,11 +253,7 @@ fun MenuItemSettingsScreen(
                             MenuItemCard(
                                 menuItem = menuItem,
                                 onEdit = { editingMenuItem = menuItem },
-                                onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteMenuItem(menuItem.menu_item_id.toInt())
-                                    }
-                                }
+                                onDelete = { menuItemToDelete = menuItem }
                             )
                         }
                     }
@@ -301,6 +298,33 @@ fun MenuItemSettingsScreen(
                 taxes = taxes,
                 units = units,
                 order = order.toLong()
+            )
+        }
+
+        if (menuItemToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { menuItemToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete '${menuItemToDelete?.menu_item_name}'?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            menuItemToDelete?.let {
+                                scope.launch {
+                                    viewModel.deleteMenuItem(it.menu_item_id.toInt())
+                                }
+                            }
+                            menuItemToDelete = null
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { menuItemToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
 
@@ -433,7 +457,7 @@ fun MenuItemDialog(
     var orderBy by remember { mutableLongStateOf(menuItem?.order_by ?: order) }
     var acRate by remember { mutableStateOf(menuItem?.ac_rate?.toString() ?: "") }
     var parcelRate by remember { mutableStateOf(menuItem?.parcel_rate?.toString() ?: "") }
-    var parcelCharge by remember { mutableStateOf(menuItem?.parcel_charge?.toString() ?: "") }
+    var parcelCharge by remember { mutableStateOf(0.0) }
     var preparationTime by remember { mutableStateOf(menuItem?.preparation_time?.toString() ?: "") }
     var isFavourite by remember { mutableStateOf(menuItem?.is_favourite == true) }
 

@@ -1,11 +1,17 @@
 package com.warriortech.resb.ui.viewmodel.payment
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.printservice.PrintService
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.warriortech.resb.data.local.dao.PrintTemplateDao
+import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
+import com.warriortech.resb.data.local.entity.PrintTemplateEntity
+import com.warriortech.resb.data.local.entity.PrintTemplateLineEntity
+import com.warriortech.resb.data.local.entity.PrintTemplateSectionEntity
 import com.warriortech.resb.data.repository.BillRepository
 import com.warriortech.resb.data.repository.CustomerRepository
 import com.warriortech.resb.data.repository.OrderRepository
@@ -23,11 +29,10 @@ import com.warriortech.resb.util.getCurrentDateModern
 import com.warriortech.resb.util.getCurrentTimeModern
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.collections.component1
@@ -76,13 +81,30 @@ data class BillingPaymentUiState(
     val roundOff:Double=0.0
 )
 
+data class TemplatePreviewLine(
+    val line: PrintTemplateLineEntity,
+    val columns: List<PrintTemplateColumnEntity>
+)
+
+data class TemplatePreviewSection(
+    val section: PrintTemplateSectionEntity,
+    val lines: List<TemplatePreviewLine>
+)
+
+data class TemplatePreviewData(
+    val template: PrintTemplateEntity,
+    val sections: List<TemplatePreviewSection>,
+    val bill: Bill
+)
+
 @HiltViewModel
 class BillingViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val billRepository: BillRepository,
     private val orderRepository: OrderRepository,
     private val sessionManager: SessionManager,
-    private val customerRepository: CustomerRepository
+    private val customerRepository: CustomerRepository,
+    private val printTemplateDao: PrintTemplateDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BillingPaymentUiState())
@@ -114,6 +136,10 @@ class BillingViewModel @Inject constructor(
 
     private val _preview = MutableStateFlow<Bitmap?>(null)
     val preview: StateFlow<Bitmap?> = _preview
+
+    private val _templatePreview = MutableStateFlow<TemplatePreviewData?>(null)
+    val templatePreview: StateFlow<TemplatePreviewData?> = _templatePreview.asStateFlow()
+
     var res = false
     val orderDetailsResponse1 = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
 
@@ -176,7 +202,16 @@ class BillingViewModel @Inject constructor(
     /**
      * Central function to recalc totals based on billed items
      */
-
+    @SuppressLint("DefaultLocale")
+    fun Double.roundTo2(): Double {
+        val dec = sessionManager.getDecimalPlaces()
+        return if (dec == 2L)
+            BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
+        else if (dec == 3L)
+            BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
+        else
+            BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
+    }
      fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
         val isRoundOffEnabled = sessionManager.getGeneralSetting()?.is_round_off == true
 
@@ -190,7 +225,7 @@ class BillingViewModel @Inject constructor(
                 menuItem.tax_percentage.toDouble() / 2
             )
             Log.d("GSTCALC", "recalcTotals: $gst ${menuItem.actual_rate}")
-            gst.gstAmount * qty
+            (gst.gstAmount * qty).roundTo2()
         }
 
         val cessAmount = items.entries.sumOf { (menuItem, qty) ->
@@ -207,7 +242,7 @@ class BillingViewModel @Inject constructor(
 
         val discountFlat = _uiState.value.discountFlat
         val otherCharges = _uiState.value.otherChrages
-        val finalTotal = subtotal + taxAmount + otherCharges - discountFlat
+        val finalTotal = subtotal + taxAmount + cessAmount + cessSpecific + otherCharges - discountFlat
         val totalAmount = if (isRoundOffEnabled) round(finalTotal) else finalTotal
         val roundOff = totalAmount - finalTotal
         Log.d("Pay", "recalcTotals: $totalAmount,$subtotal,$taxAmount,$cessAmount,$cessSpecific")
@@ -784,63 +819,91 @@ class BillingViewModel @Inject constructor(
 
     fun previewDetails(orderID: String) {
         viewModelScope.launch {
-            val orderDetails =
-                orderRepository.getOrdersByOrderId(orderID)
-                    .body()!!
-            val order = orderRepository.getOrderMasterById(orderID)
-            val counter = sessionManager.getUser()?.counter_name ?: "Counter1"
-            var sn = 1
-            val billItems = orderDetails.map { detail ->
-                val menuItem = detail.menuItem
-                val qty = detail.qty
-                BillItem(
-                    sn = sn++,
-                    itemName = menuItem.menu_item_name,
-                    qty = qty,
-                    price = menuItem.rate,
-                    basePrice = detail.rate,
-                    amount = qty * menuItem.rate,
-                    sgstPercent = menuItem.tax_percentage.toDouble() / 2,
-                    cgstPercent = menuItem.tax_percentage.toDouble() / 2,
-                    igstPercent = if (detail.igst > 0) menuItem.tax_percentage.toDouble() else 0.0,
-                    cessPercent = if (detail.cess > 0) menuItem.cess_per.toDouble() else 0.0,
-                    sgst = detail.sgst,
-                    cgst = detail.cgst,
-                    igst = if (detail.igst > 0) detail.igst else 0.0,
-                    cess = if (detail.cess > 0) detail.cess else 0.0,
-                    cess_specific = if (detail.cess_specific > 0) detail.cess_specific else 0.0,
-                    taxPercent = menuItem.tax_percentage.toDouble(),
-                    taxAmount = detail.tax_amount
+            try {
+                val orderDetails =
+                    orderRepository.getOrdersByOrderId(orderID)
+                        .body()!!
+                val order = orderRepository.getOrderMasterById(orderID)
+                val counter = sessionManager.getUser()?.counter_name ?: "Counter1"
+                var sn = 1
+                val billItems = orderDetails.map { detail ->
+                    val menuItem = detail.menuItem
+                    val qty = detail.qty
+                    BillItem(
+                        sn = sn++,
+                        itemName = menuItem.menu_item_name,
+                        qty = qty,
+                        price = menuItem.rate,
+                        basePrice = detail.rate,
+                        amount = qty * menuItem.rate,
+                        sgstPercent = menuItem.tax_percentage.toDouble() / 2,
+                        cgstPercent = menuItem.tax_percentage.toDouble() / 2,
+                        igstPercent = if (detail.igst > 0) menuItem.tax_percentage.toDouble() else 0.0,
+                        cessPercent = if (detail.cess > 0) menuItem.cess_per.toDouble() else 0.0,
+                        sgst = detail.sgst,
+                        cgst = detail.cgst,
+                        igst = if (detail.igst > 0) detail.igst else 0.0,
+                        cess = if (detail.cess > 0) detail.cess else 0.0,
+                        cess_specific = if (detail.cess_specific > 0) detail.cess_specific else 0.0,
+                        taxPercent = menuItem.tax_percentage.toDouble(),
+                        taxAmount = detail.tax_amount
+                    )
+                }
+                
+                val currentBill = Bill(
+                    company_code = sessionManager.getCompanyCode() ?: "",
+                    billNo = "PREVIEW",
+                    date = getCurrentDateModern(),
+                    time = getCurrentTimeModern(),
+                    orderNo = orderID,
+                    counter = counter,
+                    tableNo = order.table_name,
+                    custName = uiState.value.customer?.customer_name ?: "",
+                    custNo = uiState.value.customer?.contact_no ?: "",
+                    custAddress = uiState.value.customer?.address ?: "",
+                    custGstin = uiState.value.customer?.gst_no ?: "",
+                    items = billItems,
+                    subtotal = uiState.value.subtotal,
+                    deliveryCharge = uiState.value.otherChrages, 
+                    discount = uiState.value.discountFlat,
+                    roundOff = uiState.value.roundOff,
+                    total = uiState.value.totalAmount,
+                    paperWidth = if(sessionManager.getBluetoothPrinter() != null) 58 else 80,
+                    received_amt = uiState.value.totalAmount,
+                    pending_amt = 0.0
                 )
+
+                // Try to get default template for "BILL"
+                val template = printTemplateDao.getDefaultTemplate("BILL")
+                if (template != null) {
+                    val sections = printTemplateDao.getSectionsForTemplateSync(template.template_id)
+                    
+                    // NEW logic: Fetch lines and columns hierarchy for each section
+                    val fullSectionsHierarchy = sections.map { section ->
+                        val lines = printTemplateDao.getLinesForSectionSync(section.section_id)
+                        val fullLines = lines.map { line ->
+                            val columns = printTemplateDao.getColumnsForLineSync(line.line_id)
+                            TemplatePreviewLine(line, columns)
+                        }
+                        TemplatePreviewSection(section, fullLines)
+                    }
+                    
+                    _templatePreview.value = TemplatePreviewData(template, fullSectionsHierarchy, currentBill)
+                } else {
+                    // Fallback to API preview if no local template exists
+                    val bmp = billRepository.fetchBillPreview(currentBill)
+                    _preview.value = bmp?.copy(bmp.config!!, false)
+                }
+            } catch (e: Exception) {
+                Log.e("Preview", "Preview generation failed: ${e.message}")
+                _uiState.update { it.copy(errorMessage = "Preview generation failed: ${e.message}") }
             }
-            val billDetails = Bill(
-                company_code = sessionManager.getCompanyCode() ?: "",
-                billNo = "C1-BILL-1001",
-                date = getCurrentDateModern(),
-                time = getCurrentTimeModern(),
-                orderNo = orderID,
-                counter = counter,
-                tableNo = order.table_name,
-                custName = "",
-                custNo = "",
-                custAddress = "",
-                custGstin = "",
-                items = billItems,
-                subtotal = orderDetails.sumOf { it.grand_total },
-                deliveryCharge = 0.0, // Assuming no delivery charge
-                discount = 0.0,
-                roundOff = 0.0,
-                total = orderDetails.sumOf { it.grand_total },
-                paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 58 else 80,
-                received_amt = orderDetails.sumOf { it.grand_total },
-                pending_amt = 0.0
-            )
-            val bmp = billRepository.fetchBillPreview(billDetails)
-            _preview.value = bmp?.copy(bmp.config!!,false)
         }
     }
+    
     fun clearPreview() {
         _preview.value = null
+        _templatePreview.value = null
     }
 
 }

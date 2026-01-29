@@ -48,6 +48,11 @@ fun PrinterSettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.loadPrinters()
     }
+    BackHandler {
+        navController.navigate("settings") {
+            popUpTo("settings") { inclusive = true }
+        }
+    }
 
     Scaffold(
         topBar = {

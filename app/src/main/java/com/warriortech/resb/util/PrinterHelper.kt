@@ -68,6 +68,7 @@ class PrinterHelper(
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     suspend fun printBillWithTemplate(bill: Bill, templateType: String = "BILL", target: String, ipAddress: String? = null): Boolean {
         val template = printTemplateDao.getDefaultTemplate(templateType) ?: return false
+            
         val sections = printTemplateDao.getSectionsForTemplateSync(template.template_id)
         
         val outputStream = ByteArrayOutputStream()
@@ -78,20 +79,27 @@ class PrinterHelper(
         for (section in sections) {
             val lines = printTemplateDao.getLinesForSectionSync(section.section_id)
             
-            for (line in lines) {
+            var i = 0
+            while (i < lines.size) {
+                val line = lines[i]
                 if (line.is_repeatable && section.section_type.uppercase() == "BODY") {
-                    // Only repeat lines marked as repeatable (usually the item row)
+                    val start = i
+                    while (i < lines.size && lines[i].is_repeatable) {
+                        i++
+                    }
+                    val repeatableBlock = lines.subList(start, i)
+                    
                     for (item in bill.items) {
-                        outputStream.write(formatLine(line, charWidth, bill, item))
+                        for (rLine in repeatableBlock) {
+                            outputStream.write(formatLine(rLine, charWidth, bill, item))
+                        }
                     }
                 } else {
-                    // Non-repeatable lines (headers, separators, etc.) print once
                     outputStream.write(formatLine(line, charWidth, bill, null))
+                    i++
                 }
             }
-            
-            // Add a small spacer between sections
-            outputStream.write(ESC_FEED_LINE)
+//            outputStream.write(ESC_FEED_LINE)
         }
         
         outputStream.write(ESC_CUT_PAPER)
@@ -101,11 +109,14 @@ class PrinterHelper(
             try {
                 if (target == "BLUETOOTH") {
                     var success = false
-                    printViaBluetoothMac(sessionManager.getBluetoothPrinter().toString(), data) { s, _ -> success = s }
-                    success
+                    val mac = sessionManager.getBluetoothPrinter()
+                    if (mac != null) {
+                        printViaBluetoothMac(mac, data) { s, _ -> success = s }
+                        success
+                    } else false
                 } else if (target == "TCP" && ipAddress != null) {
                     printViaTcp(ipAddress, 9100, data) { _, _ -> }
-                    true // TCP is asynchronous in this implementation
+                    true 
                 } else {
                     false
                 }
@@ -123,29 +134,50 @@ class PrinterHelper(
     ): ByteArray {
         val bos = ByteArrayOutputStream()
         
-        // Font size and style
+        // 1. Font Name (ESC M n)
+        when (line.font_name?.uppercase()) {
+            "FONT_B", "FONTB", "SMALL" -> bos.write(byteArrayOf(0x1b, 0x4d, 0x01))
+            else -> bos.write(byteArrayOf(0x1b, 0x4d, 0x00))
+        }
+
+        // 2. Font Size (GS ! n)
+        val sizeInt = line.font_size.toIntOrNull() ?: 12
+        val n = when {
+            sizeInt >= 24 -> 0x11.toByte() // Double height & width
+            sizeInt >= 16 -> 0x01.toByte() // Double height
+            else -> 0x00.toByte()          // Normal
+        }
+        bos.write(byteArrayOf(0x1d, 0x21, n))
+
+        // 3. Font Styles
         if (line.is_bold) bos.write(ESC_BOLD_ON) else bos.write(ESC_BOLD_OFF)
         if (line.is_underline) bos.write(ESC_UNDERLINE_ON) else bos.write(ESC_UNDERLINE_OFF)
         
-        // Alignment
+        // 4. Alignment
         when (line.align_type.uppercase()) {
             "CENTER" -> bos.write(ESC_ALIGN_CENTER)
             "RIGHT" -> bos.write(ESC_ALIGN_RIGHT)
             else -> bos.write(ESC_ALIGN_LEFT)
         }
 
+        // 5. Max Width Pct
+        val effectiveWidth = if (line.max_width_pct != null && line.max_width_pct!! > 0) {
+            (charWidth * line.max_width_pct!! / 100)
+        } else {
+            charWidth
+        }
+
         val columns = printTemplateDao.getColumnsForLineSync(line.line_id)
         if (columns.isEmpty()) {
-            val text = resolveValue(line.field_key, bill, item, charWidth)
+            val text = resolveValue(line.field_key, bill, item, effectiveWidth, line.display_text)
             bos.write(text.toByteArray(Charsets.UTF_8))
             bos.write(ESC_FEED_LINE)
         } else {
-            // Complex line with columns
             val rowText = StringBuilder()
             
             for (column in columns.sortedBy { it.sort_order }) {
-                val colWidth = (charWidth * column.width_pct / 100)
-                val value = resolveValue(column.field_key, bill, item, charWidth)
+                val colWidth = (effectiveWidth * column.width_pct / 100)
+                val value = resolveValue(column.field_key, bill, item, colWidth)
                 
                 val formattedValue = when (column.align_type.uppercase()) {
                     "RIGHT" -> value.padStart(colWidth)
@@ -161,60 +193,74 @@ class PrinterHelper(
             bos.write(ESC_FEED_LINE)
         }
         
+        // Reset styles
+        bos.write(byteArrayOf(0x1d, 0x21, 0x00))
+        bos.write(byteArrayOf(0x1b, 0x4d, 0x00))
+        bos.write(ESC_BOLD_OFF)
+        bos.write(ESC_UNDERLINE_OFF)
+        
         return bos.toByteArray()
     }
 
     @SuppressLint("DefaultLocale")
-    private fun resolveValue(key: String, bill: Bill, item: BillItem?, charWidth: Int): String {
+    private fun resolveValue(key: String, bill: Bill, item: BillItem?, charWidth: Int, lineDisplayText: String? = null): String {
         val profile = sessionManager.getRestaurantProfile()
         val settings = sessionManager.getGeneralSetting()
         
-        return when (key.uppercase()) {
+        val cleanKey = key.uppercase().trim().replace(" ", "_")
+        
+        if (cleanKey == "TEXT" || cleanKey == "DISPLAY_TEXT" || cleanKey == "LABEL") {
+            return lineDisplayText ?: ""
+        }
+
+        return when {
             // Business Details
-            "COMPANY NAME" -> profile?.company_name ?: ""
-            "BUSINESS_ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
-            "ADDRESS1" -> profile?.address1 ?: ""
-            "ADDRESS2" -> profile?.address2 ?: ""
-            "PLACE" -> profile?.place ?: ""
-            "PINCODE" -> profile?.pincode ?: ""
-            "BUSINESS_PHONE", "CONTACT_NO" -> profile?.contact_no ?: ""
-            "BUSINESS_GSTIN", "TAX_NO", "GST_NO" -> profile?.tax_no ?: ""
+            cleanKey == "BUSINESS_NAME" || cleanKey == "RESTAURANT_NAME" || cleanKey == "COMPANY_VALUE" -> profile?.company_name ?: ""
+            cleanKey == "BUSINESS_ADDRESS" || cleanKey == "ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
+            cleanKey == "ADDRESS1" || cleanKey == "ADDRESS1_VALUE" -> profile?.address1 ?: ""
+            cleanKey == "ADDRESS2" || cleanKey == "ADDRESS2_VALUE" -> profile?.address2 ?: ""
+            cleanKey == "PLACE" || cleanKey == "PLACE_VALUE" -> profile?.place ?: ""
+            cleanKey == "PINCODE" || cleanKey == "PINCODE_VALUE" -> profile?.pincode ?: ""
+            cleanKey == "PHONE" || cleanKey == "CONTACT_NO" || cleanKey == "BUSINESS_PHONE" -> profile?.contact_no ?: ""
+            cleanKey == "GST_NO" || cleanKey == "TAX_NO" || cleanKey == "BUSINESS_GSTIN" -> profile?.tax_no ?: ""
             
             // Bill Details
-            "BILL_NO" -> bill.billNo
-            "DATE" -> bill.date
-            "TIME" -> bill.time
-            "ORDER_NO" -> bill.orderNo
-            "COUNTER" -> bill.counter
-            "TABLE_NO" -> bill.tableNo
+            cleanKey == "BILL_VALUE" -> bill.billNo
+            cleanKey == "DATE_VALUE" -> bill.date
+            cleanKey == "TIME_VALUE" -> bill.time
+            cleanKey == "ORDER_VALUE" -> bill.orderNo
+            cleanKey == "TABLE_VALUE" -> bill.tableNo
+            cleanKey == "COUNTER_VALUE" -> bill.counter
             
             // Totals
-            "SUBTOTAL" -> String.format("%.2f", bill.subtotal)
-            "TOTAL" -> String.format("%.2f", bill.total)
-            "DISCOUNT" -> String.format("%.2f", bill.discount)
-            "TAX_AMT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
-            "RECEIVED_AMT" -> String.format("%.2f", bill.received_amt)
-            "PENDING_AMT" -> String.format("%.2f", bill.pending_amt)
+            cleanKey == "SUB_TOTAL" -> String.format("%.2f", bill.subtotal)
+            cleanKey == "TOTAL" -> String.format("%.2f", bill.total)
+            cleanKey == "DISCOUNT" -> String.format("%.2f", bill.discount)
+            cleanKey == "TAX_AMOUNT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
+            cleanKey == "RECEIVED_AMT" -> String.format("%.2f", bill.received_amt)
+            cleanKey == "PENDING_AMT" -> String.format("%.2f", bill.pending_amt)
             
             // Customer Details
-            "CUST_NAME" -> bill.custName
-            "CUST_NO" -> bill.custNo
-            "CUST_ADDRESS" -> bill.custAddress
-            "CUST_GSTIN" -> bill.custGstin
+            cleanKey == "CUST_NAME" -> bill.custName
+            cleanKey == "CUST_NO" -> bill.custNo
+            cleanKey == "CUST_ADDRESS" -> bill.custAddress
+            cleanKey == "CUST_GSTIN" -> bill.custGstin
             
             // Item Details (for Body section)
-            "ITEM NAME" -> item?.itemName ?: ""
-            "QTY  VALUE" -> item?.qty?.toString() ?: ""
-            "PRICE VALUE" -> String.format("%.2f", item?.price ?: 0.0)
-            "AMT VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
-            "SN" -> item?.sn?.toString() ?: ""
+            cleanKey == "ITEM_VALUE" -> item?.itemName ?: ""
+            cleanKey == "QTY_VALUE" -> item?.qty?.toString() ?: ""
+            cleanKey == "RATE" || cleanKey == "PRICE_VALUE" -> String.format("%.2f", item?.price ?: 0.0)
+            cleanKey == "AMOUNT" || cleanKey == "AMT_VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
+            cleanKey == "SN"  -> item?.sn?.toString() ?: ""
             
             // Footer & Utilities
-            "FOOTER", "BILL_FOOTER" -> settings?.bill_footer ?: ""
-            "SEPARATOR" -> "-".repeat(charWidth)
-            "DOUBLE_SEPARATOR" -> "=".repeat(charWidth)
+            cleanKey == "FOOTER" || cleanKey == "BILL_FOOTER" || cleanKey == "THANK_VALUE" -> settings?.bill_footer ?: ""
+            cleanKey == "SEPARATOR" -> "-".repeat(charWidth)
+            cleanKey == "DOUBLE_SEPARATOR" -> "=".repeat(charWidth)
             
-            else -> if (key.startsWith("FIXED:")) key.removePrefix("FIXED:") else key
+            key.startsWith("FIXED:") -> key.removePrefix("FIXED:")
+            
+            else -> lineDisplayText ?: key 
         }
     }
 

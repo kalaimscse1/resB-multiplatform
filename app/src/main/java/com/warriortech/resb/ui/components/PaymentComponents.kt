@@ -135,24 +135,6 @@ fun PaymentSummaryCard(uiState: BillingPaymentUiState, viewModel: BillingViewMod
                     isTotal = true
                 )
             }
-
-//            Row(
-//                modifier = Modifier.fillMaxWidth(),
-//                horizontalArrangement = Arrangement.SpaceBetween,
-//                verticalAlignment = Alignment.CenterVertically
-//            ) {
-//                Text(
-//                    "Total",
-//                    style = MaterialTheme.typography.titleLarge,
-//                    fontWeight = FontWeight.Bold
-//                )
-//                Text(
-//                    CurrencySettings.format(uiState.amountToPay),
-//                    style = MaterialTheme.typography.titleLarge,
-//                    fontWeight = FontWeight.Bold,
-//                    color = MaterialTheme.colorScheme.primary
-//                )
-//            }
         }
     }
 }
@@ -168,7 +150,7 @@ fun PaymentMethodCard(
     isTendered: Boolean
 ) {
     val paidAmount = uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
-    val totalAmount = uiState.amountToPay
+    val totalAmount = uiState.totalAmount
 
     val showCustomerDropdown =
         uiState.selectedPaymentMethod?.name == "DUE" ||

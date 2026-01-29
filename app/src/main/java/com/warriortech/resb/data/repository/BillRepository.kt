@@ -322,6 +322,7 @@ class BillRepository @Inject constructor(
         if (orderMaster.isSuccessful) {
             order = orderMaster.body()!!
         }
+        val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
         val request = TblBillingRequest(
             bill_no = billNo,
             bill_date = bill.bill_date,
@@ -335,10 +336,10 @@ class BillRepository @Inject constructor(
             tax_amt = order.sumOf { it.tax_amount },
             cess = order.sumOf { it.cess },
             cess_specific = order.sumOf { it.cess_specific },
-            delivery_amt = 0.0,
+            delivery_amt = bill.delivery_amt,
             grand_total = order.sumOf { it.grand_total },
-            round_off = 0.0,
-            rounded_amt = order.sumOf { it.grand_total },
+            round_off = bill.round_off,
+            rounded_amt = bill.rounded_amt,
             cash = if (bill.cash > 0.0) order.sumOf { it.grand_total } else 0.0,
             card = if (bill.card > 0.0) order.sumOf { it.grand_total } else 0.0,
             upi = if (bill.upi > 0.0) order.sumOf { it.grand_total } else 0.0,

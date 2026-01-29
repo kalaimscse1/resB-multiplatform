@@ -531,7 +531,8 @@ fun AppNavigation(
                 orderMasterId = backStackEntry.arguments?.getString("orderMasterId"),
                 onProceedToBilling = {
                     selecteItems = it
-                }
+                },
+                sessionManager = sessionManager
             )
         }
 

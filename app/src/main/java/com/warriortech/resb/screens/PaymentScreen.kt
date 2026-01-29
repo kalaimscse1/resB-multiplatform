@@ -403,7 +403,7 @@ fun PaymentBottomBar(
     sessionManager: SessionManager
 ) {
     val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
-    val totalAmount = uiState.amountToPay
+    val totalAmount = uiState.totalAmount
     val method = uiState.selectedPaymentMethod?.name.orEmpty()
 
     val hasManualEntry = when (method) {

@@ -110,7 +110,8 @@ class PrintSettingsViewModel @Inject constructor(
                 display_text = lineName,
                 align_type = "CENTER",
                 font_size = "14",
-                max_width_pct = 2
+                max_width_pct = 2,
+                font_name = "FONT_A"
             )
             printTemplateDao.insertLine(line)
         }
@@ -125,7 +126,8 @@ class PrintSettingsViewModel @Inject constructor(
                 display_text = "LOGO",
                 align_type = "CENTER",
                 font_size = "14",
-                max_width_pct = 100
+                max_width_pct = 100,
+                font_name = "FONT_A"
             )
             printTemplateDao.insertLine(line)
         }
@@ -140,7 +142,8 @@ class PrintSettingsViewModel @Inject constructor(
                 display_text = "QRCODE",
                 align_type = "CENTER",
                 font_size = "14",
-                max_width_pct = 100
+                max_width_pct = 100,
+                font_name = "FONT_A"
             )
             printTemplateDao.insertLine(line)
         }

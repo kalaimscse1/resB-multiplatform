@@ -23,10 +23,6 @@ import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.data.local.entity.PrintTemplateColumnEntity
 import androidx.compose.ui.text.style.TextAlign
 import com.warriortech.resb.data.local.entity.KotSettingsEntity
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import kotlinx.coroutines.flow.flowOf
 import com.warriortech.resb.data.local.entity.PrintPlatformOverrideEntity
 import androidx.compose.foundation.rememberScrollState
@@ -35,6 +31,7 @@ import kotlinx.coroutines.flow.flowOf
 
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Image
 
@@ -87,7 +84,11 @@ fun PrintPreview(
                                 Text(
                                     text = "[ ${line.field_key} ]",
                                     style = MaterialTheme.typography.bodySmall,
-                                    textAlign = TextAlign.Center,
+                                    textAlign = when(line.align_type.uppercase()) {
+                                        "RIGHT" -> TextAlign.End
+                                        "CENTER" -> TextAlign.Center
+                                        else -> TextAlign.Start
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             } else {
@@ -136,8 +137,7 @@ fun PrintSettingsScreen(
     val templates by viewModel.templates.collectAsState()
     val selectedTemplate by viewModel.selectedTemplate.collectAsState()
     val sections by viewModel.sections.collectAsState()
-    val platformOverrides by (if (selectedTemplate != null) viewModel.getPlatformOverrides(selectedTemplate!!.template_id.toInt()) else flowOf(emptyList())).collectAsState(initial = emptyList())
-    val kotSettings by (if (selectedTemplate != null) viewModel.getKotSettings(selectedTemplate!!.template_id.toInt()) else flowOf(null)).collectAsState(initial = null)
+    
     var showAddTemplateDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -152,7 +152,7 @@ fun PrintSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         if (selectedTemplate != null) {
-                            viewModel.selectTemplate(null as PrintTemplateEntity?) // Deselect
+                            viewModel.selectTemplate(null) // Deselect
                         } else {
                             onBackPressed()
                         }
@@ -175,6 +175,8 @@ fun PrintSettingsScreen(
             if (selectedTemplate == null) {
                 TemplateList(templates, onTemplateClick = { viewModel.selectTemplate(it) })
             } else {
+                val platformOverrides by viewModel.getPlatformOverrides(selectedTemplate!!.template_id).collectAsState(initial = emptyList())
+                val kotSettings by viewModel.getKotSettings(selectedTemplate!!.template_id).collectAsState(initial = null)
                 TemplateEditor(
                     selectedTemplate!!,
                     sections,
@@ -347,20 +349,27 @@ fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewM
         var fieldKey by remember { mutableStateOf(column.field_key) }
         var width by remember { mutableStateOf(column.width_pct.toString()) }
         var align by remember { mutableStateOf(column.align_type) }
+        var sortOrder by remember { mutableStateOf(column.sort_order.toString()) }
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             title = { Text("Edit Column") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                     OutlinedTextField(value = fieldKey, onValueChange = { fieldKey = it }, label = { Text("Field Key") })
                     OutlinedTextField(value = width, onValueChange = { width = it }, label = { Text("Width %") })
                     OutlinedTextField(value = align, onValueChange = { align = it }, label = { Text("Align (LEFT/CENTER/RIGHT)") })
+                    OutlinedTextField(value = sortOrder, onValueChange = { sortOrder = it }, label = { Text("Sort Order") })
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.updateColumn(column.copy(field_key = fieldKey, width_pct = width.toIntOrNull() ?: 100, align_type = align))
+                    viewModel.updateColumn(column.copy(
+                        field_key = fieldKey, 
+                        width_pct = width.toIntOrNull() ?: 100, 
+                        align_type = align,
+                        sort_order = sortOrder.toIntOrNull() ?: 0
+                    ))
                     showEditDialog = false
                 }) { Text("Update") }
             },
@@ -443,12 +452,17 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
 fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
     val columns by viewModel.getColumnsForLine(line.line_id).collectAsState(initial = emptyList())
     var showAddColumnDialog by remember { mutableStateOf(false) }
+    var showEditLineDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.DragHandle, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
-            Text(text = line.field_key, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = line.field_key, 
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.clickable { showEditLineDialog = true }
+            )
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { viewModel.deleteLine(line.line_id) }, modifier = Modifier.size(24.dp)) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
@@ -468,11 +482,63 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                columns.forEach { column ->
+                columns.sortedBy { it.sort_order }.forEach { column ->
                     ColumnBadge(column, viewModel)
                 }
             }
         }
+    }
+
+    if (showEditLineDialog) {
+        var fieldKey by remember { mutableStateOf(line.field_key) }
+        var displayText by remember { mutableStateOf(line.display_text ?: "") }
+        var alignType by remember { mutableStateOf(line.align_type) }
+        var fontSize by remember { mutableStateOf(line.font_size) }
+        var isBold by remember { mutableStateOf(line.is_bold) }
+        var isUnderline by remember { mutableStateOf(line.is_underline) }
+        var sortOrder by remember { mutableStateOf(line.sort_order.toString()) }
+        var isRepeatable by remember { mutableStateOf(line.is_repeatable) }
+
+        AlertDialog(
+            onDismissRequest = { showEditLineDialog = false },
+            title = { Text("Edit Line") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(value = fieldKey, onValueChange = { fieldKey = it }, label = { Text("Field Key") })
+                    OutlinedTextField(value = displayText, onValueChange = { displayText = it }, label = { Text("Display Text") })
+                    OutlinedTextField(value = alignType, onValueChange = { alignType = it }, label = { Text("Align (LEFT/CENTER/RIGHT)") })
+                    OutlinedTextField(value = fontSize, onValueChange = { fontSize = it }, label = { Text("Font Size (SMALL/NORMAL/LARGE)") })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = isBold, onCheckedChange = { isBold = it })
+                        Text("Bold")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = isUnderline, onCheckedChange = { isUnderline = it })
+                        Text("Underline")
+                    }
+                    OutlinedTextField(value = sortOrder, onValueChange = { sortOrder = it }, label = { Text("Sort Order") })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = isRepeatable, onCheckedChange = { isRepeatable = it })
+                        Text("Repeatable (for BODY items)")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateLine(line.copy(
+                        field_key = fieldKey,
+                        display_text = displayText,
+                        align_type = alignType,
+                        font_size = fontSize,
+                        is_bold = isBold,
+                        is_underline = isUnderline,
+                        sort_order = sortOrder.toIntOrNull() ?: 0,
+                        is_repeatable = isRepeatable
+                    ))
+                    showEditLineDialog = false
+                }) { Text("Update") }
+            }
+        )
     }
 
     if (showAddColumnDialog) {
