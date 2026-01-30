@@ -35,6 +35,7 @@ fun RoleSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingRole by remember { mutableStateOf<Role?>(null) }
+    var roleToDelete by remember { mutableStateOf<Role?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -96,10 +97,7 @@ fun RoleSettingsScreen(
                         role = role,
                         onEdit = { editingRole = role },
                         onDelete = {
-                            scope.launch {
-                                viewModel.deleteRole(role.role_id)
-                                snackbarHostState.showSnackbar("Role deleted")
-                            }
+                            roleToDelete = role
                         }
                     )
                 }
@@ -125,6 +123,33 @@ fun RoleSettingsScreen(
             onSave = { updatedRole ->
                 viewModel.updateRole(updatedRole)
                 editingRole = null
+            }
+        )
+    }
+
+    roleToDelete?.let { role ->
+        AlertDialog(
+            onDismissRequest = { roleToDelete = null },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete the role '${role.role}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            viewModel.deleteRole(role.role_id)
+                            snackbarHostState.showSnackbar("Role deleted")
+                        }
+                        roleToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { roleToDelete = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }

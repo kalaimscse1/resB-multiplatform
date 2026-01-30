@@ -58,6 +58,7 @@ fun MenuCategorySettingsScreen(
     val order by viewModel.orderBy.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<MenuCategory?>(null) }
+    var categoryToDelete by remember { mutableStateOf<MenuCategory?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -168,9 +169,7 @@ fun MenuCategorySettingsScreen(
                                 category = category,
                                 onEdit = { editingCategory = it },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteCategory(it.item_cat_id)
-                                    }
+                                    categoryToDelete = it
                                 }
                             )
                         }
@@ -212,6 +211,32 @@ fun MenuCategorySettingsScreen(
                     }
                 },
                 order = order
+            )
+        }
+
+        categoryToDelete?.let { category ->
+            AlertDialog(
+                onDismissRequest = { categoryToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the category '${category.item_cat_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteCategory(category.item_cat_id)
+                            }
+                            categoryToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { categoryToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
 

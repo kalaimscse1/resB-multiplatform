@@ -43,6 +43,7 @@ fun KitchenCategorySettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingKitchenCategory by remember { mutableStateOf<KitchenCategory?>(null) }
+    var kitchenCategoryToDelete by remember { mutableStateOf<KitchenCategory?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -115,10 +116,7 @@ fun KitchenCategorySettingsScreen(
                                     showAddDialog = true
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteKitchenCategory(kitchenCategory.kitchen_cat_id)
-                                        snackbarHostState.showSnackbar("Kitchen category deleted")
-                                    }
+                                    kitchenCategoryToDelete = kitchenCategory
                                 }
                             )
                         }
@@ -167,6 +165,33 @@ fun KitchenCategorySettingsScreen(
                     }
                     showAddDialog = false
                     editingKitchenCategory = null
+                }
+            )
+        }
+
+        kitchenCategoryToDelete?.let { kitchenCategory ->
+            AlertDialog(
+                onDismissRequest = { kitchenCategoryToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the kitchen category '${kitchenCategory.kitchen_cat_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteKitchenCategory(kitchenCategory.kitchen_cat_id)
+                                snackbarHostState.showSnackbar("Kitchen category deleted")
+                            }
+                            kitchenCategoryToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { kitchenCategoryToDelete = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }

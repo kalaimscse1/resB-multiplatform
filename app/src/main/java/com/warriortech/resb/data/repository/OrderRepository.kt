@@ -648,30 +648,30 @@ class OrderRepository @Inject constructor(
                 is_inventory = 0,
                 cess_per = 0.0.toString(),
                 cess_specific = 0.0,
-                menu_item_code = TODO(),
-                menu_item_name_tamil = TODO(),
-                menu_id = TODO(),
-                menu_name = TODO(),
-                item_cat_id = TODO(),
-                item_cat_name = TODO(),
-                image = TODO(),
-                parcel_charge = TODO(),
-                kitchen_cat_id = TODO(),
-                kitchen_cat_name = TODO(),
-                is_available = TODO(),
-                preparation_time = TODO(),
-                is_favourite = TODO(),
-                stock_maintain = TODO(),
-                rate_lock = TODO(),
-                unit_id = TODO(),
-                unit_name = TODO(),
-                min_stock = TODO(),
-                hsn_code = TODO(),
-                order_by = TODO(),
-                is_raw = TODO(),
-                is_active = TODO(),
-                qty = TODO(),
-                actual_rate = TODO()
+                menu_item_code = "",
+                menu_item_name_tamil = "",
+                menu_id = 0,
+                menu_name = "",
+                item_cat_id = 0,
+                item_cat_name = "",
+                image = "",
+                parcel_charge = 0.0,
+                kitchen_cat_id = 0,
+                kitchen_cat_name = "",
+                is_available = "",
+                preparation_time = 0,
+                is_favourite = false,
+                stock_maintain = "",
+                rate_lock = "",
+                unit_id = 0,
+                unit_name = "",
+                min_stock = 0,
+                hsn_code = "",
+                order_by = 0,
+                is_raw = "",
+                is_active = 0L,
+                qty = 0,
+                actual_rate = 0.0
             ),
             rate = this.rate ?: 0.0,
             actual_rate = this.actual_rate ?: 0.0,
@@ -864,36 +864,41 @@ class OrderRepository @Inject constructor(
     suspend fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
         flow  { // Changed Flow type to Flow<Result<PrintResponse>>
             try {
-                val response = apiService.printKOT(orderId, sessionManager.getCompanyCode() ?: "")
-                val result = orderId.items
-                if (response.isSuccessful) {
-                    val printResponse = response.body()
-
-                    var mess = ""
-                    if (printResponse != null) {
-                        if (sessionManager.getBluetoothPrinter()!=null)
-                            printerHelper.printViaBluetoothMac(
-                                data = printResponse.bytes(),
-                                macAddress =  sessionManager.getBluetoothPrinter().toString()
-                            ) { _, m -> mess = m }
-                        else
-                        printerHelper.printViaTcp(
-                            ipAddress,
-                            data = printResponse.bytes()
-                        ) { success, message ->
-                            mess = if (success) {
-                                message
-                            } else {
-                                message
-                            }
-                        }
-                        emit(Result.success(mess))
-                    } else {
-                        emit(Result.failure(Exception("KOT print successful but response body was empty.")))
-                    }
+                val target = if (sessionManager.getBluetoothPrinter() != null) "BLUETOOTH" else "TCP"
+                
+                // 1. Try local template printing first
+                val localSuccess = printerHelper.printKotWithTemplate(orderId, target, ipAddress)
+                
+                if (localSuccess) {
+                    emit(Result.success("✅ KOT printed using local template"))
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                    emit(Result.failure(Exception("Failed to print KOT. Code: ${response.code()}, Error: $errorBody")))
+                    // 2. Fallback to API if local fails
+                    val response = apiService.printKOT(orderId, sessionManager.getCompanyCode() ?: "")
+                    if (response.isSuccessful) {
+                        val printResponse = response.body()
+
+                        var mess = ""
+                        if (printResponse != null) {
+                            if (sessionManager.getBluetoothPrinter()!=null)
+                                printerHelper.printViaBluetoothMac(
+                                    data = printResponse.bytes(),
+                                    macAddress =  sessionManager.getBluetoothPrinter().toString()
+                                ) { _, m -> mess = m }
+                            else
+                            printerHelper.printViaTcp(
+                                ipAddress,
+                                data = printResponse.bytes()
+                            ) { success, message ->
+                                mess = message
+                            }
+                            emit(Result.success(mess))
+                        } else {
+                            emit(Result.failure(Exception("KOT print successful but response body was empty.")))
+                        }
+                    } else {
+                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                        emit(Result.failure(Exception("Failed to print KOT. Code: ${response.code()}, Error: $errorBody")))
+                    }
                 }
             } catch (e: Exception) {
                 emit(Result.failure(Exception("Error printing KOT: ${e.message}", e)))

@@ -321,6 +321,8 @@ fun TemplateEditor(
 @Composable
 fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewModel) {
     var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
         shape = MaterialTheme.shapes.small,
@@ -340,9 +342,26 @@ fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewM
                 contentDescription = "Delete Column",
                 modifier = Modifier
                     .size(12.dp)
-                    .clickable { viewModel.deleteColumn(column) }
+                    .clickable { showDeleteConfirm = true }
             )
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete column '${column.field_key}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteColumn(column)
+                    showDeleteConfirm = false
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 
     if (showEditDialog) {
@@ -385,6 +404,7 @@ fun ColumnBadge(column: PrintTemplateColumnEntity, viewModel: PrintSettingsViewM
 fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsViewModel) {
     val lines by viewModel.getLinesForSection(section.section_id).collectAsState(initial = emptyList())
     var showAddLineDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -394,7 +414,7 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(text = section.section_type, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { viewModel.deleteSection(section) }) {
+                IconButton(onClick = { showDeleteConfirm = true }) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete Section", tint = MaterialTheme.colorScheme.error)
                 }
             }
@@ -426,6 +446,23 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
         }
     }
 
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete this section and all its contents?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteSection(section)
+                    showDeleteConfirm = false
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     if (showAddLineDialog) {
         var lineName by remember { mutableStateOf("") }
         AlertDialog(
@@ -453,6 +490,7 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
     val columns by viewModel.getColumnsForLine(line.line_id).collectAsState(initial = emptyList())
     var showAddColumnDialog by remember { mutableStateOf(false) }
     var showEditLineDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -464,7 +502,7 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
                 modifier = Modifier.clickable { showEditLineDialog = true }
             )
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { viewModel.deleteLine(line.line_id) }, modifier = Modifier.size(24.dp)) {
+            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(24.dp)) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
             }
             if (line.field_key != "LOGO" && line.field_key != "QRCODE") {
@@ -487,6 +525,23 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
                 }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete line '${line.field_key}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteLine(line.line_id)
+                    showDeleteConfirm = false
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 
     if (showEditLineDialog) {

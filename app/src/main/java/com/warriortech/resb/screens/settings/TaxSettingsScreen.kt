@@ -47,11 +47,14 @@ fun TaxSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTax by remember { mutableStateOf<Tax?>(null) }
+    var taxToDelete by remember { mutableStateOf<Tax?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    
     LaunchedEffect(Unit) {
         viewModel.loadTaxes()
     }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -82,7 +85,8 @@ fun TaxSettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         when (val state = uiState) {
             is TaxSettingsViewModel.UiState.Loading -> {
@@ -118,10 +122,7 @@ fun TaxSettingsScreen(
                                     showAddDialog = true
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteTax(tax.tax_id)
-                                        snackbarHostState.showSnackbar("Tax deleted")
-                                    }
+                                    taxToDelete = tax
                                 }
                             )
                         }
@@ -166,6 +167,33 @@ fun TaxSettingsScreen(
                     }
                     showAddDialog = false
                     editingTax = null
+                }
+            )
+        }
+
+        taxToDelete?.let { tax ->
+            AlertDialog(
+                onDismissRequest = { taxToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the tax '${tax.tax_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteTax(tax.tax_id)
+                                snackbarHostState.showSnackbar("Tax deleted")
+                            }
+                            taxToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { taxToDelete = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }

@@ -44,9 +44,10 @@ fun TaxSplitSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTaxSplit by remember { mutableStateOf<TblTaxSplit?>(null) }
+    var taxSplitToDelete by remember { mutableStateOf<TblTaxSplit?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val tax by viewModel.taxes.collectAsStateWithLifecycle()
+    val tax = viewModel.taxes.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadTaxSplits()
@@ -83,7 +84,8 @@ fun TaxSplitSettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         when (val state = uiState) {
             is TaxSplitSettingsViewModel.UiState.Loading -> {
@@ -111,18 +113,15 @@ fun TaxSplitSettingsScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(state.taxSplits) { table ->
+                        items(state.taxSplits) { item ->
                             TaxSplitItem(
-                                taxSplit = table,
+                                taxSplit = item,
                                 onEdit = {
-
+                                    editingTaxSplit = item
                                     showAddDialog = true
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteTaxSplit(table.tax_split_id)
-                                        snackbarHostState.showSnackbar("Tax Split deleted")
-                                    }
+                                    taxSplitToDelete = item
                                 }
                             )
                         }
@@ -174,7 +173,34 @@ fun TaxSplitSettingsScreen(
                     showAddDialog = false
                     editingTaxSplit = null
                 },
-                taxes = tax
+                taxes = tax.value
+            )
+        }
+
+        taxSplitToDelete?.let { item ->
+            AlertDialog(
+                onDismissRequest = { taxSplitToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the tax split '${item.tax_split_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteTaxSplit(item.tax_split_id)
+                                snackbarHostState.showSnackbar("Tax Split deleted")
+                            }
+                            taxSplitToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { taxSplitToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }

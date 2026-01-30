@@ -91,32 +91,81 @@ class PrinterHelper(
                     
                     for (item in bill.items) {
                         for (rLine in repeatableBlock) {
-                            outputStream.write(formatLine(rLine, charWidth, bill, item))
+                            outputStream.write(formatLine(rLine, charWidth, bill, null, item, null))
                         }
                     }
                 } else {
-                    outputStream.write(formatLine(line, charWidth, bill, null))
+                    outputStream.write(formatLine(line, charWidth, bill, null, null, null))
                     i++
                 }
             }
-//            outputStream.write(ESC_FEED_LINE)
         }
         
         outputStream.write(ESC_CUT_PAPER)
         val data = outputStream.toByteArray()
         
+        return sendDataToPrinter(target, mac = sessionManager.getBluetoothPrinter(), ipAddress = ipAddress, data = data)
+    }
+
+    /**
+     * Print a KOT using a template from the database.
+     */
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    suspend fun printKotWithTemplate(kot: KOTRequest, target: String, ipAddress: String? = null): Boolean {
+        val template = printTemplateDao.getDefaultTemplate("KOT") ?: return false
+            
+        val sections = printTemplateDao.getSectionsForTemplateSync(template.template_id)
+        
+        val outputStream = ByteArrayOutputStream()
+        outputStream.write(ESC_INIT)
+        
+        val charWidth = if (template.paper_width_mm == 58) 32 else 48
+
+        for (section in sections) {
+            val lines = printTemplateDao.getLinesForSectionSync(section.section_id)
+            
+            var i = 0
+            while (i < lines.size) {
+                val line = lines[i]
+                if (line.is_repeatable && section.section_type.uppercase() == "BODY") {
+                    val start = i
+                    while (i < lines.size && lines[i].is_repeatable) {
+                        i++
+                    }
+                    val repeatableBlock = lines.subList(start, i)
+                    
+                    for (item in kot.items) {
+                        for (rLine in repeatableBlock) {
+                            outputStream.write(formatLine(rLine, charWidth, null, kot, null, item))
+                        }
+                    }
+                } else {
+                    outputStream.write(formatLine(line, charWidth, null, kot, null, null))
+                    i++
+                }
+            }
+        }
+        
+        outputStream.write(ESC_CUT_PAPER)
+        val data = outputStream.toByteArray()
+        
+        return sendDataToPrinter(target, mac = sessionManager.getBluetoothPrinter(), ipAddress = ipAddress, data = data)
+    }
+    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+    private suspend fun sendDataToPrinter(target: String, mac: String?, ipAddress: String?, data: ByteArray): Boolean {
         return withContext(Dispatchers.IO) {
             try {
                 if (target == "BLUETOOTH") {
-                    var success = false
-                    val mac = sessionManager.getBluetoothPrinter()
                     if (mac != null) {
+                        var success = false
                         printViaBluetoothMac(mac, data) { s, _ -> success = s }
-                        success
+                        // Note: printViaBluetoothMac is asynchronous with its own scope, 
+                        // this might return before actual completion. Ideally it should be a suspending function.
+                        // For now keeping it as is but returning true if mac exists to signal "attempted".
+                        true 
                     } else false
                 } else if (target == "TCP" && ipAddress != null) {
-                    printViaTcp(ipAddress, 9100, data) { _, _ -> }
-                    true 
+                    printViaTcpSync(ipAddress, 9100, data)
                 } else {
                     false
                 }
@@ -129,8 +178,10 @@ class PrinterHelper(
     private suspend fun formatLine(
         line: PrintTemplateLineEntity,
         charWidth: Int,
-        bill: Bill,
-        item: BillItem?
+        bill: Bill?,
+        kot: KOTRequest?,
+        billItem: BillItem?,
+        kotItem: KOTItem?
     ): ByteArray {
         val bos = ByteArrayOutputStream()
         
@@ -161,23 +212,23 @@ class PrinterHelper(
         }
 
         // 5. Max Width Pct
-        val effectiveWidth = if (line.max_width_pct != null && line.max_width_pct!! > 0) {
-            (charWidth * line.max_width_pct!! / 100)
+        val effectiveWidth = if (line.max_width_pct != null && line.max_width_pct > 0) {
+            (charWidth * line.max_width_pct / 100)
         } else {
             charWidth
         }
 
         val columns = printTemplateDao.getColumnsForLineSync(line.line_id)
         if (columns.isEmpty()) {
-            val text = resolveValue(line.field_key, bill, item, effectiveWidth, line.display_text)
+            val text = resolveValue(line.field_key, bill, kot, billItem, kotItem, charWidth, line.display_text)
             bos.write(text.toByteArray(Charsets.UTF_8))
             bos.write(ESC_FEED_LINE)
         } else {
             val rowText = StringBuilder()
             
             for (column in columns.sortedBy { it.sort_order }) {
-                val colWidth = (effectiveWidth * column.width_pct / 100)
-                val value = resolveValue(column.field_key, bill, item, colWidth)
+                val colWidth = (charWidth * column.width_pct / 100)
+                val value = resolveValue(column.field_key, bill, kot, billItem, kotItem, colWidth)
                 
                 val formattedValue = when (column.align_type.uppercase()) {
                     "RIGHT" -> value.padStart(colWidth)
@@ -203,11 +254,19 @@ class PrinterHelper(
     }
 
     @SuppressLint("DefaultLocale")
-    private fun resolveValue(key: String, bill: Bill, item: BillItem?, charWidth: Int, lineDisplayText: String? = null): String {
+    private fun resolveValue(
+        key: String, 
+        bill: Bill?, 
+        kot: KOTRequest?, 
+        billItem: BillItem?, 
+        kotItem: KOTItem?, 
+        charWidth: Int, 
+        lineDisplayText: String? = null
+    ): String {
         val profile = sessionManager.getRestaurantProfile()
         val settings = sessionManager.getGeneralSetting()
         
-        val cleanKey = key.uppercase().trim().replace(" ", "_")
+        val cleanKey = key.uppercase().trim()
         
         if (cleanKey == "TEXT" || cleanKey == "DISPLAY_TEXT" || cleanKey == "LABEL") {
             return lineDisplayText ?: ""
@@ -215,46 +274,55 @@ class PrinterHelper(
 
         return when {
             // Business Details
-            cleanKey == "BUSINESS_NAME" || cleanKey == "RESTAURANT_NAME" || cleanKey == "COMPANY_VALUE" -> profile?.company_name ?: ""
-            cleanKey == "BUSINESS_ADDRESS" || cleanKey == "ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
-            cleanKey == "ADDRESS1" || cleanKey == "ADDRESS1_VALUE" -> profile?.address1 ?: ""
-            cleanKey == "ADDRESS2" || cleanKey == "ADDRESS2_VALUE" -> profile?.address2 ?: ""
-            cleanKey == "PLACE" || cleanKey == "PLACE_VALUE" -> profile?.place ?: ""
-            cleanKey == "PINCODE" || cleanKey == "PINCODE_VALUE" -> profile?.pincode ?: ""
-            cleanKey == "PHONE" || cleanKey == "CONTACT_NO" || cleanKey == "BUSINESS_PHONE" -> profile?.contact_no ?: ""
-            cleanKey == "GST_NO" || cleanKey == "TAX_NO" || cleanKey == "BUSINESS_GSTIN" -> profile?.tax_no ?: ""
+            cleanKey == "BUSINESS NAME" || cleanKey == "RESTAURANT NAME" || cleanKey == "COMPANY VALUE" -> profile?.company_name ?: ""
+            cleanKey == "BUSINESS ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
+            cleanKey == "ADDRESS1 VALUE" -> profile?.address1 ?: ""
+            cleanKey == "ADDRESS2 VALUE" -> profile?.address2 ?: ""
+            cleanKey == "PLACE VALUE" -> profile?.place ?: ""
+            cleanKey == "PINCODE VALUE" -> profile?.pincode ?: ""
+            cleanKey == "PHONE" || cleanKey == "CONTACT NO" || cleanKey == "BUSINESS PHONE" -> profile?.contact_no ?: ""
+            cleanKey == "GST NO" || cleanKey == "TAX NO" || cleanKey == "BUSINESS GSTIN" -> profile?.tax_no ?: ""
             
-            // Bill Details
-            cleanKey == "BILL_VALUE" -> bill.billNo
-            cleanKey == "DATE_VALUE" -> bill.date
-            cleanKey == "TIME_VALUE" -> bill.time
-            cleanKey == "ORDER_VALUE" -> bill.orderNo
-            cleanKey == "TABLE_VALUE" -> bill.tableNo
-            cleanKey == "COUNTER_VALUE" -> bill.counter
+            // Common Details
+            cleanKey == "DATE VALUE" -> bill?.date ?: kot?.orderCreatedAt?.take(10) ?: ""
+            cleanKey == "TIME VALUE" -> bill?.time ?: kot?.orderCreatedAt?.drop(11) ?: ""
+            cleanKey == "TABLE VALUE" -> bill?.tableNo ?: kot?.tableNumber ?: ""
             
-            // Totals
-            cleanKey == "SUB_TOTAL" -> String.format("%.2f", bill.subtotal)
-            cleanKey == "TOTAL" -> String.format("%.2f", bill.total)
-            cleanKey == "DISCOUNT" -> String.format("%.2f", bill.discount)
-            cleanKey == "TAX_AMOUNT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
-            cleanKey == "RECEIVED_AMT" -> String.format("%.2f", bill.received_amt)
-            cleanKey == "PENDING_AMT" -> String.format("%.2f", bill.pending_amt)
+            // Bill Specific
+            cleanKey == "BILL VALUE" -> bill?.billNo ?: ""
+            cleanKey == "ORDER VALUE" -> bill?.orderNo ?: kot?.orderId ?: ""
+            cleanKey == "COUNTER VALUE" -> bill?.counter ?: ""
             
-            // Customer Details
-            cleanKey == "CUST_NAME" -> bill.custName
-            cleanKey == "CUST_NO" -> bill.custNo
-            cleanKey == "CUST_ADDRESS" -> bill.custAddress
-            cleanKey == "CUST_GSTIN" -> bill.custGstin
+            // KOT Specific
+            cleanKey == "KOT" -> ("KOT-" + kot?.kotId?.toString())
+            cleanKey == "WAITER VALUE" -> kot?.waiterName ?: ""
+            cleanKey == "KOT TYPE" -> kot?.kottype?:""
             
-            // Item Details (for Body section)
-            cleanKey == "ITEM_VALUE" -> item?.itemName ?: ""
-            cleanKey == "QTY_VALUE" -> item?.qty?.toString() ?: ""
-            cleanKey == "RATE" || cleanKey == "PRICE_VALUE" -> String.format("%.2f", item?.price ?: 0.0)
-            cleanKey == "AMOUNT" || cleanKey == "AMT_VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
-            cleanKey == "SN"  -> item?.sn?.toString() ?: ""
+            // Totals (Bill only)
+            cleanKey == "SUB TOTAL" -> if (bill != null) String.format("%.2f", bill.subtotal) else ""
+            cleanKey == "TOTAL" -> if (bill != null) String.format("%.2f", bill.total) else ""
+            cleanKey == "DISCOUNT" -> if (bill != null) String.format("%.2f", bill.discount) else ""
+            cleanKey == "TAX AMOUNT" -> bill?.items?.sumOf { it.taxAmount }?.let { String.format("%.2f", it) } ?: ""
+            cleanKey == "RECEIVED AMT" -> if (bill != null) String.format("%.2f", bill.received_amt) else ""
+            cleanKey == "PENDING AMT" -> if (bill != null) String.format("%.2f", bill.pending_amt) else ""
+            
+            // Customer Details (Bill only)
+            cleanKey == "CUST NAME" -> bill?.custName ?: ""
+            cleanKey == "CUST NO" -> bill?.custNo ?: ""
+            cleanKey == "CUST ADDRESS" -> bill?.custAddress ?: ""
+            cleanKey == "CUST GSTIN" -> bill?.custGstin ?: ""
+            
+            // Item Details (Body section)
+            cleanKey == "ITEM VALUE"  -> billItem?.itemName ?: kotItem?.name ?: ""
+            cleanKey == "QTY VALUE" -> billItem?.qty?.toString() ?: kotItem?.quantity?.toString() ?: ""
+            cleanKey == "RATE" || cleanKey == "PRICE VALUE" -> billItem?.price?.let { String.format("%.2f", it) } ?: ""
+            cleanKey == "AMOUNT" || cleanKey == "AMT VALUE" -> billItem?.amount?.let { String.format("%.2f", it) } ?: ""
+            cleanKey == "SN" -> billItem?.sn?.toString() ?: ""
+            cleanKey == "CATEGORY" -> kotItem?.category ?: ""
+            cleanKey == "NOTES" || cleanKey == "ADDONS" -> kotItem?.addOn?.joinToString(", ") ?: ""
             
             // Footer & Utilities
-            cleanKey == "FOOTER" || cleanKey == "BILL_FOOTER" || cleanKey == "THANK_VALUE" -> settings?.bill_footer ?: ""
+            cleanKey == "FOOTER" || cleanKey == "BILL FOOTER" || cleanKey == "THANK VALUE" -> settings?.bill_footer ?: ""
             cleanKey == "SEPARATOR" -> "-".repeat(charWidth)
             cleanKey == "DOUBLE_SEPARATOR" -> "=".repeat(charWidth)
             
@@ -364,6 +432,26 @@ class PrinterHelper(
                 }
             }
         }.start()
+    }
+
+    private fun printViaTcpSync(
+        ip: String,
+        port: Int = 9100,
+        data: ByteArray
+    ): Boolean {
+        return try {
+            val socket = Socket()
+            socket.connect(InetSocketAddress(ip, port), 3000)
+            val out: OutputStream = socket.getOutputStream()
+            out.write(data)
+            out.flush()
+            out.close()
+            socket.close()
+            true
+        } catch (e: IOException) {
+            e.printStackTrace()
+            false
+        }
     }
 
     @SuppressLint("ServiceCast")

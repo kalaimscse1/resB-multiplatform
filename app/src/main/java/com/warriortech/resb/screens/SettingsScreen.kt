@@ -108,6 +108,7 @@ fun SettingsMainScreen(
                 SettingsModule.Staff,
                 SettingsModule.Role,
                 SettingsModule.Printer,
+                SettingsModule.Print,
                 SettingsModule.Tax,
                 SettingsModule.TaxSplit,
                 SettingsModule.Unit,
@@ -413,7 +414,7 @@ sealed class SettingsModule(
     object Print : SettingsModule(
         "print",
         "Print",
-        "Manage customer information",
+        "Manage Print Customization",
         Icons.Default.Print,
         listOf("name", "phone", "email", "address")
     )

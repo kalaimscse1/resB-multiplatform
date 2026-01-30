@@ -20,6 +20,9 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -70,6 +74,7 @@ fun CustomerSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingCustomer by remember { mutableStateOf<TblCustomer?>(null) }
+    var customerToDelete by remember { mutableStateOf<TblCustomer?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -125,7 +130,6 @@ fun CustomerSettingsScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
-                    return@Scaffold
                 } else {
                     LazyColumn(
                         modifier = Modifier
@@ -139,9 +143,7 @@ fun CustomerSettingsScreen(
                                 customer = customer,
                                 onEdit = { editingCustomer = it },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteCustomer(it.customer_id)
-                                    }
+                                    customerToDelete = it
                                 }
                             )
                         }
@@ -180,6 +182,32 @@ fun CustomerSettingsScreen(
                     scope.launch {
                         viewModel.updateCustomer(customer)
                         editingCustomer = null
+                    }
+                }
+            )
+        }
+
+        customerToDelete?.let { customer ->
+            AlertDialog(
+                onDismissRequest = { customerToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the customer '${customer.customer_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteCustomer(customer.customer_id)
+                                customerToDelete = null
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { customerToDelete = null }) {
+                        Text("Cancel")
                     }
                 }
             )
@@ -378,51 +406,4 @@ fun CustomerDialog(
             )
         }
     }
-//    AlertDialog(
-//        onDismissRequest = onDismiss,
-//        title = { Text(if (customer == null) "Add Customer" else "Edit Customer") },
-//        text = {
-//            Column {
-//                OutlinedTextField(
-//                    value = name,
-//                    onValueChange = { name = it },
-//                    label = { Text("Name") },
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                OutlinedTextField(
-//                    value = phone,
-//                    onValueChange = { phone = it },
-//                    label = { Text("Phone") },
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                OutlinedTextField(
-//                    value = email,
-//                    onValueChange = { email = it },
-//                    label = { Text("Email") },
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                OutlinedTextField(
-//                    value = address,
-//                    onValueChange = { address = it },
-//                    label = { Text("Address") },
-//                    modifier = Modifier.fillMaxWidth()
-//                )
-//            }
-//        },
-//        confirmButton = {
-//            TextButton(
-//                onClick = { onConfirm(name, phone, email, address) }
-//            ) {
-//                Text(if (customer == null) "Add" else "Update")
-//            }
-//        },
-//        dismissButton = {
-//            TextButton(onClick = onDismiss) {
-//                Text("Cancel")
-//            }
-//        }
-//    )
 }

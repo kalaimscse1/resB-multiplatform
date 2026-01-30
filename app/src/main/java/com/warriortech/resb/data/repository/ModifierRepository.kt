@@ -1,20 +1,16 @@
 package com.warriortech.resb.data.repository
 
-import com.warriortech.resb.data.local.entity.SyncStatus
 import com.warriortech.resb.model.Modifiers
-import com.warriortech.resb.model.OrderItemModifier
+import com.warriortech.resb.model.ModifiersRequest
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.NetworkMonitor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import okhttp3.ResponseBody
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.collections.map
-import kotlin.let
 
 @Singleton
 class ModifierRepository @Inject constructor(
@@ -33,7 +29,7 @@ class ModifierRepository @Inject constructor(
         }
     }
 
-    suspend fun createModifier(modifier: Modifiers): Result<Modifiers> {
+    suspend fun createModifier(modifier: ModifiersRequest): Result<Modifiers> {
         return try {
             if (isOnline()) {
                 val response = apiService.createModifier(modifier,sessionManager.getCompanyCode()?:"")
@@ -45,15 +41,16 @@ class ModifierRepository @Inject constructor(
                     Result.failure(Exception("API Error: ${response.code()}"))
                 }
             } else {
-                // Store locally with pending sync status
-                Result.success(modifier)
+                // Return a failure for now as we don't have local DB persistence for this entity yet
+                // Or map it to a fake Modifiers object if possible, but Result<Modifiers> expects Modifiers
+                Result.failure(Exception("Offline mode not supported for creating modifiers yet"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun updateModifier(modifier: Modifiers): Result<Modifiers> {
+    suspend fun updateModifier(modifier: ModifiersRequest): Result<Modifiers> {
         return try {
             if (isOnline()) {
                 val response = apiService.updateModifier(modifier.add_on_id, modifier,sessionManager.getCompanyCode()?:"")
@@ -65,7 +62,7 @@ class ModifierRepository @Inject constructor(
                     Result.failure(Exception("API Error: ${response.code()}"))
                 }
             } else {
-                Result.success(modifier)
+                Result.failure(Exception("Offline mode not supported for updating modifiers yet"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -98,7 +95,7 @@ class ModifierRepository @Inject constructor(
         }
     }
 
-    suspend fun getModifiersByMenuItems(menuItemId: Long): Flow<Result<List<Modifiers>>> = flow {
+    fun getModifiersByMenuItems(menuItemId: Long): Flow<Result<List<Modifiers>>> = flow {
         try {
             val response = apiService.getModifiersByMenuItem(menuItemId, sessionManager.getCompanyCode()?:"")
             if (response.isNotEmpty()) {
@@ -111,4 +108,4 @@ class ModifierRepository @Inject constructor(
             emit(Result.failure(e))
         }
     }
-    }
+}

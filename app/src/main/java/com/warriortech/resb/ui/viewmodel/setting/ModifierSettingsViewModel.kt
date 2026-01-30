@@ -7,6 +7,7 @@ import com.warriortech.resb.data.repository.MenuCategoryRepository
 import com.warriortech.resb.data.repository.ModifierRepository
 import com.warriortech.resb.model.MenuCategory
 import com.warriortech.resb.model.Modifiers
+import com.warriortech.resb.model.ModifiersRequest
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.screens.settings.ModifierSettingsUiState
 import com.warriortech.resb.ui.viewmodel.master.MenuCategorySettingsViewModel.UiState
@@ -71,7 +72,7 @@ class ModifierSettingsViewModel @Inject constructor(
     }
 
     @SuppressLint("SuspiciousIndentation")
-    fun addModifier(modifier: Modifiers) {
+    fun addModifier(modifier: ModifiersRequest) {
         viewModelScope.launch {
             try {
               val res=  modifierRepository.createModifier(modifier)
@@ -84,7 +85,7 @@ class ModifierSettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateModifier(modifier: Modifiers) {
+    fun updateModifier(modifier: ModifiersRequest) {
         viewModelScope.launch {
             try {
                 modifierRepository.updateModifier(modifier)

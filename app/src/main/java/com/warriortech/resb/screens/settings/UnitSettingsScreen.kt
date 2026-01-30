@@ -43,6 +43,7 @@ fun UnitSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingUnit by remember { mutableStateOf<TblUnit?>(null) }
+    var unitToDelete by remember { mutableStateOf<TblUnit?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -111,10 +112,7 @@ fun UnitSettingsScreen(
                                     showAddDialog = true
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteUnit(unit.unit_id)
-                                        snackbarHostState.showSnackbar("Unit deleted")
-                                    }
+                                    unitToDelete = unit
                                 }
                             )
                         }
@@ -163,6 +161,33 @@ fun UnitSettingsScreen(
                     }
                     showAddDialog = false
                     editingUnit = null
+                }
+            )
+        }
+
+        unitToDelete?.let { unit ->
+            AlertDialog(
+                onDismissRequest = { unitToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the unit '${unit.unit_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteUnit(unit.unit_id)
+                                snackbarHostState.showSnackbar("Unit deleted")
+                            }
+                            unitToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { unitToDelete = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }

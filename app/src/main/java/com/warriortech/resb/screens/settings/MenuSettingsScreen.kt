@@ -58,6 +58,7 @@ fun MenuSettingsScreen(
     val order by viewModel.orderBy.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingMenu by remember { mutableStateOf<Menu?>(null) }
+    var menuToDelete by remember { mutableStateOf<Menu?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -171,9 +172,7 @@ fun MenuSettingsScreen(
                                 menu = menu,
                                 onEdit = { editingMenu = it },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteMenu(it.menu_id)
-                                    }
+                                    menuToDelete = it
                                 }
                             )
                         }
@@ -233,6 +232,32 @@ fun MenuSettingsScreen(
                     }
                 },
                 order = order
+            )
+        }
+
+        menuToDelete?.let { menu ->
+            AlertDialog(
+                onDismissRequest = { menuToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the menu '${menu.menu_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteMenu(menu.menu_id)
+                            }
+                            menuToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { menuToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
 

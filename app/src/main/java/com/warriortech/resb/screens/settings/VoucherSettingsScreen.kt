@@ -46,6 +46,7 @@ fun VoucherSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddSheet by remember { mutableStateOf(false) }
     var editingVoucher by remember { mutableStateOf<TblVoucherResponse?>(null) }
+    var voucherToDelete by remember { mutableStateOf<TblVoucherResponse?>(null) }
     val counters by viewModel.counters.collectAsStateWithLifecycle()
     val voucherTypes by viewModel.voucherTypes.collectAsStateWithLifecycle()
 
@@ -100,7 +101,6 @@ fun VoucherSettingsScreen(
                     }
                 } else {
                     // Display list of vouchers
-                    // You can implement a LazyColumn here to show the vouchers
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -108,15 +108,14 @@ fun VoucherSettingsScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(state.vouchers) { counter ->
+                        items(state.vouchers) { voucher ->
                             VoucherCard(
-                                voucher = counter,
+                                voucher = voucher,
                                 onEdit = {
-                                    // Handle edit action
-                                    editingVoucher = counter
+                                    editingVoucher = voucher
                                 },
                                 onDelete = {
-                                    viewModel.deleteVoucher(counter.voucher_id)
+                                    voucherToDelete = voucher
                                 }
                             )
                         }
@@ -159,6 +158,30 @@ fun VoucherSettingsScreen(
                 },
                 counters = counters,
                 voucherTypes = voucherTypes
+            )
+        }
+
+        voucherToDelete?.let { voucher ->
+            AlertDialog(
+                onDismissRequest = { voucherToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the voucher '${voucher.voucher_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteVoucher(voucher.voucher_id)
+                            voucherToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { voucherToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }

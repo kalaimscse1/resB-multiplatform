@@ -63,6 +63,7 @@ fun TableSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTable by remember { mutableStateOf<Table?>(null) }
+    var tableToDelete by remember { mutableStateOf<Table?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val areas by viewModel.areas.collectAsStateWithLifecycle()
@@ -167,9 +168,7 @@ fun TableSettingsScreen(
                                 table = table,
                                 onEdit = { editingTable = table },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteTable(table.table_id)
-                                    }
+                                    tableToDelete = table
                                 }
                             )
                         }
@@ -229,6 +228,32 @@ fun TableSettingsScreen(
                     }
                 },
                 areas = areas
+            )
+        }
+
+        tableToDelete?.let { table ->
+            AlertDialog(
+                onDismissRequest = { tableToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete table '${table.table_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteTable(table.table_id)
+                            }
+                            tableToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { tableToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }

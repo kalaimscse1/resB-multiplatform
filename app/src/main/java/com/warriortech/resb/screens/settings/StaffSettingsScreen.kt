@@ -46,10 +46,12 @@ fun StaffSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingStaff by remember { mutableStateOf<TblStaff?>(null) }
+    var staffToDelete by remember { mutableStateOf<TblStaff?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val areas by viewModel.areas.collectAsStateWithLifecycle()
     val counters by viewModel.counters.collectAsStateWithLifecycle()
     val roles by viewModel.roles.collectAsStateWithLifecycle()
+    
     // Handle messages
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
@@ -114,7 +116,7 @@ fun StaffSettingsScreen(
                     StaffCard(
                         staff = staff,
                         onEdit = { editingStaff = staff },
-                        onDelete = { viewModel.deleteStaff(staff.staff_id) }
+                        onDelete = { staffToDelete = staff }
                     )
                 }
             }
@@ -145,6 +147,30 @@ fun StaffSettingsScreen(
             areas = areas,
             counters = counters,
             roles = roles
+        )
+    }
+
+    staffToDelete?.let { staff ->
+        AlertDialog(
+            onDismissRequest = { staffToDelete = null },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete staff '${staff.staff_name}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteStaff(staff.staff_id)
+                        staffToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { staffToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -526,4 +552,3 @@ fun EditStaffDialog(
         }
     )
 }
-

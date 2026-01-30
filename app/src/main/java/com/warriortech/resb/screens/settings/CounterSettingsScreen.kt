@@ -46,6 +46,7 @@ fun CounterSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingCounter by remember { mutableStateOf<TblCounter?>(null) }
+    var counterToDelete by remember { mutableStateOf<TblCounter?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -79,7 +80,8 @@ fun CounterSettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
 
         when (val state = uiState) {
@@ -119,10 +121,7 @@ fun CounterSettingsScreen(
                                     showAddDialog = true
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        val res = viewModel.deleteCounter(counter.counter_id)
-                                        snackbarHostState.showSnackbar(res)
-                                    }
+                                    counterToDelete = counter
                                 }
                             )
                         }
@@ -161,6 +160,33 @@ fun CounterSettingsScreen(
                     }
                     showAddDialog = false
                     editingCounter = null
+                }
+            )
+        }
+
+        counterToDelete?.let { counter ->
+            AlertDialog(
+                onDismissRequest = { counterToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the counter '${counter.counter_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val res = viewModel.deleteCounter(counter.counter_id)
+                                snackbarHostState.showSnackbar(res)
+                            }
+                            counterToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { counterToDelete = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }

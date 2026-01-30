@@ -13,13 +13,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.IconButton
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -29,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -66,6 +72,7 @@ fun LedgerScreen(
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var editingGroup by remember { mutableStateOf<TblLedgerDetails?>(null) }
+    var ledgerToDelete by remember { mutableStateOf<TblLedgerDetails?>(null) }
     val scope = rememberCoroutineScope()
     val ledgerState by viewModel.ledgerState.collectAsStateWithLifecycle()
     val groups by viewModel.group.collectAsStateWithLifecycle()
@@ -206,7 +213,7 @@ fun LedgerScreen(
                                             )
                                         }
                                         if (!group.is_default){
-                                            IconButton(onClick = { viewModel.deleteLedger(group.ledger_id) }) {
+                                            IconButton(onClick = { ledgerToDelete = group }) {
                                                 Icon(
                                                     Icons.Default.Delete,
                                                     contentDescription = "Delete",
@@ -254,6 +261,29 @@ fun LedgerScreen(
             )
         }
 
+        ledgerToDelete?.let { ledger ->
+            AlertDialog(
+                onDismissRequest = { ledgerToDelete = null },
+                title = { androidx.compose.material3.Text("Confirm Delete") },
+                text = { androidx.compose.material3.Text("Are you sure you want to delete ledger '${ledger.ledger_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteLedger(ledger.ledger_id)
+                            ledgerToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        androidx.compose.material3.Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { ledgerToDelete = null }) {
+                        androidx.compose.material3.Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 
 }

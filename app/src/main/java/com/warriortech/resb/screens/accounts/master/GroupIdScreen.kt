@@ -45,6 +45,7 @@ fun GroupScreen(
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var editingGroup by remember { mutableStateOf<TblGroupDetails?>(null) }
+    var groupToDelete by remember { mutableStateOf<TblGroupDetails?>(null) }
     val scope = rememberCoroutineScope()
     val uiSate by viewModel.groupState.collectAsStateWithLifecycle()
     val groupNature by viewModel.groupNatures.collectAsStateWithLifecycle()
@@ -147,7 +148,7 @@ fun GroupScreen(
                         .fillMaxSize()
                         .padding(8.dp)
                 ) {
-                    items(group) { group ->
+                    items(group) { groupItem ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -163,16 +164,16 @@ fun GroupScreen(
                             ) {
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        "${group.group_name} ",
+                                        "${groupItem.group_name} ",
                                         fontWeight = FontWeight.Bold
                                     )
-                                    Text("Nature: ${group.group_nature.g_nature_name}")
-                                    Text("Active: ${if (group.is_active) "Yes" else "No"}")
-                                    Text("Group:${groups.find { it.group_id == group.group_by }?.group_name}")
+                                    Text("Nature: ${groupItem.group_nature.g_nature_name}")
+                                    Text("Active: ${if (groupItem.is_active) "Yes" else "No"}")
+                                    Text("Group:${groups.find { it.group_id == groupItem.group_by }?.group_name}")
                                 }
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     IconButton(onClick = {
-                                        editingGroup = group
+                                        editingGroup = groupItem
                                         showDialog = true
                                     }) {
                                         Icon(
@@ -181,8 +182,8 @@ fun GroupScreen(
                                             tint = BluePrimary
                                         )
                                     }
-                                    if (!group.is_default){
-                                        IconButton(onClick = { viewModel.deleteGroup(group.group_id) }) {
+                                    if (!groupItem.is_default){
+                                        IconButton(onClick = { groupToDelete = groupItem }) {
                                             Icon(
                                                 Icons.Default.Delete,
                                                 contentDescription = "Delete",
@@ -228,6 +229,30 @@ fun GroupScreen(
                 },
             )
         }
+
+        groupToDelete?.let { group ->
+            AlertDialog(
+                onDismissRequest = { groupToDelete = null },
+                title = { androidx.compose.material3.Text("Confirm Delete") },
+                text = { androidx.compose.material3.Text("Are you sure you want to delete the group '${group.group_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteGroup(group.group_id)
+                            groupToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        androidx.compose.material3.Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { groupToDelete = null }) {
+                        androidx.compose.material3.Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -252,7 +277,7 @@ fun GroupFormDialog(
     var isActive by remember { mutableStateOf(group?.is_active ?: true) }
 
     var expanded by remember { mutableStateOf(false) }
-    var selectedNature by remember { mutableStateOf(group?.group_nature ?: natures[2]) }
+    var selectedNature by remember { mutableStateOf(group?.group_nature ?: (if(natures.isNotEmpty()) natures[if(natures.size > 2) 2 else 0] else TblGroupNature(0,"",true))) }
 
 
     ReusableBottomSheet(

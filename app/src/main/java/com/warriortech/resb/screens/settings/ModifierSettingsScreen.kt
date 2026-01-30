@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.Modifiers
 import com.warriortech.resb.model.MenuCategory
+import com.warriortech.resb.model.ModifiersRequest
 import com.warriortech.resb.ui.viewmodel.setting.ModifierSettingsViewModel
 import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
@@ -40,6 +41,7 @@ fun ModifierSettingsScreen(
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingModifier by remember { mutableStateOf<Modifiers?>(null) }
+    var modifierToDelete by remember { mutableStateOf<Modifiers?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -47,6 +49,7 @@ fun ModifierSettingsScreen(
     var failed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        viewModel.loadCategories()
         viewModel.loadModifiers()
     }
 
@@ -76,7 +79,6 @@ fun ModifierSettingsScreen(
                 actions = {
                     IconButton(onClick = {
                         showAddDialog = true
-                        viewModel.loadCategories()
                     }) {
                         Icon(
                             Icons.Default.Add, contentDescription = "Add AddOn",
@@ -116,12 +118,9 @@ fun ModifierSettingsScreen(
                             categories = categories,
                             onEdit = {
                                 editingModifier = modifier
-                                viewModel.loadCategories()
                             },
                             onDelete = {
-                                scope.launch {
-                                    viewModel.deleteModifier(modifier.add_on_id)
-                                }
+                                modifierToDelete = modifier
                             }
                         )
                     }
@@ -171,6 +170,32 @@ fun ModifierSettingsScreen(
             )
         }
 
+        modifierToDelete?.let { modifier ->
+            AlertDialog(
+                onDismissRequest = { modifierToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the AddOn '${modifier.add_on_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteModifier(modifier.add_on_id)
+                            }
+                            modifierToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { modifierToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
         if (sucess) {
             SuccessDialogWithButton(
                 title = "Success",
@@ -207,7 +232,7 @@ fun ModifierCard(
     onDelete: () -> Unit
 ) {
     val categoryName =
-        categories.find { it.item_cat_id == modifier.item_cat_id }?.item_cat_name ?: "Unknown"
+        categories.find { it.item_cat_id == modifier.item_cat.item_cat_id }?.item_cat_name ?: "Unknown"
 
     MobileOptimizedCard(
         modifier = Modifier.fillMaxWidth()
@@ -264,12 +289,12 @@ fun ModifierCard(
 fun ModifierDialog(
     modifier: Modifiers?,
     categories: List<MenuCategory>,
-    onSave: (Modifiers) -> Unit,
+    onSave: (ModifiersRequest) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(modifier?.add_on_name ?: "") }
     var price by remember { mutableStateOf(modifier?.add_on_price?.toString() ?: "") }
-    var selectedCategoryId by remember { mutableStateOf(modifier?.item_cat_id ?: 0L) }
+    var selectedCategoryId by remember { mutableStateOf(modifier?.item_cat?.item_cat_id ?: 0L) }
     var isActive by remember { mutableStateOf(modifier?.is_active ?: true) }
     var expanded by remember { mutableStateOf(false) }
 
@@ -339,7 +364,7 @@ fun ModifierDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val newModifier = Modifiers(
+                    val newModifier = ModifiersRequest(
                         add_on_id = modifier?.add_on_id ?: 0,
                         item_cat_id = selectedCategoryId,
                         add_on_name = name,

@@ -17,7 +17,8 @@ data class KOTRequest(
     val orderCreatedAt: String,
     val items: List<KOTItem>,
     val paperWidth: Int = 48,
-    val modify: String =""
+    val modify: String ="",
+    val kottype:String
 )
 
 data class KOTItem(

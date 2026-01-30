@@ -865,14 +865,14 @@ interface ApiService {
 
     @POST("menu/addOn/addAddOn")
     suspend fun createModifier(
-        @Body modifier: Modifiers,
+        @Body modifier: ModifiersRequest,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Modifiers>
 
     @PUT("menu/addOn/updateAddOn/{add_on_id}")
     suspend fun updateModifier(
         @Path("add_on_id") id: Long,
-        @Body modifier: Modifiers,
+        @Body modifier: ModifiersRequest,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Modifiers>
 

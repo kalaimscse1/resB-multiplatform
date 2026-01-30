@@ -48,6 +48,7 @@ fun AreaSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingArea by remember { mutableStateOf<Area?>(null) }
+    var areaToDelete by remember { mutableStateOf<Area?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     var sucess by remember { mutableStateOf(false) }
@@ -155,7 +156,7 @@ fun AreaSettingsScreen(
                     AreaCard(
                         area = area,
                         onEdit = { editingArea = area },
-                        onDelete = { viewModel.deleteArea(area.area_id) }
+                        onDelete = { areaToDelete = area }
                     )
                 }
             }
@@ -209,6 +210,30 @@ fun AreaSettingsScreen(
             onConfirm = { name, active ->
                 viewModel.updateArea(area.copy(area_name = name))
                 editingArea = null
+            }
+        )
+    }
+
+    areaToDelete?.let { area ->
+        AlertDialog(
+            onDismissRequest = { areaToDelete = null },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete the area '${area.area_name}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteArea(area.area_id)
+                        areaToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { areaToDelete = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }

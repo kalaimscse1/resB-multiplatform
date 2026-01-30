@@ -307,7 +307,8 @@ class MenuViewModel @Inject constructor(
                                 waiterName = sessionManager.getUser()?.user_name,
                                 orderCreatedAt = order.order_create_time,
                                 items = kotItem,
-                                paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 32 else 48
+                                paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 32 else 48,
+                                kottype =  if (tableStatus1 != "TAKEAWAY" && tableStatus1 != "DELIVERY") "DINE-IN" else tableStatus1.toString()
                             )
                             printKOT(kotRequest)
                         },
@@ -349,7 +350,8 @@ class MenuViewModel @Inject constructor(
                                 waiterName = sessionManager.getUser()?.user_name,
                                 orderCreatedAt = order.order_create_time,
                                 items = kotItem,
-                                paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 32 else 48
+                                paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 32 else 48,
+                                kottype =  if (tableStatus1 != "TAKEAWAY" && tableStatus1 != "DELIVERY") "DINE-IN" else tableStatus1.toString()
                             )
                             printKOT(kotRequest)
                         },
@@ -376,7 +378,8 @@ class MenuViewModel @Inject constructor(
                         waiterName = orderId.waiterName,
                         items = items,
                         orderCreatedAt = orderId.orderCreatedAt,
-                        paperWidth = orderId.paperWidth
+                        paperWidth = orderId.paperWidth,
+                        kottype =  orderId.kottype
                     )
                     val ip = orderRepository.getIpAddress(category)
                     orderRepository.printKOT(kotForCategory, ip).collect { result ->
@@ -448,7 +451,7 @@ class MenuViewModel @Inject constructor(
 
     fun showModifierDialog(menuItem: TblMenuItemResponse) {
         viewModelScope.launch {
-            modifierRepository.getModifierGroupsForMenuItem(menuItem.menu_item_id.toLong()).collect { result ->
+            modifierRepository.getModifierGroupsForMenuItem(menuItem.item_cat_id).collect { result ->
                 result.fold(
                     onSuccess = { modifiers ->
                         if (modifiers.isEmpty()) {

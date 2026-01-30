@@ -268,7 +268,7 @@ class KotViewModel @Inject constructor(
     fun reprint(): ApiResponse<Boolean> {
         var data = false
         var msg = ""
-        viewModelScope.launch {
+        viewModelScope.launch @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT) {
             val orderItems = _billedItems.value.entries.map { (menuItem, quantity) ->
                 OrderItem(
                     quantity = quantity,
@@ -297,7 +297,8 @@ class KotViewModel @Inject constructor(
                         items = items,
                         orderCreatedAt = "${_kot.value?.order_date} + ${_kot.value?.order_create_time}",
                         paperWidth = 48,
-                        modify = "REPRINT"
+                        modify = "REPRINT",
+                        kottype= _kot.value?.order_type?:""
                     )
                     val ip = orderRepository.getIpAddress(category)
                     orderRepository.printKOT(kotForCategory, ip).collect { result ->
@@ -370,7 +371,8 @@ class KotViewModel @Inject constructor(
                                     items = items,
                                     orderCreatedAt = "${_kot.value?.order_date} + ${_kot.value?.order_create_time}",
                                     paperWidth = 48,
-                                    modify = "MODIFIED"
+                                    modify = "MODIFIED",
+                                    kottype= _kot.value?.order_type?:""
                                 )
                                 val ip = orderRepository.getIpAddress(category)
                                 orderRepository.printKOT(kotForCategory, ip).collect { result ->

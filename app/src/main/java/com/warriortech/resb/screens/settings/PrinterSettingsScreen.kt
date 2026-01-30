@@ -44,6 +44,7 @@ fun PrinterSettingsScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     val kitchenCategories by viewModel.kitchenCategories.collectAsStateWithLifecycle()
     var editingPrinter by remember { mutableStateOf<TblPrinterResponse?>(null) }
+    var printerToDelete by remember { mutableStateOf<TblPrinterResponse?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadPrinters()
@@ -165,7 +166,7 @@ fun PrinterSettingsScreen(
                                                 contentDescription = "Edit",
                                                 tint = BluePrimary)
                                         }
-                                        IconButton(onClick = { viewModel.deletePrinter(printer.printer_id) }) {
+                                        IconButton(onClick = { printerToDelete = printer }) {
                                             Icon(
                                                 Icons.Default.Delete,
                                                 contentDescription = "Delete",
@@ -202,6 +203,30 @@ fun PrinterSettingsScreen(
             onSave = { updatedPrinter ->
                 viewModel.updatePrinter(updatedPrinter)
                 editingPrinter = null
+            }
+        )
+    }
+
+    printerToDelete?.let { printer ->
+        AlertDialog(
+            onDismissRequest = { printerToDelete = null },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete the printer '${printer.printer_name}'?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deletePrinter(printer.printer_id)
+                        printerToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { printerToDelete = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }

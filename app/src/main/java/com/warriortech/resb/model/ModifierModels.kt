@@ -2,6 +2,14 @@ package com.warriortech.resb.model
 
 data class Modifiers(
     val add_on_id: Long = 0,
+    val item_cat: MenuCategory,
+    val add_on_name: String,
+    val add_on_price: Double,
+    val is_active: Boolean = true // Specific items this modifier applies to
+)
+
+data class ModifiersRequest(
+    val add_on_id: Long = 0,
     val item_cat_id: Long,
     val add_on_name: String,
     val add_on_price: Double,

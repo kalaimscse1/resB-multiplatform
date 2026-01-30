@@ -328,42 +328,43 @@ fun RenderLineRow(
     }
 }
 
+@SuppressLint("DefaultLocale")
 fun resolvePreviewValue(key: String, bill: Bill, item: BillItem?, sessionManager: SessionManager): String {
     val profile = sessionManager.getRestaurantProfile()
     val settings = sessionManager.getGeneralSetting()
-    val cleanKey = key.uppercase().trim().replace(" ", "_")
+    val cleanKey = key.uppercase().trim()
     
     return when {
-        cleanKey == "BUSINESS_NAME" || cleanKey == "RESTAURANT_NAME" || cleanKey == "COMPANY_VALUE" -> profile?.company_name ?: ""
-        cleanKey == "BUSINESS_ADDRESS" || cleanKey == "ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
-        cleanKey == "ADDRESS1" || cleanKey == "ADDRESS1_VALUE" -> profile?.address1 ?: ""
-        cleanKey == "ADDRESS2" || cleanKey == "ADDRESS2_VALUE" -> profile?.address2 ?: ""
-        cleanKey == "PLACE" || cleanKey == "PLACE_VALUE" -> profile?.place ?: ""
-        cleanKey == "PINCODE" || cleanKey == "PINCODE_VALUE" -> profile?.pincode ?: ""
-        cleanKey == "PHONE" || cleanKey == "CONTACT_NO" || cleanKey == "BUSINESS_PHONE" -> profile?.contact_no ?: ""
-        cleanKey == "GSTIN" || cleanKey == "GST_NO" || cleanKey == "TAX_NO" || cleanKey == "BUSINESS_GSTIN" -> profile?.tax_no ?: ""
-        cleanKey == "BILL_VALUE" -> bill.billNo
-        cleanKey == "DATE_VALUE" -> bill.date
-        cleanKey == "TIME_VALUE" -> bill.time
-        cleanKey == "ORDER_VALUE" -> bill.orderNo
-        cleanKey == "TABLE_VALUE" -> bill.tableNo
-        cleanKey == "COUNTER_VALUE" -> bill.counter
-        cleanKey == "SUBTOTAL" -> String.format("%.2f", bill.subtotal)
+        cleanKey == "BUSINESS NAME" || cleanKey == "RESTAURANT NAME" || cleanKey == "COMPANY VALUE" -> profile?.company_name ?: ""
+        cleanKey == "BUSINESS ADDRESS" || cleanKey == "ADDRESS" -> "${profile?.address1 ?: ""} ${profile?.address2 ?: ""}".trim()
+        cleanKey == "ADDRESS1 VALUE" -> profile?.address1 ?: ""
+        cleanKey == "ADDRESS2 VALUE" -> profile?.address2 ?: ""
+        cleanKey == "PLACE VALUE" -> profile?.place ?: ""
+        cleanKey == "PINCODE VALUE" -> profile?.pincode ?: ""
+        cleanKey == "PHONE" || cleanKey == "CONTACT NO" || cleanKey == "BUSINESS PHONE" -> profile?.contact_no ?: ""
+        cleanKey == "GST NO" || cleanKey == "TAX NO" || cleanKey == "BUSINESS GSTIN" -> profile?.tax_no ?: ""
+        cleanKey == "BILL VALUE" -> bill.billNo
+        cleanKey == "DATE VALUE" -> bill.date
+        cleanKey == "TIME VALUE" -> bill.time
+        cleanKey == "ORDER VALUE" -> bill.orderNo
+        cleanKey == "TABLE VALUE" -> bill.tableNo
+        cleanKey == "COUNTER VALUE" -> bill.counter
+        cleanKey == "SUB TOTAL" -> String.format("%.2f", bill.subtotal)
         cleanKey == "TOTAL" -> String.format("%.2f", bill.total)
         cleanKey == "DISCOUNT" -> String.format("%.2f", bill.discount)
-        cleanKey == "TAX_AMT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
-        cleanKey == "RECEIVED_AMT" -> String.format("%.2f", bill.received_amt)
-        cleanKey == "PENDING_AMT" -> String.format("%.2f", bill.pending_amt)
-        cleanKey == "CUST_NAME" -> bill.custName
-        cleanKey == "CUST_NO" -> bill.custNo
-        cleanKey == "CUST_ADDRESS" -> bill.custAddress
-        cleanKey == "CUST_GSTIN" -> bill.custGstin
-        cleanKey == "ITEM_VALUE" -> item?.itemName ?: ""
-        cleanKey == "QTY_VALUE" -> item?.qty?.toString() ?: ""
-        cleanKey == "RATE" || cleanKey == "PRICE_VALUE" -> String.format("%.2f", item?.price ?: 0.0)
-        cleanKey == "AMT_VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
+        cleanKey == "TAX AMOUNT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
+        cleanKey == "RECEIVED AMT" -> String.format("%.2f", bill.received_amt)
+        cleanKey == "PENDING AMT" -> String.format("%.2f", bill.pending_amt)
+        cleanKey == "CUST NAME" -> bill.custName
+        cleanKey == "CUST NO" -> bill.custNo
+        cleanKey == "CUST ADDRESS" -> bill.custAddress
+        cleanKey == "CUST GSTIN" -> bill.custGstin
+        cleanKey == "ITEM VALUE" -> item?.itemName ?: ""
+        cleanKey == "QTY VALUE" -> item?.qty?.toString() ?: ""
+        cleanKey == "RATE" || cleanKey == "PRICE VALUE" -> String.format("%.2f", item?.price ?: 0.0)
+        cleanKey == "AMT VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
         cleanKey == "SN" -> item?.sn?.toString() ?: ""
-        cleanKey == "FOOTER" || cleanKey == "BILL_FOOTER" || cleanKey == "THANK_VALUE" -> settings?.bill_footer ?: ""
+        cleanKey == "FOOTER" || cleanKey == "BILL FOOTER" || cleanKey == "THANK VALUE" -> settings?.bill_footer ?: ""
         cleanKey == "SEPARATOR" -> "--------------------------------"
         cleanKey == "DOUBLE_SEPARATOR" -> "================================"
         key.startsWith("FIXED:") -> key.removePrefix("FIXED:")

@@ -36,6 +36,7 @@ fun VoucherTypeSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingVoucherType by remember { mutableStateOf<TblVoucherType?>(null) }
+    var voucherTypeToDelete by remember { mutableStateOf<TblVoucherType?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -107,10 +108,7 @@ fun VoucherTypeSettingsScreen(
                                     showAddDialog = true
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        viewModel.deleteVoucherType(voucherType.voucher_Type_id)
-                                        snackbarHostState.showSnackbar("Voucher type deleted")
-                                    }
+                                    voucherTypeToDelete = voucherType
                                 }
                             )
                         }
@@ -159,6 +157,33 @@ fun VoucherTypeSettingsScreen(
                     }
                     showAddDialog = false
                     editingVoucherType = null
+                }
+            )
+        }
+
+        voucherTypeToDelete?.let { voucherType ->
+            AlertDialog(
+                onDismissRequest = { voucherTypeToDelete = null },
+                title = { Text("Confirm Delete") },
+                text = { Text("Are you sure you want to delete the voucher type '${voucherType.voucher_type_name}'?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteVoucherType(voucherType.voucher_Type_id)
+                                snackbarHostState.showSnackbar("Voucher type deleted")
+                            }
+                            voucherTypeToDelete = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { voucherTypeToDelete = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
