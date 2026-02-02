@@ -237,24 +237,12 @@ fun RegistrationScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                             )
-                            OutlinedTextField(
-                                value = adminOtpInput,
-                                onValueChange = { if (it.length <= 6) adminOtpInput = it },
-                                label = { Text("Admin OTP") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = LocalTextStyle.current.copy(
-                                    textAlign = TextAlign.Center,
-                                    letterSpacing = 4.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-
+0
                             Button(
-                                onClick = { viewModel.verifyOtpsAndRegister(emailOtpInput, mobileOtpInput, adminOtpInput) },
+                                onClick = { viewModel.verifyOtpsAndRegister(emailOtpInput, mobileOtpInput) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
-                                enabled = emailOtpInput.length == 6 && mobileOtpInput.length == 6 && adminOtpInput.length == 6 && !uiState.isLoading
+                                enabled = emailOtpInput.length == 6 && mobileOtpInput.length == 6 && !uiState.isLoading
                             ) {
                                 if (uiState.isLoading) {
                                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)

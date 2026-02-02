@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.IconButton
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.Scaffold
@@ -55,7 +56,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.warriortech.resb.network.RetrofitClient
@@ -143,6 +146,37 @@ fun LoginScreen(
         )
     }
 
+    if (uiState.value.showOtpDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissOtpDialog,
+            title = { Text("OTP Verification") },
+            text = {
+                Column {
+                    Text("Enter the 4-digit OTP sent to your Admin:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.value.otpInput,
+                        onValueChange = viewModel::onOtpInputChange,
+                        label = { Text("OTP") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::verifyOtpAndLogin) {
+                    Text("Verify & Login")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissOtpDialog) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
@@ -214,7 +248,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
                     .padding(10.dp)
             ) {
-                if (sessionManager.getEmail()?.isBlank() == true){
+                if (sessionManager.getEmail().isNullOrBlank()){
                     MobileOptimizedTextField(
                         value = uiState.value.companyCode,
                         onValueChange = viewModel::onCompanyCodeChange,

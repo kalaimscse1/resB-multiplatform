@@ -6,13 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.model.LoginRequest
 import com.warriortech.resb.network.RetrofitClient
 import com.warriortech.resb.network.SessionManager
+import com.warriortech.resb.network.WhatsAppApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
+import kotlin.random.Random
 
 /**
  * ViewModel for managing the login state and actions.
@@ -24,7 +27,10 @@ data class LoginUiState(
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val loginError: String? = null,
-    val loginSuccess: Boolean = false
+    val loginSuccess: Boolean = false,
+    val showOtpDialog: Boolean = false,
+    val generatedOtp: String = "",
+    val otpInput: String = ""
 )
 
 /**
@@ -32,18 +38,12 @@ data class LoginUiState(
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val sessionManager: SessionManager
-) : ViewModel() { // Assuming you might inject dependencies later
-
-//    var uiState by mutableStateOf(LoginUiState())
-//        private set
+    private val sessionManager: SessionManager,
+    private val whatsappApi: WhatsAppApi
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
-
-    /**
-     * Handles changes to the company code input field.
-     */
 
     init {
         // Pre-fill company code when ViewModel is created
@@ -58,39 +58,27 @@ class LoginViewModel @Inject constructor(
         _uiState.update { it.copy(companyCode = companyCode, loginError = null) }
     }
 
-    /**
-     * Handles changes to the username input field.
-     */
     fun onUsernameChange(username: String) {
         _uiState.update { it.copy(username = username, loginError = null) }
     }
 
-    /**
-     * Handles changes to the password input field.
-     */
     fun onPasswordChange(password: String) {
         _uiState.update { it.copy(password = password, loginError = null) }
     }
 
-    /**
-     * Toggles the visibility of the password input field.
-     */
+    fun onOtpInputChange(otp: String) {
+        _uiState.update { it.copy(otpInput = otp) }
+    }
+
     fun togglePasswordVisibility() {
         _uiState.update { it.copy(isPasswordVisible = !uiState.value.isPasswordVisible) }
     }
 
-    /**
-     * Validates the input fields to ensure they are not empty.
-     */
     private fun validateInput(): Boolean {
         return uiState.value.username.isNotBlank() &&
                 uiState.value.password.isNotBlank() &&
                 uiState.value.companyCode.isNotBlank()
     }
-
-    /**
-     * Login function that attempts to log in the user with the provided credentials.
-     */
 
     fun attemptLogin() {
         if (!validateInput()) {
@@ -98,6 +86,69 @@ class LoginViewModel @Inject constructor(
             return
         }
 
+        val code = sessionManager.getCompanyCode() ?: ""
+        if (code.isEmpty()) {
+            sendAdminOtp()
+        } else {
+            processLogin()
+        }
+    }
+
+    private fun sendAdminOtp() {
+        _uiState.update { it.copy(isLoading = true, loginError = null) }
+        viewModelScope.launch {
+            try {
+                val otp = Random.nextInt(1000, 9999).toString()
+                val msgOtp = uiState.value.companyCode + " - " + otp
+                val response = whatsappApi.sendWhatsApp(
+                    secret = "66a02ca4cbae00a9b996ba9d1f62a51c56cbccd1".toRequestBody(),
+                    account = "1768990496a87ff679a2f3e71d9181a67b7542122c6970a7204c38d".toRequestBody(),
+                    recipient = "120363042991809443@g.us".toRequestBody(),           // +919876543210
+                    type = "text".toRequestBody(),
+                    message = "Your OTP For $msgOtp".toRequestBody()
+                )
+
+                if (response.isSuccessful) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            showOtpDialog = true,
+                            generatedOtp = otp
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            loginError = "Failed to send verification OTP. Please check your Email Id."
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loginError = "Error: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun verifyOtpAndLogin() {
+        if (uiState.value.otpInput == uiState.value.generatedOtp) {
+            _uiState.update { it.copy(showOtpDialog = false) }
+            processLogin()
+        } else {
+            _uiState.update { it.copy(loginError = "Invalid OTP") }
+        }
+    }
+
+    fun dismissOtpDialog() {
+        _uiState.update { it.copy(showOtpDialog = false, isLoading = false) }
+    }
+
+    private fun processLogin() {
         _uiState.update { it.copy(isLoading = true, loginError = null) }
         viewModelScope.launch {
             try {
@@ -105,37 +156,36 @@ class LoginViewModel @Inject constructor(
                     uiState.value.companyCode.trim(),
                     "KTS-COMPANY_MASTER"
                 )
-                sessionManager.saveCompanyCode(
-                    check.data?.company_master_code?:""
-                )
+                
+                if (check.data != null) {
+                    val companyMasterCode = check.data.company_master_code
+                    sessionManager.saveCompanyCode(companyMasterCode)
 
-                val generalSetting = RetrofitClient.apiService.getGeneralSettings(
-                    sessionManager.getCompanyCode()?:""
-                )
-                val profile = RetrofitClient.apiService.getRestaurantProfile(
-                    tenantId = sessionManager.getCompanyCode()?:"",
-                    companyCode = sessionManager.getCompanyCode()?:""
-                )
-                if (check.data !=null) {
+                    val generalSetting = RetrofitClient.apiService.getGeneralSettings(companyMasterCode)
+                    val profile = RetrofitClient.apiService.getRestaurantProfile(
+                        tenantId = companyMasterCode,
+                        companyCode = companyMasterCode
+                    )
+
                     val response = RetrofitClient.apiService.login(
                         request = LoginRequest(
                             companyCode = uiState.value.companyCode,
                             user_name = uiState.value.username,
                             password = uiState.value.password
                         ),
-                        tenantId = sessionManager.getCompanyCode()?:""
+                        tenantId = companyMasterCode
                     )
 
                     if (response.success && response.data != null) {
                         sessionManager.saveEmail(_uiState.value.companyCode)
                         val authResponse = response.data
                         val general = generalSetting.body()
-                        Log.d("LoginViewModel", "General Settings: ${authResponse.user}")
+                        
                         sessionManager.saveUserLogin(true)
                         sessionManager.saveAuthToken(authResponse.token)
                         sessionManager.saveUser(authResponse.user)
                         sessionManager.saveGeneralSetting(
-                            general?.get(0) ?: error("general setting failed")
+                            general?.get(0) ?: throw Exception("General settings not found")
                         )
                         sessionManager.saveDecimalPlaces(profile.decimal_point)
                         sessionManager.saveRestaurantProfile(profile)
@@ -149,11 +199,9 @@ class LoginViewModel @Inject constructor(
                             )
                         }
                     }
-
                 } else {
                     _uiState.update { it.copy(isLoading = false, loginError = check.message) }
                 }
-
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -165,9 +213,6 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Resets the login success state after handling the login result.
-     */
     fun onLoginHandled() {
         _uiState.update { it.copy(loginSuccess = false, loginError = null) }
     }
