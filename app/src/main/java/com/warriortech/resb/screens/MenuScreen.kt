@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.RemoveShoppingCart
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
@@ -68,6 +69,7 @@ import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.SuccessDialog
 import com.warriortech.resb.util.getDeviceInfo
 import kotlinx.coroutines.delay
+
 @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
 @SuppressLint(
     "StateFlowValueCalledInComposition", "DefaultLocale", "SuspiciousIndentation",
@@ -108,6 +110,7 @@ fun MenuScreen(
 
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showOrderDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
     var values by remember { mutableStateOf<PaddingValues>(PaddingValues(0.dp)) }
     var sucess by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -152,7 +155,7 @@ fun MenuScreen(
             }
 
             else -> {
-                snackbarHostState.showSnackbar("Loading")
+                // No action needed for other states
             }
         }
     }
@@ -178,6 +181,21 @@ fun MenuScreen(
             onConfirm = { showOrderDialog = false },
             tableStatus = effectiveStatus.toString(),
             items= orderDetailsResponse
+        )
+    }
+
+    if (showSearchDialog) {
+        val allItems = when (val state = menuState) {
+            is MenuViewModel.MenuUiState.Success -> state.menuItems
+            else -> emptyList()
+        }
+        ItemSearchDialog(
+            allItems = allItems,
+            onItemSelected = { item ->
+                viewModel.addItemToOrder(item)
+                showSearchDialog = false
+            },
+            onDismiss = { showSearchDialog = false }
         )
     }
 
@@ -236,6 +254,13 @@ fun MenuScreen(
                                 tint = SurfaceLight
                             )
                         }
+                    }
+                    IconButton(onClick = { showSearchDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search Item",
+                            tint = SurfaceLight
+                        )
                     }
                     BarcodeScannerButton(
                         onBarcodeScanned = { barcode ->
@@ -405,14 +430,6 @@ fun MenuScreen(
                                     .weight(1f)
                                     .height(48.dp)
                             )
-//                            MobileOptimizedButton(
-//                                onClick = { showConfirmDialog = true },
-//                                text = "Place Order & Bill",
-//                                enabled = (selectedItems.isNotEmpty()),
-//                                modifier = Modifier
-//                                    .weight(1f)
-//                                    .height(48.dp)
-//                            )
                         }
                     }
                 }
@@ -613,6 +630,52 @@ fun MenuScreen(
             }
         )
     }
+}
+
+@Composable
+fun ItemSearchDialog(
+    allItems: List<TblMenuItemResponse>,
+    onItemSelected: (TblMenuItemResponse) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredItems = remember(searchQuery, allItems) {
+        if (searchQuery.isBlank()) emptyList()
+        else allItems.filter { it.menu_item_name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Search Item") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Enter item name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                ) {
+                    itemsIndexed(filteredItems) { _, item ->
+                        ListItem(
+                            headlineContent = { Text(item.menu_item_name) },
+                            modifier = Modifier.clickable { onItemSelected(item) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

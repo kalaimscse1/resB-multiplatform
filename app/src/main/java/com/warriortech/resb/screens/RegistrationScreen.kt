@@ -237,7 +237,7 @@ fun RegistrationScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                             )
-0
+
                             Button(
                                 onClick = { viewModel.verifyOtpsAndRegister(emailOtpInput, mobileOtpInput) },
                                 modifier = Modifier.fillMaxWidth(),
