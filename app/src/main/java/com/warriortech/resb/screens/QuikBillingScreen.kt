@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.magnifier
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
@@ -33,12 +36,15 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblMenuItemResponse
+import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.ui.components.BarcodeScannerButton
 import com.warriortech.resb.ui.components.MobileOptimizedButton
 import com.warriortech.resb.ui.components.MobileOptimizedButtonColor
@@ -57,6 +63,7 @@ fun ItemWiseBillScreen(
     viewModel: CounterViewModel = hiltViewModel(),
     drawerState: DrawerState,
     navController: NavHostController,
+    sessionManager: SessionManager,
     onProceedToBilling: (orderDetailsResponse: Map<TblMenuItemResponse, Int>) -> Unit
 ) {
 
@@ -76,6 +83,7 @@ fun ItemWiseBillScreen(
 
     var showDialog by remember { mutableStateOf(false) }
     var showBillDialog by remember { mutableStateOf(false) }
+    var showTenderDialog by remember { mutableStateOf(false) }
     var success by remember { mutableStateOf(false) }
     var isProcessingCash by remember { mutableStateOf(false) }
     var isProcessingOthers by remember { mutableStateOf(false) }
@@ -171,13 +179,18 @@ fun ItemWiseBillScreen(
                                 isClearClicked = false
                                 isOtherClicked = false
                                 if (selectedItems.isNotEmpty()) {
-                                    scope.launch {
-                                        isProcessingCash = true
-                                        viewModel.cashPrintBill()
-                                        success = true
-                                        delay(1500)
-                                        success = false
-                                        isProcessingCash = false
+                                    val isTenderEnabled = sessionManager.getGeneralSetting()?.is_tendered ?: false
+                                    if (isTenderEnabled) {
+                                        showTenderDialog = true
+                                    } else {
+                                        scope.launch {
+                                            isProcessingCash = true
+                                            viewModel.cashPrintBill()
+                                            success = true
+                                            delay(1500)
+                                            success = false
+                                            isProcessingCash = false
+                                        }
                                     }
                                 } else showBillDialog = true
                             },
@@ -363,11 +376,13 @@ fun ItemWiseBillScreen(
                 )
             }
 
-            // Menu items grid
+            // Categories tabs
+
+            // Items grid
             when (val state = menuState) {
                 is CounterViewModel.MenuUiState.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = ModernPrimaryGreen)
+                        CircularProgressIndicator()
                     }
                 }
 
@@ -417,86 +432,51 @@ fun ItemWiseBillScreen(
                             columns = GridCells.Fixed(columns),
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(6.dp),
+                                .background(ghostWhite)
+                                .padding(4.dp),
+                            contentPadding = PaddingValues(4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            itemsIndexed(
-                                filteredMenuItems,
-                                key = { index, p -> "${p.menu_item_id}_${p.menu_id}_$index" }) { _, product ->
+                            itemsIndexed(filteredMenuItems) { _, item ->
                                 Card(
-                                    modifier = when {
-                                        screenWidthDp >= 1200 -> Modifier
-                                            .aspectRatio(1f)
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .pointerInput(Unit) {
-                                                detectTapGestures { tapOffset ->
-                                                    FlyToCartController.current?.invoke(
-                                                        product,
-                                                        tapOffset,
-                                                        cartOffset
-                                                    )
-                                                    viewModel.addItemToOrder(product)
-                                                }
+                                    modifier = Modifier
+                                        .aspectRatio(1f)
+                                        .pointerInput(Unit) {
+                                            detectTapGestures { tapOffset ->
+                                                FlyToCartController.current?.invoke(
+                                                    item,
+                                                    tapOffset,
+                                                    cartOffset
+                                                )
+                                                viewModel.addItemToOrder(item)
                                             }
-                                        screenWidthDp >= 800 -> Modifier
-                                            .aspectRatio(1f)
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .pointerInput(Unit) {
-                                                detectTapGestures { tapOffset ->
-                                                    FlyToCartController.current?.invoke(
-                                                        product,
-                                                        tapOffset,
-                                                        cartOffset
-                                                    )
-                                                    viewModel.addItemToOrder(product)
-                                                }
-                                            }
-                                        else -> Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .pointerInput(Unit) {
-                                                detectTapGestures { tapOffset ->
-                                                    FlyToCartController.current?.invoke(
-                                                        product,
-                                                        tapOffset,
-                                                        cartOffset
-                                                    )
-                                                    viewModel.addItemToOrder(product)
-                                                }
-                                            }
-                                    } ,
-                                    elevation = CardDefaults.cardElevation(4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = ghostWhiteDark)
+                                        },
+                                    shape = RoundedCornerShape(4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(2.dp)
                                 ) {
                                     Column(
                                         modifier = Modifier
-                                            .padding(10.dp)
-                                            .fillMaxSize(),
+                                            .fillMaxSize()
+                                            .padding(4.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
-                                            product.menu_item_name,
+                                            item.menu_item_name,
+                                            fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center,
                                             maxLines = 2,
-                                            fontSize = when {
-                                                screenWidthDp >= 1200 -> 18.sp
-                                                screenWidthDp >= 800 -> 16.sp
-                                                else -> 12.sp
-                                            }
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            CurrencySettings.format(product.rate),
-                                            textAlign = TextAlign.Center,
-                                            fontSize = when {
-                                                screenWidthDp >= 1200 -> 18.sp
-                                                screenWidthDp >= 800 -> 16.sp
-                                                else -> 12.sp
-                                            }
+                                            CurrencySettings.formatPlain(item.rate),
+                                            fontSize = 10.sp,
+                                            color = ModernDarkGreen,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     }
                                 }
@@ -504,60 +484,122 @@ fun ItemWiseBillScreen(
                         }
                     }
                 }
-
-                else -> {}
+                is CounterViewModel.MenuUiState.Error -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.message, color = Color.Red)
+                    }
+                }
             }
         }
-    }
 
-    FlyToCartOverlay()
+        if (showTenderDialog) {
+            val total = selectedItems.entries.sumOf { it.key.rate * it.value }
+            TenderDialog(
+                totalAmount = total,
+                onConfirm = { received ->
+                    showTenderDialog = false
+                    scope.launch {
+                        isProcessingCash = true
+                        viewModel.cashPrintBill(received) // Assuming VM can handle this or you might need a new method for tendered amount
+                        success = true
+                        delay(1500)
+                        success = false
+                        isProcessingCash = false
+                    }
+                },
+                onDismiss = { showTenderDialog = false }
+            )
+        }
+        FlyToCartOverlay()
 
-    if (showDialog) {
-        ClearDialog(
-            onDismiss = { showDialog = false },
-            onConfirm = {
-                viewModel.clearOrder()
-                showDialog = false
-                isSaveClicked = false
-                isClearClicked = false
-                isOtherClicked = false
-            }
-        )
-    }
+        if (showDialog) {
+            ClearDialog(
+                onDismiss = { showDialog = false },
+                onConfirm = {
+                    viewModel.clearOrder()
+                    showDialog = false
+                    isSaveClicked = false
+                    isClearClicked = false
+                    isOtherClicked = false
+                }
+            )
+        }
 
-    if (showBillDialog) {
-        MessageBox(
-            title = "Alert",
-            message = "Please select items to proceed billing.",
-            onDismiss = {
-                showBillDialog = false
-                isSaveClicked = false
-                isClearClicked = false
-                isOtherClicked = false
-            }
-        )
-    }
+        if (showBillDialog) {
+            MessageBox(
+                title = "Alert",
+                message = "Please select items to proceed billing.",
+                onDismiss = {
+                    showBillDialog = false
+                    isSaveClicked = false
+                    isClearClicked = false
+                    isOtherClicked = false
+                }
+            )
+        }
 
-    if (success) {
-        SuccessDialog(
-            title = "Bill Successful",
-            description = "Payment Done Successfully",
-            paddingValues = values
-        )
+        if (success) {
+            SuccessDialog(
+                title = "Bill Successful",
+                description = "Payment Done Successfully",
+                paddingValues = values
+            )
+        }
     }
 }
 
 @Composable
-fun QuantityButton(symbol: String, color: Color, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(32.dp)
-            .border(1.dp, color, RoundedCornerShape(4.dp))
-            .pointerInput(Unit) { detectTapGestures { onClick() } },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(symbol, color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-    }
+fun TenderDialog(
+    totalAmount: Double,
+    onConfirm: (Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var tenderedAmount by remember { mutableStateOf("") }
+    val balance = (tenderedAmount.toDoubleOrNull() ?: 0.0) - totalAmount
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cash Payment") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Total Payable:", style = MaterialTheme.typography.bodyLarge)
+                    Text(CurrencySettings.format(totalAmount), fontWeight = FontWeight.Bold)
+                }
+                OutlinedTextField(
+                    value = tenderedAmount,
+                    onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) tenderedAmount = it },
+                    label = { Text("Tendered Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                if (balance >= 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Balance to Return:", color = ModernDarkGreen)
+                        Text(CurrencySettings.format(balance), fontWeight = FontWeight.Bold, color = ModernDarkGreen)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(tenderedAmount.toDoubleOrNull() ?: 0.0) },
+                enabled = (tenderedAmount.toDoubleOrNull() ?: 0.0) >= totalAmount
+            ) {
+                Text("Pay & Print")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -618,26 +660,55 @@ fun ClearDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     )
 }
 
-object FlyToCartController {
-    var current: ((TblMenuItemResponse, Offset, Offset) -> Unit)? = null
+@Composable
+fun QuickMenuItemCard(item: TblMenuItemResponse, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                item.menu_item_name,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                CurrencySettings.formatPlain(item.rate),
+                fontSize = 10.sp,
+                color = ModernDarkGreen,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
 }
 
 @Composable
-fun ActionButton(
-    text: String,
-    color: Color,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = color,
-            disabledContainerColor = color.copy(alpha = 0.6f)
-        ),
-        modifier = Modifier.padding(horizontal = 2.dp)
+fun QuantityButton(text: String, color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .border(1.dp, color, RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Text(text, color = Color.White)
+        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 16.sp)
     }
+}
+
+object FlyToCartController {
+    var current: ((TblMenuItemResponse, Offset, Offset) -> Unit)? = null
 }

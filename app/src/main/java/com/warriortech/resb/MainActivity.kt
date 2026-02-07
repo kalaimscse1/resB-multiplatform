@@ -834,7 +834,8 @@ fun AppNavigation(
                 navController = navController,
                 onProceedToBilling = {
                     selecteItems = it
-                }
+                },
+                sessionManager = sessionManager
             )
         }
         composable("modifier_setting") {

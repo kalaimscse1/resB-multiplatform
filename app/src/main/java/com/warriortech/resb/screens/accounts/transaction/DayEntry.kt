@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -89,10 +91,9 @@ import androidx.navigation.NavHostController
 import com.warriortech.resb.MainActivity
 import com.warriortech.resb.model.TblLedgerDetailIdRequest
 import com.warriortech.resb.model.TblLedgerDetails
-import com.warriortech.resb.screens.ActionButton
-import com.warriortech.resb.screens.ClearDialog
 import com.warriortech.resb.ui.components.GradientFloatingActionButton
 import com.warriortech.resb.ui.components.ModernDivider
+import com.warriortech.resb.ui.theme.ModernDarkGreen
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.ResbTypography
 import com.warriortech.resb.ui.theme.SecondaryGreen
@@ -728,6 +729,32 @@ fun LedgerEntryDialog(
 
 
 @Composable
+fun ClearDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Clear Items") },
+        text = { Text("Are you sure you want to clear items?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = ModernDarkGreen)
+            ) {
+                Text("Ok")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+
+@Composable
 fun PaymentModeRow(
     paymentMode: PaymentMode,
     onModeChange: (PaymentMode) -> Unit,
@@ -813,4 +840,23 @@ enum class PaymentMode(val label: String) {
     CARD("CARD"),
     UPI("UPI"),
     OTHERS("OTHERS")
+}
+@Composable
+fun ActionButton(
+    text: String,
+    color: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color,
+            disabledContainerColor = color.copy(alpha = 0.6f)
+        ),
+        modifier = Modifier.padding(horizontal = 2.dp)
+    ) {
+        Text(text, color = Color.White)
+    }
 }

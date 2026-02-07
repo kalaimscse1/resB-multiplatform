@@ -152,7 +152,7 @@ class LoginViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, loginError = null) }
         viewModelScope.launch {
             try {
-                val check = RetrofitClient.apiService.checkIsBlockByMailId(
+                val check = RetrofitClient.masterApiService.checkIsBlockByMailId(
                     uiState.value.companyCode.trim(),
                     "KTS-COMPANY_MASTER"
                 )

@@ -7,6 +7,7 @@ import com.warriortech.resb.model.RegistrationRequest
 import com.warriortech.resb.model.RegistrationResponse
 import com.warriortech.resb.model.RestaurantProfile
 import com.warriortech.resb.network.ApiService
+import com.warriortech.resb.network.RetrofitClient
 import com.warriortech.resb.network.WhatsAppApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -24,7 +25,7 @@ class RegistrationRepository @Inject constructor(
     @SuppressLint("SuspiciousIndentation")
     fun registerCompany(registrationRequest: RegistrationRequest): Flow<Result<Registration>> = flow {
         try {
-            val response = apiService.registerCompany(registrationRequest,"KTS-COMPANY_MASTER")
+            val response = RetrofitClient.masterApiService.registerCompany(registrationRequest,"KTS-COMPANY_MASTER")
 
             if (response.isSuccessful) {
                 val res = response.body()!!
@@ -38,7 +39,7 @@ class RegistrationRepository @Inject constructor(
     }
 
     suspend fun getCompanyCode(): Map<String, String> {
-        val response = apiService.getCompanyCode("KTS-COMPANY_MASTER")
+        val response = RetrofitClient.masterApiService.getCompanyCode("KTS-COMPANY_MASTER")
         return if (response.isSuccessful) {
             response.body()!!
         } else {

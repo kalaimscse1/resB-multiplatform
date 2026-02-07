@@ -248,7 +248,7 @@ class CounterViewModel @Inject constructor(
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun cashPrintBill() {
+    fun cashPrintBill(tenderedAmount: Double=0.0) {
         viewModelScope.launch {
             if (_selectedItems.value.isEmpty()) {
 
@@ -286,7 +286,9 @@ class CounterViewModel @Inject constructor(
                                 igst_status = false
                             ),
                             "--",
-                            voucherType = "BILL"
+                            voucherType = "BILL",
+                            tenderedAmt = tenderedAmount,
+                            total = amount
                         ).collect { billResult ->
                             billResult.fold(
                                 onSuccess = { response ->

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -33,9 +34,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -52,6 +55,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,6 +68,7 @@ import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.screens.settings.CustomerDialog
 import com.warriortech.resb.ui.components.PaymentMethodCard
 import com.warriortech.resb.ui.components.PaymentSummaryCard
+import com.warriortech.resb.ui.theme.ModernDarkGreen
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SecondaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -96,6 +101,8 @@ fun PaymentScreen(
     var showCustomerDialog by remember { mutableStateOf(false) }
     var customer by remember { mutableStateOf<TblCustomer?>(null) }
     val scope = rememberCoroutineScope()
+
+    var showTenderDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadCustomers()
@@ -195,8 +202,15 @@ fun PaymentScreen(
             PaymentBottomBar(
                 uiState = uiState,
                 onConfirmPayment = {
-                    viewModel.updateAmountToPay(uiState.totalAmount)
-                    viewModel.processPayment(voucherType = voucherType ?: "BILL")
+                    val isTenderEnabled = sessionManager.getGeneralSetting()?.is_tendered == true
+                    val isCash = uiState.selectedPaymentMethod?.name == "CASH"
+                    
+                    if (isCash && isTenderEnabled) {
+                        showTenderDialog = true
+                    } else {
+                        viewModel.updateAmountToPay(uiState.totalAmount)
+                        viewModel.processPayment(voucherType = voucherType ?: "BILL")
+                    }
                 },
                 customer = customers.find { it.customer_id == customer?.customer_id },
                 sessionManager = sessionManager
@@ -328,6 +342,20 @@ fun PaymentScreen(
             }
         }
     }
+
+    if (showTenderDialog) {
+        PaymentTenderDialog(
+            totalAmount = uiState.totalAmount,
+            onConfirm = { received ->
+                showTenderDialog = false
+                viewModel.updateAmountReceived(received)
+                viewModel.updateAmountToPay(uiState.totalAmount)
+                viewModel.processPayment(voucherType = voucherType ?: "BILL")
+            },
+            onDismiss = { showTenderDialog = false }
+        )
+    }
+
     if (showCustomerDialog) {
         CustomerDialog(
             customer = null,
@@ -342,57 +370,58 @@ fun PaymentScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerSelectionDialog(
-    customers: List<TblCustomer>,
-    onCustomerSelected: (TblCustomer) -> Unit,
-    onDismissRequest: () -> Unit
+fun PaymentTenderDialog(
+    totalAmount: Double,
+    onConfirm: (Double) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        dragHandle = null,
-        sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Select Customer",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            StringDropdown(
-                label = "Customer",
-                options = customers.map { it.customer_name },
-                onOptionSelected = { selectedName ->
-                    val selectedCustomer = customers.find { it.customer_name == selectedName }
-                    selectedCustomer?.let {
-                        onCustomerSelected(it)
+    var tenderedAmount by remember { mutableStateOf("") }
+    val balance = (tenderedAmount.toDoubleOrNull() ?: 0.0) - totalAmount
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cash Tender") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Total Payable:", style = MaterialTheme.typography.bodyLarge)
+                    Text(CurrencySettings.format(totalAmount), fontWeight = FontWeight.Bold)
+                }
+                OutlinedTextField(
+                    value = tenderedAmount,
+                    onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) tenderedAmount = it },
+                    label = { Text("Tendered Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                if (balance >= 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Balance to Return:", color = ModernDarkGreen)
+                        Text(CurrencySettings.format(balance), fontWeight = FontWeight.Bold, color = ModernDarkGreen)
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                selectedOption = {
-                    customers.find { true }?.customer_name
-                        ?: customers.firstOrNull()?.customer_name
-                        ?: "Select Customer"
-                }.toString()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onDismissRequest,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Close")
+                }
             }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(tenderedAmount.toDoubleOrNull() ?: 0.0) },
+                enabled = (tenderedAmount.toDoubleOrNull() ?: 0.0) >= totalAmount
+            ) {
+                Text("Confirm & Pay")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
-    }
+    )
 }
 
 @Composable
@@ -407,7 +436,7 @@ fun PaymentBottomBar(
     val method = uiState.selectedPaymentMethod?.name.orEmpty()
 
     val hasManualEntry = when (method) {
-        "CASH" -> if (isTendered) uiState.amountReceived > 0.0 else uiState.cashAmount > 0.0
+        "CASH" -> if (isTendered) true else uiState.cashAmount > 0.0 // True because tender dialog will handle it
         "CARD" -> uiState.cardAmount > 0.0
         "UPI" -> uiState.upiAmount > 0.0
         "OTHERS" -> (uiState.cashAmount + uiState.cardAmount + uiState.upiAmount) > 0.0
@@ -418,9 +447,7 @@ fun PaymentBottomBar(
     val paidAmount = when (method) {
         "CASH" -> {
             if (isTendered) {
-                if (uiState.amountReceived == 0.0) totalAmount
-                else if (uiState.amountReceived >= totalAmount) totalAmount
-                else uiState.amountReceived
+                totalAmount // Assume full payment, balance handled in dialog
             } else {
                 if (uiState.cashAmount == 0.0) totalAmount else uiState.cashAmount
             }
@@ -447,14 +474,6 @@ fun PaymentBottomBar(
         else -> isIdle
     }
 
-    if (paidAmount > totalAmount) {
-        Toast.makeText(
-            LocalContext.current,
-            "Paid amount exceeds total amount",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-
     BottomAppBar(containerColor = SecondaryGreen) {
         Row(
             modifier = Modifier
@@ -463,36 +482,15 @@ fun PaymentBottomBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(CurrencySettings.format(paidAmount))
+            Text(CurrencySettings.format(paidAmount), color = Color.White, fontWeight = FontWeight.Bold)
             Button(
                 onClick = { onConfirmPayment(isDue) },
                 enabled = enabled,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (enabled) PrimaryGreen else Color.Gray
+                    containerColor = if (enabled) PrimaryGreen else Color.Gray,
+                    contentColor = Color.White
                 )
             ) { Text("Confirm Payment") }
         }
     }
-}
-
-@Composable
-fun PaymentConfirmationDialog(
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Alert") },
-        text = { Text("Paid Amount exceeds Total Amount ") },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm() },
-                enabled = true
-            ) {
-                Text("Ok")
-            }
-        },
-        dismissButton = {
-        }
-    )
 }
