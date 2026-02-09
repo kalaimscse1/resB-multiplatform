@@ -12,9 +12,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.screens.BillingSummaryRow
@@ -175,6 +179,8 @@ fun PaymentMethodCard(
         }
     }
 
+    val focusRequester = remember { FocusRequester() }
+
     // Auto-fill on first selection (Option B)
     LaunchedEffect(uiState.selectedPaymentMethod) {
         when (uiState.selectedPaymentMethod?.name) {
@@ -184,10 +190,20 @@ fun PaymentMethodCard(
                 } else {
                     if (uiState.cashAmount == 0.0) viewModel.updateCashAmount(totalAmount)
                 }
+                focusRequester.requestFocus()
             }
 
-            "CARD" -> if (uiState.cardAmount == 0.0) viewModel.updateCardAmount(totalAmount)
-            "UPI" -> if (uiState.upiAmount == 0.0) viewModel.updateUpiAmount(totalAmount)
+            "CARD" -> {
+                if (uiState.cardAmount == 0.0) viewModel.updateCardAmount(totalAmount)
+                focusRequester.requestFocus()
+            }
+            "UPI" -> {
+                if (uiState.upiAmount == 0.0) viewModel.updateUpiAmount(totalAmount)
+                focusRequester.requestFocus()
+            }
+            "OTHERS" -> {
+                focusRequester.requestFocus()
+            }
         }
     }
 
@@ -229,14 +245,32 @@ fun PaymentMethodCard(
                 "CASH" -> {
                     Spacer(modifier = Modifier.height(16.dp))
                     if (isTendered) {
+                        var amountReceivedText by remember { 
+                            mutableStateOf(TextFieldValue(if (uiState.amountReceived == 0.0) "" else uiState.amountReceived.toString())) 
+                        }
+                        // Sync with uiState if needed (e.g. on focus)
+                        LaunchedEffect(uiState.amountReceived) {
+                            if (amountReceivedText.text != uiState.amountReceived.toString() && !(uiState.amountReceived == 0.0 && amountReceivedText.text == "")) {
+                                amountReceivedText = amountReceivedText.copy(text = if (uiState.amountReceived == 0.0) "" else uiState.amountReceived.toString())
+                            }
+                        }
+
                         OutlinedTextField(
-                            value = if (uiState.amountReceived == 0.0) "" else uiState.amountReceived.toString(),
+                            value = amountReceivedText,
                             onValueChange = {
-                                viewModel.updateAmountReceived(it.toDoubleOrNull() ?: 0.0)
+                                amountReceivedText = it
+                                viewModel.updateAmountReceived(it.text.toDoubleOrNull() ?: 0.0)
                             },
                             label = { Text("Amount Received") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { 
+                                    if (it.isFocused) {
+                                        amountReceivedText = amountReceivedText.copy(selection = TextRange(0, amountReceivedText.text.length))
+                                    }
+                                }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
@@ -247,15 +281,31 @@ fun PaymentMethodCard(
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
+                        var cashAmountText by remember { 
+                            mutableStateOf(TextFieldValue(if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString())) 
+                        }
+                        LaunchedEffect(uiState.cashAmount) {
+                            if (cashAmountText.text != uiState.cashAmount.toString() && !(uiState.cashAmount == 0.0 && cashAmountText.text == "")) {
+                                cashAmountText = cashAmountText.copy(text = if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString())
+                            }
+                        }
+
                         OutlinedTextField(
-                            value = CurrencySettings.formatPlain(uiState.cashAmount)
-                                .takeIf { uiState.cashAmount != 0.0 } ?: "",
+                            value = cashAmountText,
                             onValueChange = {
-                                viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0)
+                                cashAmountText = it
+                                viewModel.updateCashAmount(it.text.toDoubleOrNull() ?: 0.0)
                             },
                             label = { Text("Cash Amount") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { 
+                                    if (it.isFocused) {
+                                        cashAmountText = cashAmountText.copy(selection = TextRange(0, cashAmountText.text.length))
+                                    }
+                                }
                         )
                     }
                     viewModel.updateCardAmount(0.0)
@@ -264,15 +314,31 @@ fun PaymentMethodCard(
 
                 "CARD" -> {
                     Spacer(modifier = Modifier.height(16.dp))
+                    var cardAmountText by remember { 
+                        mutableStateOf(TextFieldValue(if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString())) 
+                    }
+                    LaunchedEffect(uiState.cardAmount) {
+                        if (cardAmountText.text != uiState.cardAmount.toString() && !(uiState.cardAmount == 0.0 && cardAmountText.text == "")) {
+                            cardAmountText = cardAmountText.copy(text = if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString())
+                        }
+                    }
+
                     OutlinedTextField(
-                        value = CurrencySettings.formatPlain(uiState.cardAmount)
-                            .takeIf { uiState.cardAmount != 0.0 } ?: "",
+                        value = cardAmountText,
                         onValueChange = {
-                            viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0)
+                            cardAmountText = it
+                            viewModel.updateCardAmount(it.text.toDoubleOrNull() ?: 0.0)
                         },
                         label = { Text("Card Amount") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { 
+                                if (it.isFocused) {
+                                    cardAmountText = cardAmountText.copy(selection = TextRange(0, cardAmountText.text.length))
+                                }
+                            }
                     )
                     viewModel.updateCashAmount(0.0)
                     viewModel.updateUpiAmount(0.0)
@@ -280,62 +346,114 @@ fun PaymentMethodCard(
 
                 "UPI" -> {
                     Spacer(modifier = Modifier.height(16.dp))
+                    var upiAmountText by remember { 
+                        mutableStateOf(TextFieldValue(if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString())) 
+                    }
+                    LaunchedEffect(uiState.upiAmount) {
+                        if (upiAmountText.text != uiState.upiAmount.toString() && !(uiState.upiAmount == 0.0 && upiAmountText.text == "")) {
+                            upiAmountText = upiAmountText.copy(text = if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString())
+                        }
+                    }
+
                     OutlinedTextField(
-                        value = CurrencySettings.formatPlain(uiState.upiAmount)
-                            .takeIf { uiState.upiAmount != 0.0 } ?: "",
+                        value = upiAmountText,
                         onValueChange = {
-                            viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0)
+                            upiAmountText = it
+                            viewModel.updateUpiAmount(it.text.toDoubleOrNull() ?: 0.0)
                         },
                         label = { Text("UPI Amount") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { 
+                                if (it.isFocused) {
+                                    upiAmountText = upiAmountText.copy(selection = TextRange(0, upiAmountText.text.length))
+                                }
+                            }
                     )
                     viewModel.updateCashAmount(0.0)
                     viewModel.updateCardAmount(0.0)
                 }
 
                 "OTHERS" -> {
-                    viewModel.updateCashAmount(0.0)
-                    viewModel.updateCardAmount(0.0)
-                    viewModel.updateUpiAmount(0.0)
-                    val cashValue = remember(uiState.cashAmount) {
-                        if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString()
+                    var cashAmountText by remember { 
+                        mutableStateOf(TextFieldValue(if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString())) 
                     }
-                    val cardValue = remember(uiState.cardAmount) {
-                        if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString()
+                    var cardAmountText by remember { 
+                        mutableStateOf(TextFieldValue(if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString())) 
                     }
-                    val upiValue = remember(uiState.upiAmount) {
-                        if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString()
+                    var upiAmountText by remember { 
+                        mutableStateOf(TextFieldValue(if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString())) 
                     }
+
+                    LaunchedEffect(uiState.cashAmount) {
+                        if (cashAmountText.text != uiState.cashAmount.toString() && !(uiState.cashAmount == 0.0 && cashAmountText.text == "")) {
+                            cashAmountText = cashAmountText.copy(text = if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString())
+                        }
+                    }
+                    LaunchedEffect(uiState.cardAmount) {
+                        if (cardAmountText.text != uiState.cardAmount.toString() && !(uiState.cardAmount == 0.0 && cardAmountText.text == "")) {
+                            cardAmountText = cardAmountText.copy(text = if (uiState.cardAmount == 0.0) "" else uiState.cardAmount.toString())
+                        }
+                    }
+                    LaunchedEffect(uiState.upiAmount) {
+                        if (upiAmountText.text != uiState.upiAmount.toString() && !(uiState.upiAmount == 0.0 && upiAmountText.text == "")) {
+                            upiAmountText = upiAmountText.copy(text = if (uiState.upiAmount == 0.0) "" else uiState.upiAmount.toString())
+                        }
+                    }
+                    
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = cashValue,
+                        value = cashAmountText,
                         onValueChange = {
-                            viewModel.updateCashAmount(it.toDoubleOrNull() ?: 0.0)
+                            cashAmountText = it
+                            viewModel.updateCashAmount(it.text.toDoubleOrNull() ?: 0.0)
                         },
                         label = { Text("Cash") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { 
+                                if (it.isFocused) {
+                                    cashAmountText = cashAmountText.copy(selection = TextRange(0, cashAmountText.text.length))
+                                }
+                            }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value = cardValue,
+                        value = cardAmountText,
                         onValueChange = {
-                            viewModel.updateCardAmount(it.toDoubleOrNull() ?: 0.0)
+                            cardAmountText = it
+                            viewModel.updateCardAmount(it.text.toDoubleOrNull() ?: 0.0)
                         },
                         label = { Text("Card") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { 
+                                if (it.isFocused) {
+                                    cardAmountText = cardAmountText.copy(selection = TextRange(0, cardAmountText.text.length))
+                                }
+                            }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value = upiValue,
+                        value = upiAmountText,
                         onValueChange = {
-                            viewModel.updateUpiAmount(it.toDoubleOrNull() ?: 0.0)
+                            upiAmountText = it
+                            viewModel.updateUpiAmount(it.text.toDoubleOrNull() ?: 0.0)
                         },
                         label = { Text("UPI") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { 
+                                if (it.isFocused) {
+                                    upiAmountText = upiAmountText.copy(selection = TextRange(0, upiAmountText.text.length))
+                                }
+                            }
                     )
                 }
             }
