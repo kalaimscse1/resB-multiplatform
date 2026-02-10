@@ -189,6 +189,7 @@ class LoginViewModel @Inject constructor(
                         )
                         sessionManager.saveDecimalPlaces(profile.decimal_point)
                         sessionManager.saveRestaurantProfile(profile)
+                        Log.d("LoginViewModel", "${sessionManager.getGeneralSetting()}")
 
                         _uiState.update { it.copy(isLoading = false, loginSuccess = true) }
                     } else {

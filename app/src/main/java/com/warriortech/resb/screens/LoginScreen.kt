@@ -128,7 +128,6 @@ fun LoginScreen(
                 TextButton(onClick = {
                     if (ipInput.isNotBlank()) {
                         sessionManager.saveBaseUrl("http://$ipInput/api/")
-                        RetrofitClient.updateBaseUrl("http://$ipInput/api/")
                         coroutineScope.launch {
                             scaffoldState.snackbarHostState.showSnackbar("Base URL updated")
                         }

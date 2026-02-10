@@ -2,6 +2,7 @@ package com.warriortech.resb.data.repository
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.warriortech.resb.data.local.dao.OrderDao
 import com.warriortech.resb.data.local.dao.TableDao
@@ -390,6 +391,7 @@ class OrderRepository @Inject constructor(
                 val cgstPer = tax.getOrNull(0)?.tax_split_percentage?.toDouble() ?: 0.0
                 val sgstPer = tax.getOrNull(1)?.tax_split_percentage?.toDouble() ?: 0.0
                 val totalTaxPer = item.menuItem.tax_percentage.toDouble()
+                Log.d("taxEnabled", isTaxEnabled.toString())
 
                 val taxAmountResult = if (isTaxEnabled) {
                     calculateGst(pricePerUnit, totalTaxPer, isTaxIncluded, sgstPer, cgstPer)

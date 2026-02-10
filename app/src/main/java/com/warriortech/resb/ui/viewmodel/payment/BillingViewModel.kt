@@ -2,7 +2,6 @@ package com.warriortech.resb.ui.viewmodel.payment
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.printservice.PrintService
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -23,7 +22,6 @@ import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.model.TblOrderDetailsResponse
 import com.warriortech.resb.network.SessionManager
-import com.warriortech.resb.ui.viewmodel.setting.CustomerSettingsViewModel.UiState
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.getCurrentDateModern
 import com.warriortech.resb.util.getCurrentTimeModern
@@ -35,8 +33,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
 import javax.inject.Inject
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.math.round
 
 data class PaymentMethod(
@@ -119,7 +115,7 @@ class BillingViewModel @Inject constructor(
     private val _selectedItems = MutableStateFlow<Map<TblMenuItemResponse, Int>>(emptyMap())
     val selectedItems: StateFlow<Map<TblMenuItemResponse, Int>> = _selectedItems.asStateFlow()
 
-    val _originalOrderDetails = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
+    val originalOrderDetails = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
     private val _filteredOrderDetails = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
 
     private val _totalAmount = MutableStateFlow(0.0)
@@ -132,7 +128,6 @@ class BillingViewModel @Inject constructor(
     val billNo: StateFlow<String> = _billNo.asStateFlow()
 
     private val _customerId = MutableStateFlow(0L)
-    val customerId: StateFlow<Long> = _customerId.asStateFlow()
 
     private val _preview = MutableStateFlow<Bitmap?>(null)
     val preview: StateFlow<Bitmap?> = _preview
@@ -157,13 +152,6 @@ class BillingViewModel @Inject constructor(
 
     fun updateCustomerId(id: Long) {
         _customerId.value = id
-    }
-
-    fun loadBillPreview(bill: Bill) {
-        viewModelScope.launch {
-            val bmp = billRepository.fetchBillPreview(bill)
-            _preview.value = bmp
-        }
     }
 
     fun updateBillState(bill:BillingPaymentUiState){
@@ -205,40 +193,49 @@ class BillingViewModel @Inject constructor(
     @SuppressLint("DefaultLocale")
     fun Double.roundTo2(): Double {
         val dec = sessionManager.getDecimalPlaces()
-        return if (dec == 2L)
-            BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
-        else if (dec == 3L)
-            BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
-        else
-            BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
+        return when (dec) {
+            2L -> BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
+            3L -> BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
+            else -> BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
+        }
     }
      fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
-        val isRoundOffEnabled = sessionManager.getGeneralSetting()?.is_round_off == true
+        val settings = sessionManager.getGeneralSetting()
+        val isRoundOffEnabled = settings?.is_round_off == true
+        val isTaxEnabled = settings?.is_tax ?: false
+        val isTaxIncluded = settings?.is_tax_included ?: false
 
         val subtotal = items.entries.sumOf { (menuItem, qty) -> menuItem.rate * qty }
-        val taxAmount = items.entries.sumOf { (menuItem, qty) ->
-            val gst = calculateGst(
-                menuItem.actual_rate,
-                menuItem.tax_percentage.toDouble(),
-                true,
-                menuItem.tax_percentage.toDouble() / 2,
-                menuItem.tax_percentage.toDouble() / 2
-            )
-            Log.d("GSTCALC", "recalcTotals: $gst ${menuItem.actual_rate}")
-            (gst.gstAmount * qty).roundTo2()
-        }
+        
+        val taxAmount = if (isTaxEnabled) {
+            items.entries.sumOf { (menuItem, qty) ->
+                val gst = calculateGst(
+                    menuItem.actual_rate,
+                    menuItem.tax_percentage.toDouble(),
+                    isTaxIncluded,
+                    menuItem.tax_percentage.toDouble() / 2,
+                    menuItem.tax_percentage.toDouble() / 2
+                )
+                Log.d("GSTCALC", "recalcTotals: $gst ${menuItem.actual_rate}")
+                (gst.gstAmount * qty).roundTo2()
+            }
+        } else 0.0
 
-        val cessAmount = items.entries.sumOf { (menuItem, qty) ->
-            if (menuItem.is_inventory == 1L && menuItem.cess_specific != 0.00) {
-                menuItem.cess_specific * qty
-            } else 0.0
-        }
+        val cessAmount = if (isTaxEnabled) {
+            items.entries.sumOf { (menuItem, qty) ->
+                if (menuItem.is_inventory == 1L && menuItem.cess_specific != 0.00) {
+                    menuItem.cess_specific * qty
+                } else 0.0
+            }
+        } else 0.0
 
-        val cessSpecific = items.entries.sumOf { (menuItem, qty) ->
-            if (menuItem.is_inventory == 1L) {
-                (menuItem.actual_rate * qty) * (menuItem.cess_per.toDoubleOrNull() ?: 0.0) / 100.0
-            } else 0.0
-        }
+        val cessSpecific = if (isTaxEnabled) {
+            items.entries.sumOf { (menuItem, qty) ->
+                if (menuItem.is_inventory == 1L) {
+                    (menuItem.actual_rate * qty) * (menuItem.cess_per.toDoubleOrNull() ?: 0.0) / 100.0
+                } else 0.0
+            }
+        } else 0.0
 
         val discountFlat = _uiState.value.discountFlat
         val otherCharges = _uiState.value.otherChrages
@@ -262,10 +259,6 @@ class BillingViewModel @Inject constructor(
         _selectedItems.value = menu
     }
 
-    fun setOrderId(orderId: String) {
-        _orderId.value = orderId
-    }
-
     fun setBillingDetailsFromOrderResponse(
         orderDetails: List<TblOrderDetailsResponse>,
         orderMasterId: String
@@ -275,7 +268,7 @@ class BillingViewModel @Inject constructor(
             if (order.body() != null) {
                 val orderDetailsResponse = order.body()!!
                 _orderId.value = orderMasterId
-                _originalOrderDetails.value = orderDetailsResponse
+                originalOrderDetails.value = orderDetailsResponse
                 _filteredOrderDetails.value = orderDetailsResponse
                 val menuItems = orderDetailsResponse.map {
 
@@ -318,7 +311,7 @@ class BillingViewModel @Inject constructor(
                     )
                 }
                 val itemsMap = menuItems.associateWith { it.qty }.toMutableMap()
-                var tableStatus = "TABLE" // Default
+                val tableStatus = "TABLE" // Default
                 val subtotal = orderDetailsResponse.sumOf { it.total }
                 val taxAmount = orderDetailsResponse.sumOf { it.tax_amount }
                 val cessAmount = orderDetailsResponse.sumOf { if (it.cess > 0) it.cess else 0.0 }
@@ -381,7 +374,7 @@ class BillingViewModel @Inject constructor(
                         _selectedItems.value =
                             emptyMap() // Clear selected items after placing order
                     },
-                    onFailure = { error ->
+                    onFailure = { 
 
                     }
                 )
@@ -395,7 +388,7 @@ class BillingViewModel @Inject constructor(
 
     fun filterByKotNumber(kotNumber: Int) {
         val filtered =
-            _originalOrderDetails.value
+            originalOrderDetails.value
         _filteredOrderDetails.value = filtered
         val itemsMap = mutableMapOf<TblMenuItemResponse, Int>()
         filtered.forEach { detail ->
@@ -405,29 +398,6 @@ class BillingViewModel @Inject constructor(
         _uiState.value = recalcTotals(itemsMap).copy(
             selectedKotNumber = if (kotNumber == -1) null else kotNumber
         )
-    }
-
-    fun updateKotItem(
-        orderDetailId: Long,
-        newQuantity: Int,
-        newRate: Double
-    ) {
-        val updatedDetails = _originalOrderDetails.value.map { detail ->
-            if (detail.order_details_id == orderDetailId) {
-                detail.copy(
-                    qty = newQuantity,
-                    rate = newRate,
-                    total = newQuantity * newRate
-                )
-            } else detail
-        }
-        _originalOrderDetails.value = updatedDetails
-        val itemsMap = mutableMapOf<TblMenuItemResponse, Int>()
-        updatedDetails.forEach { detail ->
-            val menuItem = detail.menuItem.copy(rate = detail.rate, qty = detail.qty)
-            itemsMap[menuItem] = detail.qty
-        }
-        _uiState.value = recalcTotals(itemsMap)
     }
 
     fun updateItemQuantity(menuItem: TblMenuItemResponse, newQuantity: Int) {
@@ -448,19 +418,6 @@ class BillingViewModel @Inject constructor(
         val currentItems = _uiState.value.billedItems.toMutableMap()
         currentItems.remove(menuItem)
         _uiState.value = recalcTotals(currentItems)
-    }
-
-    fun updateTaxPercentage(tax: Double) {
-        _uiState.update { currentState ->
-            val newTaxAmount = calculateTaxAmount(currentState.subtotal, tax)
-            val newTotalAmount =
-                calculateTotal(currentState.subtotal, newTaxAmount, currentState.discountFlat)
-            currentState.copy(
-                taxAmount = newTaxAmount,
-                totalAmount = newTotalAmount,
-                amountToPay = newTotalAmount
-            )
-        }
     }
 
     fun updateDiscountFlat(discount: Double) {
@@ -497,10 +454,6 @@ class BillingViewModel @Inject constructor(
         }
     }
 
-    private fun calculateTaxAmount(subtotal: Double, taxPercentage: Double): Double {
-        return subtotal * (taxPercentage / 100)
-    }
-
     private fun calculateTotal(subtotal: Double, taxAmount: Double, discountFlat: Double): Double {
         return (subtotal + taxAmount) - discountFlat
     }
@@ -517,10 +470,6 @@ class BillingViewModel @Inject constructor(
                 )
             )
         }
-    }
-
-    fun selectPaymentMethod(method: PaymentMethod) {
-        _uiState.update { it.copy(selectedPaymentMethod = method) }
     }
 
     fun updateAmountToPay(amount: Double) {
@@ -647,8 +596,8 @@ class BillingViewModel @Inject constructor(
                         val billDetails = Bill(
                             company_code = sessionManager.getCompanyCode() ?: "",
                             billNo = response.bill_no,
-                            date = response.bill_date.toString(),
-                            time = response.bill_create_time.toString(),
+                            date = response.bill_date,
+                            time = response.bill_create_time,
                             orderNo = response.order_master.order_master_id,
                             counter = counter,
                             tableNo = response.order_master.table_name,
@@ -662,14 +611,13 @@ class BillingViewModel @Inject constructor(
                             discount = response.disc_amt,
                             roundOff = response.round_off,
                             total = response.grand_total,
-                            paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 80 else 80,
+                            paperWidth = 80,
                             received_amt = response.received_amt,
                             pending_amt = response.pending_amt
                         )
-                        val data = currentState
                         val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
                         if (isReceipt) {
-                            printBill(billDetails, data, amount, paymentMethod)
+                            printBill(billDetails, currentState, amount, paymentMethod)
                         } else {
                             delay(2000) // Simulate network delay
                             val transactionId = UUID.randomUUID().toString()
@@ -723,7 +671,7 @@ class BillingViewModel @Inject constructor(
                 // First try printing with local template
                 billRepository.printBillWithLocalTemplate(bill, ip).collect { result ->
                     result.fold(
-                        onSuccess = { message ->
+                        onSuccess = { 
                             handlePrintSuccess(currentState, amount, paymentMethod)
                         },
                         onFailure = { localError ->
@@ -732,7 +680,7 @@ class BillingViewModel @Inject constructor(
                             val printResponse = billRepository.printBill(bill, ip)
                             printResponse.collect { serverResult ->
                                 serverResult.fold(
-                                    onSuccess = { message ->
+                                    onSuccess = { 
                                         handlePrintSuccess(currentState, amount, paymentMethod)
                                     },
                                     onFailure = { error ->
@@ -811,10 +759,6 @@ class BillingViewModel @Inject constructor(
                 changeAmount = maxOf(0.0, change)
             )
         }
-    }
-
-    fun updateDiscount(discount: Double) {
-        _uiState.value = _uiState.value.copy(discount = discount)
     }
 
     fun previewDetails(orderID: String) {

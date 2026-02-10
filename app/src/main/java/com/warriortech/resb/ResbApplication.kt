@@ -2,25 +2,22 @@ package com.warriortech.resb
 
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
-import com.warriortech.resb.data.sync.SyncManager
 import com.warriortech.resb.data.sync.SyncWorker
 import com.warriortech.resb.network.ApiService
+import com.warriortech.resb.network.RetrofitClient
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.LocaleHelper
-import com.warriortech.resb.util.NetworkMonitor
 import com.warriortech.resb.util.SubscriptionScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import timber.log.BuildConfig
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -42,11 +39,14 @@ class ResbApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize RetrofitClient with SessionManager
+        RetrofitClient.init(sessionManager)
+
         // Schedule subscription checks
         subscriptionScheduler.scheduleSubscriptionChecks()
 
         // Enable logging in debug
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild()) {
             Timber.plant(Timber.DebugTree())
         }
 
@@ -92,10 +92,5 @@ class ResbApplication : Application(), Configuration.Provider {
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         LocaleHelper.onAttach(this)
-    }
-
-    companion object {
-        lateinit var sharedPreferences: SharedPreferences
-            private set
     }
 }

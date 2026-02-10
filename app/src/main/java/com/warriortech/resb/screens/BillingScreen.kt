@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -83,10 +82,10 @@ fun KotSelectionDialog(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    items(kotNumbers) { kotNumber ->
+                    items(kotNumbers) { kot: Int ->
                         MobileOptimizedButton(
-                            onClick = { onKotSelected(kotNumber) },
-                            text = "KOT #$kotNumber",
+                            onClick = { onKotSelected(kot) },
+                            text = "KOT #$kot",
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -101,20 +100,20 @@ fun KotSelectionDialog(
 @Composable
 fun BillingScreen(
     navController: NavHostController,
-    viewModel: BillingViewModel = hiltViewModel(),
+    viewModel: BillingViewModel = hiltViewModel<BillingViewModel>(),
     orderDetailsResponse: List<TblOrderDetailsResponse>? = null,
     orderMasterId: String? = null,
     sessionManager: SessionManager,
-    onProceedToBilling: (orderDetailsResponse: Map<TblMenuItemResponse, Int>) -> Unit
+    onProceedToBilling: (Map<TblMenuItemResponse, Int>) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState: BillingPaymentUiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedKotNumber by remember { mutableStateOf<Int?>(null) }
     var showKotSelectionDialog by remember { mutableStateOf(false) }
-    val orderDetails by viewModel._originalOrderDetails.collectAsStateWithLifecycle()
+    val orderDetails: List<TblOrderDetailsResponse> by viewModel.originalOrderDetails.collectAsStateWithLifecycle()
     var previewDialog by remember { mutableStateOf(false) }
-    val preview by viewModel.preview.collectAsStateWithLifecycle()
-    val templatePreview by viewModel.templatePreview.collectAsStateWithLifecycle()
+    val preview: Bitmap? by viewModel.preview.collectAsStateWithLifecycle()
+    val templatePreview: TemplatePreviewData? by viewModel.templatePreview.collectAsStateWithLifecycle()
 
     LaunchedEffect(key1 = orderDetailsResponse, key2 = orderMasterId) {
         when {
@@ -184,7 +183,7 @@ fun BillingScreen(
                 uiState = uiState,
                 orderMasterId = orderMasterId,
                 onProceedToPayment = {
-                    navController.navigate("payment_screen/${uiState.totalAmount}/${uiState.orderMasterId}/${"--"}/${0L}/${""}") {
+                    navController.navigate("payment_screen/${uiState.totalAmount}/${uiState.orderMasterId}/${"--"}/${0L}/${" "}") {
                         launchSingleTop = true
                         restoreState = true
                     }
@@ -354,7 +353,7 @@ fun resolvePreviewValue(key: String, bill: Bill, item: BillItem?, sessionManager
         cleanKey == "DISCOUNT" -> String.format("%.2f", bill.discount)
         cleanKey == "TAX AMOUNT" -> String.format("%.2f", bill.items.sumOf { it.taxAmount })
         cleanKey == "RECEIVED AMT" -> String.format("%.2f", bill.received_amt)
-        cleanKey == "PENDING AMT" -> String.format("%.2f", bill.pending_amt)
+        cleanKey == "PENDING AMT" -> String.format("%.2f", bill.received_amt - bill.total)
         cleanKey == "CUST NAME" -> bill.custName
         cleanKey == "CUST NO" -> bill.custNo
         cleanKey == "CUST ADDRESS" -> bill.custAddress
@@ -396,14 +395,17 @@ fun BillingContent(
                 Spacer(Modifier.height(8.dp))
             }
             val filteredOrderDetails = orderDetails.groupBy { it.kot_number }
-            items(filteredOrderDetails.toList()) { it ->
+            items(
+                items = filteredOrderDetails.toList(),
+                key = { it.first }
+            ) { entry: Pair<Int, List<TblOrderDetailsResponse>> ->
                 Text(
-                    text = "KOT #${it.first}",
+                    text = "KOT #${entry.first}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
-                it.second.forEach { details ->
+                entry.second.forEach { details ->
                     BilledItemRow(
                         menuItem = details.menuItem,
                         quantity = details.qty,
