@@ -72,23 +72,21 @@ class OrderRepository @Inject constructor(
             // 1. Check for/Determine existing open OrderMaster ID for the table
             if (currentOrderMasterId == null && tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY") {
                 // Try to find an open order for this table
-                // Assuming getOpenOrderMasterForTable returns a TblOrderResponse or similar with order_master_id
-                // If it returns null, no open order exists.
                 val openOrderResponse = apiService.getOpenOrderMasterForTable(
                     tableId,
                     sessionManager.getCompanyCode() ?: ""
-                ) // YOU NEED TO IMPLEMENT/DEFINE THIS
+                ) 
                 if (openOrderResponse.isSuccessful && openOrderResponse.body() != null) {
                     currentOrderMasterId = openOrderResponse.body()!!.order_master_id
                     orderMasterResponse =
-                        openOrderResponse.body() // Store the existing order master response
+                        openOrderResponse.body() 
                 }
             }
 
             val tableInfo = apiService.getTablesByStatus(
                 tableId,
                 sessionManager.getCompanyCode() ?: ""
-            ) // Assuming this gets details like seating_capacity, table_name
+            ) 
 
             // 2. If no existing open OrderMaster, create a new one
             if (currentOrderMasterId == null) {
@@ -96,11 +94,11 @@ class OrderRepository @Inject constructor(
                     sessionManager.getCompanyCode() ?: "",
                     sessionManager.getUser()?.counter_id ?: 0L,
                     "ORDER"
-                ) // Get new Order Master ID from API
+                ) 
                 val orderRequest = OrderMaster(
                     order_date = getCurrentDateModern(),
                     order_create_time = getCurrentTimeModern(),
-                    order_completed_time = "", // Will be empty for new/running orders
+                    order_completed_time = "", 
                     staff_id = sessionManager.getUser()?.staff_id ?: 1,
                     is_dine_in = tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY",
                     is_take_away = tableStatus == "TAKEAWAY",
@@ -108,12 +106,12 @@ class OrderRepository @Inject constructor(
                     table_id = tableId,
                     no_of_person = tableInfo.seating_capacity,
                     waiter_request_status = true,
-                    kitchen_response_status = true, // Assuming KOT is being sent
+                    kitchen_response_status = true, 
                     order_status = "RUNNING",
                     is_merge = false,
                     is_active = 1,
                     order_master_id = newOrderMasterApiId["order_master_id"]
-                        ?: "", // Use ID from getOrderNo
+                        ?: "", 
                     is_delivered = false,
                     note = "",
                     delivery_time = "",
@@ -128,7 +126,6 @@ class OrderRepository @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     orderMasterResponse = response.body()
                     currentOrderMasterId = orderMasterResponse!!.order_master_id
-                    // Update table availability only if a new order is created for a dine-in table
                     if (orderRequest.is_dine_in) {
                         apiService.updateTableAvailability(
                             tableId,
@@ -149,17 +146,10 @@ class OrderRepository @Inject constructor(
                     return@flow
                 }
             } else {
-                // If currentOrderMasterId was passed or found, but we don't have the TblOrderResponse object yet
-                // You might need an API endpoint to fetch OrderMaster details by its ID if not already available
-                // For now, let's assume if currentOrderMasterId is not null, it's valid.
-                // The TblOrderResponse is mainly used to emit success, so we might need to construct a minimal one or fetch it.
-                // This part depends on what TblOrderResponse should contain when updating.
-                // For simplicity, let's assume we proceed and the success emission will primarily focus on the KOT.
-                // Fetch the order master details if we only have the ID
                 val masterResponse = apiService.getOrderMasterById(
                     currentOrderMasterId,
                     sessionManager.getCompanyCode() ?: ""
-                ) // YOU MIGHT NEED THIS ENDPOINT
+                )
                 if (masterResponse.isSuccessful && masterResponse.body() != null) {
                     orderMasterResponse = masterResponse.body()
                 } else {
@@ -169,10 +159,13 @@ class OrderRepository @Inject constructor(
             }
 
 
-            // 3. Create OrderDetails for the items being placed (new or added)
+            // 3. Create OrderDetails
+            val isTaxEnabled = sessionManager.getGeneralSetting()?.is_tax ?: false
+            val isTaxIncluded = sessionManager.getGeneralSetting()?.is_tax_included ?: false
+            
             val newKotNumberMap = apiService.getKotNo(
                 sessionManager.getCompanyCode() ?: ""
-            ) // Get a KOT number for this batch of items
+            ) 
             val newKotNumber = newKotNumberMap["kot_number"]
 
             if (currentOrderMasterId.isEmpty() || newKotNumber == null) {
@@ -187,59 +180,65 @@ class OrderRepository @Inject constructor(
                     "TAKEAWAY", "DELIVERY" -> item.menuItem.parcel_rate
                     else -> item.menuItem.rate
                 }
+                
                 val tax = apiService.getTaxSplit(
                     item.menuItem.tax_id,
                     sessionManager.getCompanyCode() ?: ""
                 )
-                val cgst = tax[0].tax_split_percentage
-                val sgst = tax[1].tax_split_percentage
-                val totalAmountForTaxCalc = pricePerUnit
-                val taxAmount = calculateGst(
-                    totalAmountForTaxCalc,
-                    item.menuItem.tax_percentage.toDouble(),
-                    true,
-                    sgst.toDouble(),
-                    cgst.toDouble()
-                )
-                val cess = calculateGstAndCess(
-                    totalAmountForTaxCalc,
-                    item.menuItem.tax_percentage.toDouble(),
-                    item.menuItem.cess_per.toDouble(),
-                    true,
-                    item.menuItem.cess_specific,
-                    sgst.toDouble(),
-                    cgst.toDouble()
-                )
+                val cgstPer = tax.getOrNull(0)?.tax_split_percentage?.toDouble() ?: 0.0
+                val sgstPer = tax.getOrNull(1)?.tax_split_percentage?.toDouble() ?: 0.0
+                val totalTaxPer = item.menuItem.tax_percentage.toDouble()
+                
+                val taxAmountResult = if (isTaxEnabled) {
+                    calculateGst(pricePerUnit, totalTaxPer, isTaxIncluded, sgstPer, cgstPer)
+                } else {
+                    GstResult(pricePerUnit, 0.0, pricePerUnit, 0.0, 0.0)
+                }
+                
+                val cessAmountResult = if (isTaxEnabled && item.menuItem.is_inventory == 1L) {
+                    calculateGstAndCess(
+                        pricePerUnit,
+                        totalTaxPer,
+                        item.menuItem.cess_per.toDouble(),
+                        isTaxIncluded,
+                        item.menuItem.cess_specific,
+                        sgstPer,
+                        cgstPer
+                    )
+                } else {
+                    GstCessResult(pricePerUnit, 0.0, 0.0, pricePerUnit, 0.0, 0.0)
+                }
+
                 OrderDetails(
                     order_master_id = currentOrderMasterId,
                     order_details_id = 0,
                     kot_number = newKotNumber,
                     menu_item_id = item.menuItem.menu_item_id,
-                    rate = if (item.menuItem.is_inventory != 1L) taxAmount.basePrice.roundTo2() else cess.basePrice.roundTo2(),
+                    rate = if (item.menuItem.is_inventory != 1L) taxAmountResult.basePrice.roundTo2() else cessAmountResult.basePrice.roundTo2(),
                     actual_rate = pricePerUnit,
                     qty = item.quantity,
-                    total = if (item.menuItem.is_inventory != 1L) (taxAmount.basePrice * item.quantity).roundTo2() else (cess.basePrice * item.quantity).roundTo2(), // Total base price for this item line
+                    total = if (item.menuItem.is_inventory != 1L) (taxAmountResult.basePrice * item.quantity).roundTo2() else (cessAmountResult.basePrice * item.quantity).roundTo2(), 
                     tax_id = item.menuItem.tax_id,
                     tax_name = item.menuItem.tax_name,
-                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmount.gstAmount * item.quantity).roundTo2() else (cess.gstAmount * item.quantity).roundTo2(),
-                    sgst_per = if (tableStatus != "DELIVERY") sgst.toDouble() else 0.0,
+                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmountResult.gstAmount * item.quantity).roundTo2() else (cessAmountResult.gstAmount * item.quantity).roundTo2(),
+                    sgst_per = if (tableStatus != "DELIVERY") sgstPer else 0.0,
                     sgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmount.sgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (taxAmountResult.sgst * item.quantity).roundTo2() else 0.0
                     } else {
-                        if (tableStatus != "DELIVERY") (cess.sgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (cessAmountResult.sgst * item.quantity).roundTo2() else 0.0
                     },
-                    cgst_per = if (tableStatus != "DELIVERY") cgst.toDouble() else 0.0,
+                    cgst_per = if (tableStatus != "DELIVERY") cgstPer else 0.0,
                     cgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmount.cgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (taxAmountResult.cgst * item.quantity).roundTo2() else 0.0
                     } else {
-                        if (tableStatus != "DELIVERY") (cess.cgst * item.quantity).roundTo2() else 0.0
-                    }, // Adjust if your backend calculates differently
-                    igst_per = item.menuItem.tax_percentage.toDouble(),
-                    igst = taxAmount.gstAmount.roundTo2(),
+                        if (tableStatus != "DELIVERY") (cessAmountResult.cgst * item.quantity).roundTo2() else 0.0
+                    }, 
+                    igst_per = totalTaxPer,
+                    igst = taxAmountResult.gstAmount.roundTo2(),
                     cess_per = if (item.menuItem.is_inventory == 1L) item.menuItem.cess_per.toDouble() else 0.0,
-                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.cessAmount * item.quantity).roundTo2() else 0.0,
+                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.cessAmount * item.quantity).roundTo2() else 0.0,
                     cess_specific = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (item.menuItem.cess_specific * item.quantity).roundTo2() else 0.0,
-                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.totalPrice * item.quantity).roundTo2() else (taxAmount.totalPrice * item.quantity).roundTo2(),
+                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.totalPrice * item.quantity).roundTo2() else (taxAmountResult.totalPrice * item.quantity).roundTo2(),
                     prepare_status = true,
                     item_add_mode = existingOpenOrderMasterId != null,
                     is_flag = false,
@@ -262,15 +261,7 @@ class OrderRepository @Inject constructor(
                     emit(Result.failure(Exception("Order details created, but failed to package final response.")))
                 }
             } else {
-                emit(
-                    Result.failure(
-                        Exception(
-                            "Error creating OrderDetails: ${detailsResponse.code()}, ${
-                                detailsResponse.errorBody()?.string()
-                            }"
-                        )
-                    )
-                )
+                emit(Result.failure(Exception("Error creating OrderDetails: ${detailsResponse.code()}")))
             }
 
         } catch (e: Exception) {
@@ -280,7 +271,6 @@ class OrderRepository @Inject constructor(
 
     /**
      * Get open order items for a specific table to display in UI.
-     * This needs to be robust to fetch all items belonging to any open OrderMaster for the table.
      */
 
     @SuppressLint("SuspiciousIndentation")
@@ -289,10 +279,10 @@ class OrderRepository @Inject constructor(
         itemsToPlace: List<OrderItem>,
         tableStatus: String,
         existingOpenOrderMasterId: String? = null ,
-        deliveryBoyId: Long? = null,// Allow passing it if already known
+        deliveryBoyId: Long? = null,
     ): Flow<Result<List<TblOrderDetailsResponse>>> = flow {
         if (itemsToPlace.isEmpty()) {
-            emit(Result.failure(IllegalArgumentException("Cannot place an order with no items.")))
+            emit(Result.failure(IllegalArgumentException("No items.")))
             return@flow
         }
 
@@ -304,7 +294,7 @@ class OrderRepository @Inject constructor(
                 val openOrderResponse = apiService.getOpenOrderMasterForTable(
                     tableId,
                     sessionManager.getCompanyCode() ?: ""
-                ) // YOU NEED TO IMPLEMENT/DEFINE THIS
+                ) 
                 if (openOrderResponse.isSuccessful && openOrderResponse.body() != null) {
                     currentOrderMasterId = openOrderResponse.body()!!.order_master_id
                     orderMasterResponse = openOrderResponse.body()
@@ -314,14 +304,14 @@ class OrderRepository @Inject constructor(
             val tableInfo = apiService.getTablesByStatus(
                 tableId,
                 sessionManager.getCompanyCode() ?: ""
-            ) // Assuming this gets details like seating_capacity, table_name
+            ) 
 
             if (currentOrderMasterId == null) {
                 val newOrderMasterApiId = apiService.getOrderNo(
                     sessionManager.getCompanyCode() ?: "",
                     sessionManager.getUser()?.counter_id ?: 0L,
                     "ORDER"
-                ) // Get new Order Master ID from API
+                ) 
                 val orderRequest = OrderMaster(
                     order_date = getCurrentDateModern(),
                     order_create_time = getCurrentTimeModern(),
@@ -360,35 +350,30 @@ class OrderRepository @Inject constructor(
                         )
                     }
                 } else {
-                    emit(
-                        Result.failure(
-                            Exception(
-                                "Error creating new OrderMaster: ${response.code()}, ${
-                                    response.errorBody()?.string()
-                                }"
-                            )
-                        )
-                    )
+                    emit(Result.failure(Exception("Error creating OrderMaster")))
                     return@flow
                 }
             } else {
                 val masterResponse = apiService.getOrderMasterById(
                     currentOrderMasterId,
                     sessionManager.getCompanyCode() ?: ""
-                ) // YOU MIGHT NEED THIS ENDPOINT
+                ) 
                 if (masterResponse.isSuccessful && masterResponse.body() != null) {
                     orderMasterResponse = masterResponse.body()
                 } else {
-                    emit(Result.failure(Exception("Could not retrieve details for existing OrderMaster ID: $currentOrderMasterId")))
+                    emit(Result.failure(Exception("OrderMaster not found")))
                     return@flow
                 }
             }
+
+            val isTaxEnabled = sessionManager.getGeneralSetting()?.is_tax ?: false
+            val isTaxIncluded = sessionManager.getGeneralSetting()?.is_tax_included ?: false
 
             val newKotNumberMap = apiService.getKotNo(sessionManager.getCompanyCode() ?: "")
             val newKotNumber = newKotNumberMap["kot_number"]
 
             if (currentOrderMasterId.isEmpty() || newKotNumber == null) {
-                emit(Result.failure(Exception("Failed to obtain OrderMaster ID or KOT number.")))
+                emit(Result.failure(Exception("Obtain failed")))
                 return@flow
             }
 
@@ -402,55 +387,60 @@ class OrderRepository @Inject constructor(
                     item.menuItem.tax_id,
                     sessionManager.getCompanyCode() ?: ""
                 )
-                val cgst = tax[0].tax_split_percentage
-                val sgst = tax[1].tax_split_percentage
-                val totalAmountForTaxCalc = pricePerUnit
-                val taxAmount = calculateGst(
-                    totalAmountForTaxCalc,
-                    item.menuItem.tax_percentage.toDouble(),
-                    true,
-                    sgst.toDouble(),
-                    cgst.toDouble()
-                )
-                val cess = calculateGstAndCess(
-                    totalAmountForTaxCalc,
-                    item.menuItem.tax_percentage.toDouble(),
-                    item.menuItem.cess_per.toDouble(),
-                    true,
-                    item.menuItem.cess_specific,
-                    sgst.toDouble(),
-                    cgst.toDouble()
-                )
+                val cgstPer = tax.getOrNull(0)?.tax_split_percentage?.toDouble() ?: 0.0
+                val sgstPer = tax.getOrNull(1)?.tax_split_percentage?.toDouble() ?: 0.0
+                val totalTaxPer = item.menuItem.tax_percentage.toDouble()
+
+                val taxAmountResult = if (isTaxEnabled) {
+                    calculateGst(pricePerUnit, totalTaxPer, isTaxIncluded, sgstPer, cgstPer)
+                } else {
+                    GstResult(pricePerUnit, 0.0, pricePerUnit, 0.0, 0.0)
+                }
+
+                val cessAmountResult = if (isTaxEnabled && item.menuItem.is_inventory == 1L) {
+                    calculateGstAndCess(
+                        pricePerUnit,
+                        totalTaxPer,
+                        item.menuItem.cess_per.toDouble(),
+                        isTaxIncluded,
+                        item.menuItem.cess_specific,
+                        sgstPer,
+                        cgstPer
+                    )
+                } else {
+                    GstCessResult(pricePerUnit, 0.0, 0.0, pricePerUnit, 0.0, 0.0)
+                }
+
                 OrderDetails(
                     order_master_id = currentOrderMasterId,
                     order_details_id = 0,
                     kot_number = newKotNumber,
                     menu_item_id = item.menuItem.menu_item_id,
-                    rate = if (item.menuItem.is_inventory != 1L) taxAmount.basePrice.roundTo2() else cess.basePrice.roundTo2(),
+                    rate = if (item.menuItem.is_inventory != 1L) taxAmountResult.basePrice.roundTo2() else cessAmountResult.basePrice.roundTo2(),
                     actual_rate = pricePerUnit,
                     qty = item.quantity,
-                    total = if (item.menuItem.is_inventory != 1L) (taxAmount.basePrice * item.quantity).roundTo2() else (cess.basePrice * item.quantity).roundTo2(), // Total base price for this item line
+                    total = if (item.menuItem.is_inventory != 1L) (taxAmountResult.basePrice * item.quantity).roundTo2() else (cessAmountResult.basePrice * item.quantity).roundTo2(), 
                     tax_id = item.menuItem.tax_id,
                     tax_name = item.menuItem.tax_name,
-                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmount.gstAmount * item.quantity).roundTo2() else (cess.gstAmount * item.quantity).roundTo2(),
-                    sgst_per = if (tableStatus != "DELIVERY") sgst.toDouble() else 0.0,
+                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmountResult.gstAmount * item.quantity).roundTo2() else (cessAmountResult.gstAmount * item.quantity).roundTo2(),
+                    sgst_per = if (tableStatus != "DELIVERY") sgstPer else 0.0,
                     sgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmount.sgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (taxAmountResult.sgst * item.quantity).roundTo2() else 0.0
                     } else {
-                        if (tableStatus != "DELIVERY") (cess.sgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (cessAmountResult.sgst * item.quantity).roundTo2() else 0.0
                     },
-                    cgst_per = if (tableStatus != "DELIVERY") cgst.toDouble() else 0.0,
+                    cgst_per = if (tableStatus != "DELIVERY") cgstPer else 0.0,
                     cgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmount.cgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (taxAmountResult.cgst * item.quantity).roundTo2() else 0.0
                     } else {
-                        if (tableStatus != "DELIVERY") (cess.cgst * item.quantity).roundTo2() else 0.0
-                    }, // Adjust if your backend calculates differently
-                    igst_per = item.menuItem.tax_percentage.toDouble(),
-                    igst = taxAmount.gstAmount.roundTo2(),
+                        if (tableStatus != "DELIVERY") (cessAmountResult.cgst * item.quantity).roundTo2() else 0.0
+                    }, 
+                    igst_per = totalTaxPer,
+                    igst = taxAmountResult.gstAmount.roundTo2(),
                     cess_per = if (item.menuItem.is_inventory == 1L) item.menuItem.cess_per.toDouble() else 0.0,
-                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.cessAmount * item.quantity).roundTo2() else 0.0,
+                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.cessAmount * item.quantity).roundTo2() else 0.0,
                     cess_specific = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (item.menuItem.cess_specific * item.quantity).roundTo2() else 0.0,
-                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.totalPrice * item.quantity).roundTo2() else (taxAmount.totalPrice * item.quantity).roundTo2(),
+                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.totalPrice * item.quantity).roundTo2() else (taxAmountResult.totalPrice * item.quantity).roundTo2(),
                     prepare_status = true,
                     item_add_mode = existingOpenOrderMasterId != null,
                     is_flag = false,
@@ -471,18 +461,10 @@ class OrderRepository @Inject constructor(
                     orderMasterResponse?.kot_number = newKotNumber
                     emit(Result.success(response))
                 } else {
-                    emit(Result.failure(Exception("Order details created, but failed to package final response.")))
+                    emit(Result.failure(Exception("Failed response.")))
                 }
             } else {
-                emit(
-                    Result.failure(
-                        Exception(
-                            "Error creating OrderDetails: ${detailsResponse.code()}, ${
-                                detailsResponse.errorBody()?.string()
-                            }"
-                        )
-                    )
-                )
+                emit(Result.failure(Exception("Error")))
             }
 
         } catch (e: Exception) {
@@ -503,9 +485,10 @@ class OrderRepository @Inject constructor(
     ): Flow<Result<List<TblOrderDetailsResponse>>> = flow {
         try {
             var currentOrderMasterId = existingOpenOrderMasterId
-            var orderMasterResponse: TblOrderResponse? = null
+            
+            val isTaxEnabled = sessionManager.getGeneralSetting()?.is_tax ?: false
+            val isTaxIncluded = sessionManager.getGeneralSetting()?.is_tax_included ?: false
 
-            // Step 1: Create Order Master if needed
             if (existingOpenOrderMasterId == null) {
                 val voucher = voucherDao.getActiveVoucherByType(
                     sessionManager.getUser()?.counter_id?.toInt() ?: 0, "ORDER"
@@ -547,7 +530,6 @@ class OrderRepository @Inject constructor(
                 }
             }
 
-            // Step 2: Create Order Details
             val newKotNumber = orderDetailsDao.getMaxKOTNumber(getCurrentDateModern())
             val orderDetailsList = itemsToPlace.map { item ->
                 val pricePerUnit = when (tableStatus) {
@@ -555,60 +537,63 @@ class OrderRepository @Inject constructor(
                     "PARCEL", "DELIVERY" -> item.menuItem.parcel_rate
                     else -> item.menuItem.rate
                 }
-                val tax =
-                    apiService.getTaxSplit(
-                        item.menuItem.tax_id,
-                        sessionManager.getCompanyCode() ?: ""
+                val tax = apiService.getTaxSplit(
+                    item.menuItem.tax_id,
+                    sessionManager.getCompanyCode() ?: ""
+                )
+                val cgstPer = tax.getOrNull(0)?.tax_split_percentage?.toDouble() ?: 0.0
+                val sgstPer = tax.getOrNull(1)?.tax_split_percentage?.toDouble() ?: 0.0
+                val totalTaxPer = item.menuItem.tax_percentage.toDouble()
+
+                val taxAmountResult = if (isTaxEnabled) {
+                    calculateGst(pricePerUnit, totalTaxPer, isTaxIncluded, sgstPer, cgstPer)
+                } else {
+                    GstResult(pricePerUnit, 0.0, pricePerUnit, 0.0, 0.0)
+                }
+
+                val cessAmountResult = if (isTaxEnabled && item.menuItem.is_inventory == 1L) {
+                    calculateGstAndCess(
+                        pricePerUnit,
+                        totalTaxPer,
+                        item.menuItem.cess_per.toDouble(),
+                        isTaxIncluded,
+                        item.menuItem.cess_specific,
+                        sgstPer,
+                        cgstPer
                     )
-                val cgst = tax[0].tax_split_percentage
-                val sgst = tax[1].tax_split_percentage
-                val totalAmountForTaxCalc = pricePerUnit
-                val taxAmount = calculateGst(
-                    totalAmountForTaxCalc,
-                    item.menuItem.tax_percentage.toDouble(),
-                    true,
-                    sgst.toDouble(),
-                    cgst.toDouble()
-                )
-                val cess = calculateGstAndCess(
-                    totalAmountForTaxCalc,
-                    item.menuItem.tax_percentage.toDouble(),
-                    item.menuItem.cess_per.toDouble(),
-                    true,
-                    item.menuItem.cess_specific,
-                    sgst.toDouble(),
-                    cgst.toDouble()
-                )
+                } else {
+                    GstCessResult(pricePerUnit, 0.0, 0.0, pricePerUnit, 0.0, 0.0)
+                }
 
                 TblOrderDetails(
                     order_master_id = currentOrderMasterId.toString(),
                     order_details_id = 0,
                     kot_number = newKotNumber,
                     menu_item_id = item.menuItem.menu_item_id.toInt(),
-                    rate = if (item.menuItem.is_inventory != 1L) taxAmount.basePrice.roundTo2() else cess.basePrice.roundTo2(),
+                    rate = if (item.menuItem.is_inventory != 1L) taxAmountResult.basePrice.roundTo2() else cessAmountResult.basePrice.roundTo2(),
                     actual_rate = pricePerUnit,
                     qty = item.quantity,
-                    total = if (item.menuItem.is_inventory != 1L) (taxAmount.basePrice * item.quantity).roundTo2() else (cess.basePrice * item.quantity).roundTo2(),
+                    total = if (item.menuItem.is_inventory != 1L) (taxAmountResult.basePrice * item.quantity).roundTo2() else (cessAmountResult.basePrice * item.quantity).roundTo2(),
                     tax_id = item.menuItem.tax_id.toInt(),
-                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmount.gstAmount * item.quantity).roundTo2() else (cess.gstAmount * item.quantity).roundTo2(),
-                    sgst_per = if (tableStatus != "DELIVERY") sgst.toDouble() else 0.0,
+                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmountResult.gstAmount * item.quantity).roundTo2() else (cessAmountResult.gstAmount * item.quantity).roundTo2(),
+                    sgst_per = if (tableStatus != "DELIVERY") sgstPer else 0.0,
                     sgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmount.sgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (taxAmountResult.sgst * item.quantity).roundTo2() else 0.0
                     } else {
-                        if (tableStatus != "DELIVERY") (cess.sgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (cessAmountResult.sgst * item.quantity).roundTo2() else 0.0
                     },
-                    cgst_per = if (tableStatus != "DELIVERY") cgst.toDouble() else 0.0,
+                    cgst_per = if (tableStatus != "DELIVERY") cgstPer else 0.0,
                     cgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmount.cgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (taxAmountResult.cgst * item.quantity).roundTo2() else 0.0
                     } else {
-                        if (tableStatus != "DELIVERY") (cess.cgst * item.quantity).roundTo2() else 0.0
+                        if (tableStatus != "DELIVERY") (cessAmountResult.cgst * item.quantity).roundTo2() else 0.0
                     },
-                    igst_per = item.menuItem.tax_percentage.toDouble(),
-                    igst = taxAmount.gstAmount.roundTo2(),
+                    igst_per = totalTaxPer,
+                    igst = taxAmountResult.gstAmount.roundTo2(),
                     cess_per = if (item.menuItem.is_inventory == 1L) item.menuItem.cess_per.toDouble() else 0.0,
-                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.cessAmount * item.quantity).roundTo2() else 0.0,
+                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.cessAmount * item.quantity).roundTo2() else 0.0,
                     cess_specific = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (item.menuItem.cess_specific * item.quantity).roundTo2() else 0.0,
-                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.totalPrice * item.quantity).roundTo2() else (taxAmount.totalPrice * item.quantity).roundTo2(),
+                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.totalPrice * item.quantity).roundTo2() else (taxAmountResult.totalPrice * item.quantity).roundTo2(),
                     prepare_status = true,
                     item_add_mode = existingOpenOrderMasterId != null,
                     is_flag = false,
@@ -621,7 +606,6 @@ class OrderRepository @Inject constructor(
 
             orderDetailsDao.insertAll(orderDetailsList)
 
-            // Step 3: Fetch back inserted details as response
             val savedDetails = orderDetailsDao.getByOrderMasterId(currentOrderMasterId.toString())
             val responseList = savedDetails.map { it.toTblOrderDetailsResponse() }
 
@@ -715,60 +699,70 @@ class OrderRepository @Inject constructor(
         kotNumber: Int? = null,
         tableStatus: String
     ): Flow<Result<List<TblOrderDetailsResponse>>> = flow {
+        
+        val isTaxEnabled = sessionManager.getGeneralSetting()?.is_tax ?: false
+        val isTaxIncluded = sessionManager.getGeneralSetting()?.is_tax_included ?: false
+
         val orderDetails = items.map { item ->
 
             val tax =
                 apiService.getTaxSplit(item.menuItem.tax_id, sessionManager.getCompanyCode() ?: "")
-            val cgst = tax[0].tax_split_percentage
-            val sgst = tax[1].tax_split_percentage
+            val cgstPer = tax.getOrNull(0)?.tax_split_percentage?.toDouble() ?: 0.0
+            val sgstPer = tax.getOrNull(1)?.tax_split_percentage?.toDouble() ?: 0.0
+            val totalTaxPer = item.menuItem.tax_percentage.toDouble()
+            
             val totalAmountForTaxCalc = item.menuItem.actual_rate
-            val taxAmount = calculateGst(
-                totalAmountForTaxCalc,
-                item.menuItem.tax_percentage.toDouble(),
-                true,
-                sgst.toDouble(),
-                cgst.toDouble()
-            )
-            val cess = calculateGstAndCess(
-                totalAmountForTaxCalc,
-                item.menuItem.tax_percentage.toDouble(),
-                item.menuItem.cess_per.toDouble(),
-                true,
-                item.menuItem.cess_specific,
-                sgst.toDouble(),
-                cgst.toDouble()
-            )
+            
+            val taxAmountResult = if (isTaxEnabled) {
+                calculateGst(totalAmountForTaxCalc, totalTaxPer, isTaxIncluded, sgstPer, cgstPer)
+            } else {
+                GstResult(totalAmountForTaxCalc, 0.0, totalAmountForTaxCalc, 0.0, 0.0)
+            }
+            
+            val cessAmountResult = if (isTaxEnabled && item.menuItem.is_inventory == 1L) {
+                calculateGstAndCess(
+                    totalAmountForTaxCalc,
+                    totalTaxPer,
+                    item.menuItem.cess_per.toDouble(),
+                    isTaxIncluded,
+                    item.menuItem.cess_specific,
+                    sgstPer,
+                    cgstPer
+                )
+            } else {
+                GstCessResult(totalAmountForTaxCalc, 0.0, 0.0, totalAmountForTaxCalc, 0.0, 0.0)
+            }
 
             OrderDetails(
                 order_master_id = orderId ?: "",
                 order_details_id = item.orderDetailsId ?: 0L,
                 kot_number = kotNumber ?: item.kotNumber,
                 menu_item_id = item.menuItem.menu_item_id,
-                rate = if (item.menuItem.is_inventory != 1L) taxAmount.basePrice.roundTo2() else cess.basePrice.roundTo2(),
+                rate = if (item.menuItem.is_inventory != 1L) taxAmountResult.basePrice.roundTo2() else cessAmountResult.basePrice.roundTo2(),
                 actual_rate = item.menuItem.actual_rate,
                 qty = item.quantity,
-                total = if (item.menuItem.is_inventory != 1L) (taxAmount.basePrice * item.quantity).roundTo2() else (cess.basePrice * item.quantity).roundTo2(), // Total base price for this item line
+                total = if (item.menuItem.is_inventory != 1L) (taxAmountResult.basePrice * item.quantity).roundTo2() else (cessAmountResult.basePrice * item.quantity).roundTo2(), 
                 tax_id = item.menuItem.tax_id,
                 tax_name = item.menuItem.tax_name,
-                tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmount.gstAmount * item.quantity).roundTo2() else (cess.gstAmount * item.quantity).roundTo2(),
-                sgst_per = if (tableStatus != "DELIVERY") sgst.toDouble() else 0.0,
+                tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmountResult.gstAmount * item.quantity).roundTo2() else (cessAmountResult.gstAmount * item.quantity).roundTo2(),
+                sgst_per = if (tableStatus != "DELIVERY") sgstPer else 0.0,
                 sgst = if (item.menuItem.is_inventory != 1L) {
-                    if (tableStatus != "DELIVERY") (taxAmount.sgst * item.quantity).roundTo2() else 0.0
+                    if (tableStatus != "DELIVERY") (taxAmountResult.sgst * item.quantity).roundTo2() else 0.0
                 } else {
-                    if (tableStatus != "DELIVERY") (cess.sgst * item.quantity).roundTo2() else 0.0
+                    if (tableStatus != "DELIVERY") (cessAmountResult.sgst * item.quantity).roundTo2() else 0.0
                 },
-                cgst_per = if (tableStatus != "DELIVERY") cgst.toDouble() else 0.0,
+                cgst_per = if (tableStatus != "DELIVERY") cgstPer else 0.0,
                 cgst = if (item.menuItem.is_inventory != 1L) {
-                    if (tableStatus != "DELIVERY") (taxAmount.cgst * item.quantity).roundTo2() else 0.0
+                    if (tableStatus != "DELIVERY") (taxAmountResult.cgst * item.quantity).roundTo2() else 0.0
                 } else {
-                    if (tableStatus != "DELIVERY") (cess.cgst * item.quantity).roundTo2() else 0.0
-                }, // Adjust if your backend calculates differently
-                igst_per = item.menuItem.tax_percentage.toDouble(),
-                igst = taxAmount.gstAmount.roundTo2(),
+                    if (tableStatus != "DELIVERY") (cessAmountResult.cgst * item.quantity).roundTo2() else 0.0
+                }, 
+                igst_per = totalTaxPer,
+                igst = taxAmountResult.gstAmount.roundTo2(),
                 cess_per = if (item.menuItem.is_inventory == 1L) item.menuItem.cess_per.toDouble() else 0.0,
-                cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.cessAmount * item.quantity).roundTo2() else 0.0,
+                cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.cessAmount * item.quantity).roundTo2() else 0.0,
                 cess_specific = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (item.menuItem.cess_specific * item.quantity).roundTo2() else 0.0,
-                grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cess.totalPrice * item.quantity).roundTo2() else (taxAmount.totalPrice * item.quantity).roundTo2(),
+                grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.totalPrice * item.quantity).roundTo2() else (taxAmountResult.totalPrice * item.quantity).roundTo2(),
                 prepare_status = true,
                 item_add_mode = orderId != null,
                 is_flag = false,
@@ -781,22 +775,14 @@ class OrderRepository @Inject constructor(
         val response =
             apiService.updateOrderDetails(orderDetails, sessionManager.getCompanyCode() ?: "")
         if (response.isSuccessful) {
-            val response = response.body()
-            if (response != null) {
-                emit(Result.success(response))
+            val body = response.body()
+            if (body != null) {
+                emit(Result.success(body))
             } else {
-                emit(Result.failure(Exception("Order details created, but failed to package final response.")))
+                emit(Result.failure(Exception("Failed")))
             }
         } else {
-            emit(
-                Result.failure(
-                    Exception(
-                        "Error creating OrderDetails: ${response.code()}, ${
-                            response.errorBody()?.string()
-                        }"
-                    )
-                )
-            )
+            emit(Result.failure(Exception("Error")))
         }
     }
 
@@ -804,7 +790,7 @@ class OrderRepository @Inject constructor(
         val openOrderMasterResponse = apiService.getOpenOrderMasterForTable(
             tableId,
             sessionManager.getCompanyCode() ?: ""
-        ) // Assuming this is defined
+        ) 
 
         if (openOrderMasterResponse.isSuccessful) {
             val orderMaster = openOrderMasterResponse.body()
@@ -813,7 +799,7 @@ class OrderRepository @Inject constructor(
                 val orderDetailsResponse = apiService.getOpenOrderDetailsForTable(
                     orderMasterId,
                     sessionManager.getCompanyCode() ?: ""
-                ) // YOU MAY NEED TO RENAME/CREATE THIS
+                ) 
                 if (orderDetailsResponse.isSuccessful && orderDetailsResponse.body() != null) {
                     return orderDetailsResponse.body()!!
                 }
@@ -827,7 +813,6 @@ class OrderRepository @Inject constructor(
 
     /**
      * Get all orders
-     * Our backend doesn't have a filter by table yet, so we get all orders and filter client-side
      */
     suspend fun getAllOrders(): List<TblOrderResponse> {
         try {
@@ -847,7 +832,6 @@ class OrderRepository @Inject constructor(
         } catch (e: Exception) {
             return emptyList()
         }
-        return emptyList()
     }
 
     suspend fun getRunningOrderAmount(orderId: String): Map<String, Double> {
@@ -862,17 +846,15 @@ class OrderRepository @Inject constructor(
     @SuppressLint("SuspiciousIndentation")
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     suspend fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
-        flow  { // Changed Flow type to Flow<Result<PrintResponse>>
+        flow  { 
             try {
                 val target = if (sessionManager.getBluetoothPrinter() != null) "BLUETOOTH" else "TCP"
                 
-                // 1. Try local template printing first
                 val localSuccess = printerHelper.printKotWithTemplate(orderId, target, ipAddress)
                 
                 if (localSuccess) {
                     emit(Result.success("✅ KOT printed using local template"))
                 } else {
-                    // 2. Fallback to API if local fails
                     val response = apiService.printKOT(orderId, sessionManager.getCompanyCode() ?: "")
                     if (response.isSuccessful) {
                         val printResponse = response.body()
@@ -893,11 +875,10 @@ class OrderRepository @Inject constructor(
                             }
                             emit(Result.success(mess))
                         } else {
-                            emit(Result.failure(Exception("KOT print successful but response body was empty.")))
+                            emit(Result.failure(Exception("KOT print empty body.")))
                         }
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
-                        emit(Result.failure(Exception("Failed to print KOT. Code: ${response.code()}, Error: $errorBody")))
+                        emit(Result.failure(Exception("Failed to print KOT")))
                     }
                 }
             } catch (e: Exception) {
@@ -974,9 +955,9 @@ fun calculateGstAndCess(
     cgst: Double
 ): GstCessResult {
     return if (isInclusive) {
-        val amount = amount - cessSpecific
+        val amnt = amount - cessSpecific
         val totalRate = gstRate + cessRate
-        val basePrice = amount / (1 + totalRate / 100)
+        val basePrice = amnt / (1 + totalRate / 100)
         val gstAmount = basePrice * gstRate / 100
         val cgstAmount = basePrice * cgst / 100
         val sgstAmount = basePrice * sgst / 100
