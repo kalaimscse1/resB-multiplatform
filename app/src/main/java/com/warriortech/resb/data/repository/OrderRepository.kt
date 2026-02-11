@@ -4,26 +4,15 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import com.warriortech.resb.data.local.dao.OrderDao
-import com.warriortech.resb.data.local.dao.TableDao
-import com.warriortech.resb.data.local.dao.TblOrderDetailsDao
-import com.warriortech.resb.data.local.dao.TblOrderMasterDao
-import com.warriortech.resb.data.local.dao.TblVoucherDao
-import com.warriortech.resb.data.local.entity.SyncStatus
-import com.warriortech.resb.data.local.entity.TblOrderDetails
-import com.warriortech.resb.data.local.entity.TblOrderMaster
 import com.warriortech.resb.model.KOTRequest
 import com.warriortech.resb.model.OrderDetails
 import com.warriortech.resb.model.OrderItem
 import com.warriortech.resb.model.OrderMaster
-import com.warriortech.resb.model.OrderStatus
-import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.model.TblOrderDetailsResponse
 import com.warriortech.resb.model.TblOrderResponse
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.PrinterHelper
-import com.warriortech.resb.util.generateNextBillNo
 import com.warriortech.resb.util.getCurrentDateModern
 import com.warriortech.resb.util.getCurrentTimeModern
 import kotlinx.coroutines.flow.*
@@ -32,7 +21,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.collections.map
 
 /**
  * Repository for Order-related API operations
@@ -41,20 +29,16 @@ import kotlin.collections.map
 @Singleton
 class OrderRepository @Inject constructor(
     private val apiService: ApiService,
-    private val orderDao: TblOrderMasterDao,
-    private val orderDetailsDao: TblOrderDetailsDao,
-    private val voucherDao: TblVoucherDao,
-    private val tableDao: TableDao,
     private val sessionManager: SessionManager,
     private val printerHelper: PrinterHelper
 ) {
     /**
      * Create a new order
      * @param tableId The table ID
-     * @param items List of order items
+     * @param itemsToPlace List of order items
      */
     @SuppressLint("SuspiciousIndentation")
-    suspend fun placeOrUpdateOrder(
+    fun placeOrUpdateOrder(
         tableId: Long,
         itemsToPlace: List<OrderItem>,
         tableStatus: String,
@@ -68,7 +52,7 @@ class OrderRepository @Inject constructor(
 
         try {
             var currentOrderMasterId = existingOpenOrderMasterId
-            var orderMasterResponse: TblOrderResponse? = null
+            var orderMasterResponse: TblOrderResponse?
 
             // 1. Check for/Determine existing open OrderMaster ID for the table
             if (currentOrderMasterId == null && tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY") {
@@ -79,9 +63,12 @@ class OrderRepository @Inject constructor(
                 ) 
                 if (openOrderResponse.isSuccessful && openOrderResponse.body() != null) {
                     currentOrderMasterId = openOrderResponse.body()!!.order_master_id
-                    orderMasterResponse =
-                        openOrderResponse.body() 
+                    orderMasterResponse = openOrderResponse.body() 
+                } else {
+                    orderMasterResponse = null
                 }
+            } else {
+                orderMasterResponse = null
             }
 
             val tableInfo = apiService.getTablesByStatus(
@@ -146,7 +133,7 @@ class OrderRepository @Inject constructor(
                     )
                     return@flow
                 }
-            } else {
+            } else if (orderMasterResponse == null) {
                 val masterResponse = apiService.getOrderMasterById(
                     currentOrderMasterId,
                     sessionManager.getCompanyCode() ?: ""
@@ -169,7 +156,7 @@ class OrderRepository @Inject constructor(
             ) 
             val newKotNumber = newKotNumberMap["kot_number"]
 
-            if (currentOrderMasterId.isEmpty() || newKotNumber == null) {
+            if (currentOrderMasterId!!.isEmpty() || newKotNumber == null) {
                 emit(Result.failure(Exception("Failed to obtain OrderMaster ID or KOT number.")))
                 return@flow
             }
@@ -211,7 +198,7 @@ class OrderRepository @Inject constructor(
                 }
 
                 OrderDetails(
-                    order_master_id = currentOrderMasterId,
+                    order_master_id = currentOrderMasterId!!,
                     order_details_id = 0,
                     kot_number = newKotNumber,
                     menu_item_id = item.menuItem.menu_item_id,
@@ -275,7 +262,7 @@ class OrderRepository @Inject constructor(
      */
 
     @SuppressLint("SuspiciousIndentation")
-    suspend fun placeOrUpdateOrders(
+    fun placeOrUpdateOrders(
         tableId: Long,
         itemsToPlace: List<OrderItem>,
         tableStatus: String,
@@ -289,7 +276,7 @@ class OrderRepository @Inject constructor(
 
         try {
             var currentOrderMasterId = existingOpenOrderMasterId
-            var orderMasterResponse: TblOrderResponse? = null
+            var orderMasterResponse: TblOrderResponse?
 
             if (currentOrderMasterId == null && tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY") {
                 val openOrderResponse = apiService.getOpenOrderMasterForTable(
@@ -299,7 +286,11 @@ class OrderRepository @Inject constructor(
                 if (openOrderResponse.isSuccessful && openOrderResponse.body() != null) {
                     currentOrderMasterId = openOrderResponse.body()!!.order_master_id
                     orderMasterResponse = openOrderResponse.body()
+                } else {
+                    orderMasterResponse = null
                 }
+            } else {
+                orderMasterResponse = null
             }
 
             val tableInfo = apiService.getTablesByStatus(
@@ -354,7 +345,7 @@ class OrderRepository @Inject constructor(
                     emit(Result.failure(Exception("Error creating OrderMaster")))
                     return@flow
                 }
-            } else {
+            } else if (orderMasterResponse == null) {
                 val masterResponse = apiService.getOrderMasterById(
                     currentOrderMasterId,
                     sessionManager.getCompanyCode() ?: ""
@@ -373,7 +364,7 @@ class OrderRepository @Inject constructor(
             val newKotNumberMap = apiService.getKotNo(sessionManager.getCompanyCode() ?: "")
             val newKotNumber = newKotNumberMap["kot_number"]
 
-            if (currentOrderMasterId.isEmpty() || newKotNumber == null) {
+            if (currentOrderMasterId!!.isEmpty() || newKotNumber == null) {
                 emit(Result.failure(Exception("Obtain failed")))
                 return@flow
             }
@@ -414,7 +405,7 @@ class OrderRepository @Inject constructor(
                 }
 
                 OrderDetails(
-                    order_master_id = currentOrderMasterId,
+                    order_master_id = currentOrderMasterId!!,
                     order_details_id = 0,
                     kot_number = newKotNumber,
                     menu_item_id = item.menuItem.menu_item_id,
@@ -478,224 +469,17 @@ class OrderRepository @Inject constructor(
         return apiService.getOrderMasterById(orderId, sessionManager.getCompanyCode() ?: "").body()!!
     }
 
-
-    suspend fun placeOrderLocalDb(
-        tableId: Long,
-        itemsToPlace: List<OrderItem>,
-        tableStatus: String,
-        existingOpenOrderMasterId: String? = null
-    ): Flow<Result<List<TblOrderDetailsResponse>>> = flow {
-        try {
-            var currentOrderMasterId = existingOpenOrderMasterId
-            
-            val isTaxEnabled = sessionManager.getGeneralSetting()?.is_tax ?: false
-            val isTaxIncluded = sessionManager.getGeneralSetting()?.is_tax_included ?: false
-
-            if (existingOpenOrderMasterId == null) {
-                val voucher = voucherDao.getActiveVoucherByType(
-                    sessionManager.getUser()?.counter_id?.toInt() ?: 0, "ORDER"
-                )
-                val newOrderMasterId = generateNextBillNo(
-                    voucher?.starting_no ?: "ORD0001",
-                    voucher?.starting_no ?: "ORD0001"
-                )
-                val orderMaster = TblOrderMaster(
-                    order_master_id = newOrderMasterId,
-                    order_date = getCurrentDateModern(),
-                    order_create_time = getCurrentTimeModern(),
-                    order_completed_time = "",
-                    staff_id = sessionManager.getUser()?.staff_id?.toInt() ?: 1,
-                    is_dine_in = tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY",
-                    is_take_away = tableStatus == "TAKEAWAY",
-                    is_delivery = tableStatus == "DELIVERY",
-                    table_id = tableId.toInt(),
-                    no_of_person = 0,
-                    waiter_request_status = true,
-                    kitchen_response_status = true,
-                    order_status = "RUNNING",
-                    is_merge = false,
-                    is_active = true,
-                    is_delivered = false,
-                    is_online = false,
-                    online_order_id = 1,
-                    online_ref_no = "",
-                    is_online_paid = false,
-                    is_synced = SyncStatus.PENDING_SYNC
-                )
-                orderDao.insert(orderMaster)
-                tableDao.updateTableAvailability(tableId, "OCCUPIED")
-                currentOrderMasterId = newOrderMasterId
-            } else {
-                val orderMaster = orderDao.getById(existingOpenOrderMasterId)
-                if (orderMaster != null) {
-                    currentOrderMasterId = orderMaster.order_master_id
-                }
-            }
-
-            val newKotNumber = orderDetailsDao.getMaxKOTNumber(getCurrentDateModern())
-            val orderDetailsList = itemsToPlace.map { item ->
-                val pricePerUnit = when (tableStatus) {
-                    "AC" -> item.menuItem.ac_rate
-                    "PARCEL", "DELIVERY" -> item.menuItem.parcel_rate
-                    else -> item.menuItem.rate
-                }
-                val tax = apiService.getTaxSplit(
-                    item.menuItem.tax_id,
-                    sessionManager.getCompanyCode() ?: ""
-                )
-                val cgstPer = tax.getOrNull(0)?.tax_split_percentage?.toDouble() ?: 0.0
-                val sgstPer = tax.getOrNull(1)?.tax_split_percentage?.toDouble() ?: 0.0
-                val totalTaxPer = item.menuItem.tax_percentage.toDouble()
-
-                val taxAmountResult = if (isTaxEnabled) {
-                    calculateGst(pricePerUnit, totalTaxPer, isTaxIncluded, sgstPer, cgstPer)
-                } else {
-                    GstResult(pricePerUnit, 0.0, pricePerUnit, 0.0, 0.0)
-                }
-
-                val cessAmountResult = if (isTaxEnabled && item.menuItem.is_inventory == 1L) {
-                    calculateGstAndCess(
-                        pricePerUnit,
-                        totalTaxPer,
-                        item.menuItem.cess_per.toDouble(),
-                        isTaxIncluded,
-                        item.menuItem.cess_specific,
-                        sgstPer,
-                        cgstPer
-                    )
-                } else {
-                    GstCessResult(pricePerUnit, 0.0, 0.0, pricePerUnit, 0.0, 0.0)
-                }
-
-                TblOrderDetails(
-                    order_master_id = currentOrderMasterId.toString(),
-                    order_details_id = 0,
-                    kot_number = newKotNumber,
-                    menu_item_id = item.menuItem.menu_item_id.toInt(),
-                    rate = if (item.menuItem.is_inventory != 1L) taxAmountResult.basePrice.roundTo2() else cessAmountResult.basePrice.roundTo2(),
-                    actual_rate = pricePerUnit,
-                    qty = item.quantity,
-                    total = if (item.menuItem.is_inventory != 1L) (taxAmountResult.basePrice * item.quantity).roundTo2() else (cessAmountResult.basePrice * item.quantity).roundTo2(),
-                    tax_id = item.menuItem.tax_id.toInt(),
-                    tax_amount = if (item.menuItem.is_inventory != 1L) (taxAmountResult.gstAmount * item.quantity).roundTo2() else (cessAmountResult.gstAmount * item.quantity).roundTo2(),
-                    sgst_per = if (tableStatus != "DELIVERY") sgstPer else 0.0,
-                    sgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmountResult.sgst * item.quantity).roundTo2() else 0.0
-                    } else {
-                        if (tableStatus != "DELIVERY") (cessAmountResult.sgst * item.quantity).roundTo2() else 0.0
-                    },
-                    cgst_per = if (tableStatus != "DELIVERY") cgstPer else 0.0,
-                    cgst = if (item.menuItem.is_inventory != 1L) {
-                        if (tableStatus != "DELIVERY") (taxAmountResult.cgst * item.quantity).roundTo2() else 0.0
-                    } else {
-                        if (tableStatus != "DELIVERY") (cessAmountResult.cgst * item.quantity).roundTo2() else 0.0
-                    },
-                    igst_per = totalTaxPer,
-                    igst = taxAmountResult.gstAmount.roundTo2(),
-                    cess_per = if (item.menuItem.is_inventory == 1L) item.menuItem.cess_per.toDouble() else 0.0,
-                    cess = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.cessAmount * item.quantity).roundTo2() else 0.0,
-                    cess_specific = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (item.menuItem.cess_specific * item.quantity).roundTo2() else 0.0,
-                    grand_total = if (item.menuItem.is_inventory == 1L && item.menuItem.cess_specific != 0.00) (cessAmountResult.totalPrice * item.quantity).roundTo2() else (taxAmountResult.totalPrice * item.quantity).roundTo2(),
-                    prepare_status = true,
-                    item_add_mode = existingOpenOrderMasterId != null,
-                    is_flag = false,
-                    merge_order_nos = "",
-                    merge_order_tables = "",
-                    merge_pax = 0,
-                    is_active = true
-                )
-            }
-
-            orderDetailsDao.insertAll(orderDetailsList)
-
-            val savedDetails = orderDetailsDao.getByOrderMasterId(currentOrderMasterId.toString())
-            val responseList = savedDetails.map { it.toTblOrderDetailsResponse() }
-
-            emit(Result.success(responseList))
-        } catch (e: Exception) {
-            emit(Result.failure(e))
-        }
-    }
-
-    private fun TblOrderDetails.toTblOrderDetailsResponse(): TblOrderDetailsResponse {
-        return TblOrderDetailsResponse(
-            order_master_id = this.order_master_id.toString(),
-            order_details_id = this.order_details_id.toLong(),
-            kot_number = this.kot_number?:0,
-            menuItem = TblMenuItemResponse(
-                menu_item_id = this.menu_item_id?.toLong() ?: 0L,
-                menu_item_name = "",
-                rate = 0.0,
-                ac_rate = 0.0,
-                parcel_rate = 0.0,
-                tax_id = 0,
-                tax_name = "",
-                tax_percentage = 0.0.toString(),
-                is_inventory = 0,
-                cess_per = 0.0.toString(),
-                cess_specific = 0.0,
-                menu_item_code = "",
-                menu_item_name_tamil = "",
-                menu_id = 0,
-                menu_name = "",
-                item_cat_id = 0,
-                item_cat_name = "",
-                image = "",
-                parcel_charge = 0.0,
-                kitchen_cat_id = 0,
-                kitchen_cat_name = "",
-                is_available = "",
-                preparation_time = 0,
-                is_favourite = false,
-                stock_maintain = "",
-                rate_lock = "",
-                unit_id = 0,
-                unit_name = "",
-                min_stock = 0,
-                hsn_code = "",
-                order_by = 0,
-                is_raw = "",
-                is_active = 0L,
-                qty = 0,
-                actual_rate = 0.0
-            ),
-            rate = this.rate ?: 0.0,
-            actual_rate = this.actual_rate ?: 0.0,
-            qty = this.qty ?: 0,
-            total = this.total ?: 0.0,
-            tax_id = this.tax_id?.toLong() ?: 0L,
-            tax_amount = this.tax_amount ?: 0.0,
-            sgst_per = this.sgst_per ?: 0.0,
-            sgst = this.sgst ?: 0.0,
-            cgst_per = this.cgst_per ?: 0.0,
-            cgst = this.cgst ?: 0.0,
-            igst_per = this.igst_per ?: 0.0,
-            igst = this.igst ?: 0.0,
-            cess_per = this.cess_per ?: 0.0,
-            cess = this.cess ?: 0.0,
-            cess_specific = this.cess_specific ?: 0.0,
-            grand_total = this.grand_total ?: 0.0,
-            prepare_status = this.prepare_status == true,
-            item_add_mode = this.item_add_mode == true,
-            is_flag = this.is_flag == true,
-            merge_order_nos = this.merge_order_nos.toString(),
-            merge_order_tables = this.merge_order_tables.toString(),
-            merge_pax = this.merge_pax ?: 0,
-            is_active = if (this.is_active == true) 1 else 0,
-            tax_name = ""
-        )
-    }
     @SuppressLint("DefaultLocale")
     fun Double.roundTo2(): Double {
         val dec = sessionManager.getDecimalPlaces()
-        return if (dec == 2L)
-            BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
-        else if (dec == 3L)
-            BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
-        else
-            BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
+        return when (dec) {
+            2L -> BigDecimal.valueOf(this).setScale(2, RoundingMode.HALF_UP).toDouble()
+            3L -> BigDecimal.valueOf(this).setScale(3, RoundingMode.HALF_UP).toDouble()
+            else -> BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
+        }
     }
-    suspend fun updateOrderDetails(
+
+    fun updateOrderDetails(
         orderId: String?,
         items: List<OrderItem>,
         kotNumber: Int? = null,
@@ -810,29 +594,20 @@ class OrderRepository @Inject constructor(
         return emptyList()
     }
 
-
-
-
     /**
      * Get all orders
      */
     suspend fun getAllOrders(): List<TblOrderResponse> {
-        try {
+        return try {
             val response = apiService.getAllOrders(sessionManager.getCompanyCode() ?: "")
 
             if (response.isSuccessful) {
-                val orders = response.body()
-                if (orders != null) {
-
-                    return orders
-                } else {
-                    return emptyList()
-                }
+                response.body() ?: emptyList()
             } else {
-                return emptyList()
+                emptyList()
             }
         } catch (e: Exception) {
-            return emptyList()
+            emptyList()
         }
     }
 
@@ -847,7 +622,7 @@ class OrderRepository @Inject constructor(
 
     @SuppressLint("SuspiciousIndentation")
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    suspend fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
+    fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
         flow  { 
             try {
                 val target = if (sessionManager.getBluetoothPrinter() != null) "BLUETOOTH" else "TCP"
@@ -872,7 +647,7 @@ class OrderRepository @Inject constructor(
                             printerHelper.printViaTcp(
                                 ipAddress,
                                 data = printResponse.bytes()
-                            ) { success, message ->
+                            ) { _, message ->
                                 mess = message
                             }
                             emit(Result.success(mess))

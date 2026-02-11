@@ -107,7 +107,6 @@ fun BillingScreen(
     onProceedToBilling: (Map<TblMenuItemResponse, Int>) -> Unit
 ) {
     val uiState: BillingPaymentUiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     var selectedKotNumber by remember { mutableStateOf<Int?>(null) }
     var showKotSelectionDialog by remember { mutableStateOf(false) }
     val orderDetails: List<TblOrderDetailsResponse> by viewModel.originalOrderDetails.collectAsStateWithLifecycle()
@@ -138,7 +137,6 @@ fun BillingScreen(
 
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -200,13 +198,7 @@ fun BillingScreen(
             onRemoveItem = { menuItem ->
                 viewModel.removeItem(menuItem)
             },
-            orderDetails = orderDetails,
-            onDiscountChange = { discount ->
-                viewModel.updateDiscountFlat(discount)
-            },
-            onOtherChargesChange = { charges ->
-                viewModel.updateOtherCharges(charges)
-            }
+            orderDetails = orderDetails
         )
 
     }
@@ -377,9 +369,7 @@ fun BillingContent(
     uiState: BillingPaymentUiState,
     onUpdateQuantity: (TblMenuItemResponse, Int) -> Unit,
     onRemoveItem: (TblMenuItemResponse) -> Unit,
-    orderDetails: List<TblOrderDetailsResponse>,
-    onDiscountChange: (Double) -> Unit = {},
-    onOtherChargesChange: (Double) -> Unit = {}
+    orderDetails: List<TblOrderDetailsResponse>
 ) {
     val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 

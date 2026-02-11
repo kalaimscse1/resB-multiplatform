@@ -251,19 +251,11 @@ object AppModule {
     @Singleton
     fun provideOrderRepository(
         apiService: ApiService,
-        orderDao: TblOrderMasterDao,
-        orderDetailsDao: TblOrderDetailsDao,
-        voucherDao: TblVoucherDao,
-        tableDao: TableDao,
         sessionManager: SessionManager,
         printerHelper: PrinterHelper
     ): OrderRepository {
         return OrderRepository(
             apiService,
-            orderDao,
-            orderDetailsDao,
-            voucherDao,
-            tableDao,
             sessionManager,
             printerHelper
         )

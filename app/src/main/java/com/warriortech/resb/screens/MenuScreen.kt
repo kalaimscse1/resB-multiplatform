@@ -19,6 +19,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -191,9 +192,11 @@ fun MenuScreen(
         }
         ItemSearchDialog(
             allItems = allItems,
+            selectedItems = selectedItems,
+            newSelectedItems = newselectedItems,
+            isExistingOrderLoaded = viewModel.isExistingOrderLoaded.value,
             onItemSelected = { item ->
                 viewModel.addItemToOrder(item)
-                showSearchDialog = false
             },
             onDismiss = { showSearchDialog = false }
         )
@@ -477,7 +480,6 @@ fun MenuScreen(
                         Text("No menu items available")
                     }
                 } else {
-                    val menuShow = sessionManager.getGeneralSetting()?.menu_show_in_time == true
                     val listState = rememberLazyListState()
                     val scope = rememberCoroutineScope()
                     val bottomBarHeight = 80.dp
@@ -635,13 +637,28 @@ fun MenuScreen(
 @Composable
 fun ItemSearchDialog(
     allItems: List<TblMenuItemResponse>,
+    selectedItems: Map<TblMenuItemResponse, Int>,
+    newSelectedItems: Map<TblMenuItemResponse, Int>,
+    isExistingOrderLoaded: Boolean,
     onItemSelected: (TblMenuItemResponse) -> Unit,
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val filteredItems = remember(searchQuery, allItems) {
+    
+    // Improved sorting: Selected items appear first even during search
+    val filteredItems = remember(searchQuery, allItems, selectedItems, newSelectedItems) {
         if (searchQuery.isBlank()) emptyList()
-        else allItems.filter { it.menu_item_name.contains(searchQuery, ignoreCase = true) }
+        else {
+            allItems.filter { it.menu_item_name.contains(searchQuery, ignoreCase = true) }
+                .sortedByDescending { item ->
+                    val q = if (isExistingOrderLoaded) {
+                        (selectedItems[item] ?: 0) + (newSelectedItems[item] ?: 0)
+                    } else {
+                        selectedItems[item] ?: 0
+                    }
+                    q > 0
+                }
+        }
     }
 
     AlertDialog(
@@ -661,12 +678,51 @@ fun ItemSearchDialog(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 200.dp)
+                        .heightIn(max = 400.dp)
                 ) {
+                    // Show "Currently Selected" section at top if no search query
+                    if (searchQuery.isBlank()) {
+                        val currentlySelected = allItems.filter { item ->
+                            val qty = if (isExistingOrderLoaded) {
+                                (selectedItems[item] ?: 0) + (newSelectedItems[item] ?: 0)
+                            } else {
+                                selectedItems[item] ?: 0
+                            }
+                            qty > 0
+                        }
+                        
+                        if (currentlySelected.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "Currently Selected",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(8.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            itemsIndexed(currentlySelected) { _, item ->
+                                SearchResultItem(
+                                    item = item,
+                                    selectedItems = selectedItems,
+                                    newSelectedItems = newSelectedItems,
+                                    isExistingOrderLoaded = isExistingOrderLoaded,
+                                    onItemSelected = onItemSelected
+                                )
+                            }
+                            item { 
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            }
+                        }
+                    }
+
+                    // Search Results
                     itemsIndexed(filteredItems) { _, item ->
-                        ListItem(
-                            headlineContent = { Text(item.menu_item_name) },
-                            modifier = Modifier.clickable { onItemSelected(item) }
+                        SearchResultItem(
+                            item = item,
+                            selectedItems = selectedItems,
+                            newSelectedItems = newSelectedItems,
+                            isExistingOrderLoaded = isExistingOrderLoaded,
+                            onItemSelected = onItemSelected
                         )
                     }
                 }
@@ -674,6 +730,65 @@ fun ItemSearchDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+@Composable
+fun SearchResultItem(
+    item: TblMenuItemResponse,
+    selectedItems: Map<TblMenuItemResponse, Int>,
+    newSelectedItems: Map<TblMenuItemResponse, Int>,
+    isExistingOrderLoaded: Boolean,
+    onItemSelected: (TblMenuItemResponse) -> Unit
+) {
+    val qty = if (isExistingOrderLoaded) {
+        (selectedItems[item] ?: 0) + (newSelectedItems[item] ?: 0)
+    } else {
+        selectedItems[item] ?: 0
+    }
+    
+    ListItem(
+        headlineContent = { 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(item.menu_item_name)
+                if (qty > 0) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            text = qty.toString(),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        },
+        supportingContent = {
+            if (qty > 0) {
+                Text(
+                    "Selected",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        modifier = Modifier.clickable { 
+            onItemSelected(item)
+        },
+        colors = if (qty > 0) {
+            ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+        } else {
+            ListItemDefaults.colors()
         }
     )
 }
@@ -725,16 +840,6 @@ fun MenuItemCard(
                             overflow = TextOverflow.Ellipsis,
                             color = textColor,
                         )
-
-//                        if (menuItem.menu_item_name_tamil.isNotBlank()) {
-//                            Spacer(modifier = Modifier.height(4.dp))
-//                            Text(
-//                                text = menuItem.menu_item_name_tamil,
-//                                style = MaterialTheme.typography.bodySmall,
-//                                maxLines = 2,
-//                                overflow = TextOverflow.Ellipsis
-//                            )
-//                        }
                     }
                 }
             }
@@ -782,7 +887,6 @@ fun MenuItemCard(
                         }
                         Spacer(modifier = Modifier.padding(horizontal = 2.dp))
                         // ---- QUANTITY ----
-//                        if (quantity > 0) {
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
@@ -798,9 +902,6 @@ fun MenuItemCard(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-//                        } else {
-//                            Spacer(modifier = Modifier.width(36.dp))
-//                        }
                         Spacer(modifier = Modifier.padding(horizontal = 2.dp))
                         // ---- PLUS BUTTON ----
                         Box(
@@ -837,15 +938,6 @@ fun MenuItemCard(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-//                        IconButton(
-//                            onClick = onModifierClick
-//                        ) {
-//                            androidx.compose.material3.Icon(
-//                                Icons.Default.Tune,
-//                                contentDescription = "AddOn",
-//                                tint = Color.Blue
-//                            )
-//                        }
                     }
                 } else {
                     Text(
@@ -1091,27 +1183,6 @@ fun OrderDetailsDialog(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
-
-//                    selectedItems.forEach { (item, qty) ->
-//                        Row(
-//                            modifier = Modifier
-//                                .fillMaxWidth()
-//                                .padding(vertical = 4.dp),
-//                            horizontalArrangement = Arrangement.SpaceBetween
-//                        ) {
-//                            Text(
-//                                "${item.menu_item_name} × $qty",
-//                                style = MaterialTheme.typography.bodySmall
-//                            )
-//
-//
-//
-//                            Text(
-//                                CurrencySettings.format((item.actual_rate * qty)),
-//                                style = MaterialTheme.typography.bodySmall
-//                            )
-//                        }
-//                    }
                 }
 
                 ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
