@@ -7,6 +7,7 @@ import com.warriortech.resb.data.repository.PrinterRepository
 import com.warriortech.resb.model.KitchenCategory
 import com.warriortech.resb.model.Printer
 import com.warriortech.resb.model.TblPrinterResponse
+import com.warriortech.resb.network.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ import javax.inject.Inject
 class PrinterSettingsViewModel @Inject constructor(
     private val printerRepository: PrinterRepository,
     private val menuCategoryRepository: MenuCategoryRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PrinterSettingsUiState>(PrinterSettingsUiState.Loading)
@@ -26,6 +28,11 @@ class PrinterSettingsViewModel @Inject constructor(
     private val _kitchenCategories = MutableStateFlow<List<KitchenCategory>>(emptyList())
     val kitchenCategories: StateFlow<List<KitchenCategory>> = _kitchenCategories.asStateFlow()
 
+    private val _printerType = MutableStateFlow(sessionManager.getPrinterType())
+    val printerType: StateFlow<String> = _printerType.asStateFlow()
+
+    private val _paperWidth = MutableStateFlow(sessionManager.getPaperWidth())
+    val paperWidth: StateFlow<Int> = _paperWidth.asStateFlow()
 
     sealed class PrinterSettingsUiState {
         object Loading : PrinterSettingsUiState()
@@ -80,5 +87,15 @@ class PrinterSettingsViewModel @Inject constructor(
                 _uiState.value = PrinterSettingsUiState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    fun savePrinterType(type: String) {
+        sessionManager.savePrinterType(type)
+        _printerType.value = type
+    }
+
+    fun savePaperWidth(width: Int) {
+        sessionManager.savePaperWidth(width)
+        _paperWidth.value = width
     }
 }

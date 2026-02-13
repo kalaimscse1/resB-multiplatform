@@ -243,7 +243,7 @@ class BillRepository @Inject constructor(
                     voucher,
                     ledgerDetail,
                     ledger,
-                    billNumber["bill_no"] ?: "",
+                    billNo,
                     receivedAmt,
                     totals
                 )
@@ -266,13 +266,16 @@ class BillRepository @Inject constructor(
             val bytes = response.body()?.bytes()
                 ?: return@flow emit(Result.failure(Exception("Empty print data")))
             var msg = ""
-            if (sessionManager.getBluetoothPrinter() != null)
+            val printerType = sessionManager.getPrinterType()
+            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null)
                 printerHelper.printViaBluetoothMac(
                     data = bytes,
                     macAddress = sessionManager.getBluetoothPrinter().toString()
                 ) { _, m -> msg = m }
-            else
+            else if (printerType == "TCP")
                 printerHelper.printViaTcp(ipAddress, data = bytes) { _, m -> msg = m }
+            else
+                emit(Result.failure(Exception("Printer not configured")))
             emit(Result.success(msg))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -282,7 +285,7 @@ class BillRepository @Inject constructor(
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBillWithLocalTemplate(bill: Bill, ipAddress: String): Flow<Result<String>> = flow {
         try {
-            val target = if (sessionManager.getBluetoothPrinter() != null) "BLUETOOTH" else "TCP"
+            val target = sessionManager.getPrinterType()
             val address = if (target == "BLUETOOTH") sessionManager.getBluetoothPrinter().toString() else ipAddress
             
             printerHelper.printBillWithTemplate(bill, "BILL", target, address)

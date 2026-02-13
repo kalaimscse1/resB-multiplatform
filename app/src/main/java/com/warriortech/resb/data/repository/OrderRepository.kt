@@ -625,7 +625,7 @@ class OrderRepository @Inject constructor(
     fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
         flow  { 
             try {
-                val target = if (sessionManager.getBluetoothPrinter() != null) "BLUETOOTH" else "TCP"
+                val target = sessionManager.getPrinterType()
                 
                 val localSuccess = printerHelper.printKotWithTemplate(orderId, target, ipAddress)
                 
@@ -638,18 +638,21 @@ class OrderRepository @Inject constructor(
 
                         var mess = ""
                         if (printResponse != null) {
-                            if (sessionManager.getBluetoothPrinter()!=null)
+                            val printerType = sessionManager.getPrinterType()
+                            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null)
                                 printerHelper.printViaBluetoothMac(
                                     data = printResponse.bytes(),
                                     macAddress =  sessionManager.getBluetoothPrinter().toString()
                                 ) { _, m -> mess = m }
+                            else if (printerType == "TCP")
+                                printerHelper.printViaTcp(
+                                    ipAddress,
+                                    data = printResponse.bytes()
+                                ) { _, message ->
+                                    mess = message
+                                }
                             else
-                            printerHelper.printViaTcp(
-                                ipAddress,
-                                data = printResponse.bytes()
-                            ) { _, message ->
-                                mess = message
-                            }
+                                return@flow emit(Result.failure(Exception("Printer not configured")))
                             emit(Result.success(mess))
                         } else {
                             emit(Result.failure(Exception("KOT print empty body.")))

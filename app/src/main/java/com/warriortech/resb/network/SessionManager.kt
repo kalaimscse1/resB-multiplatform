@@ -32,6 +32,8 @@ class SessionManager @Inject constructor(
         private const val KEY_USER_LOGIN = "user_login"
         private const val MAIL_ID="mail_id"
         private const val BLUETOOTH="bluetooth_printer"
+        private const val PRINTER_TYPE = "printer_type" // BLUETOOTH, USB, TCP
+        private const val KEY_PAPER_WIDTH = "paper_width" // 58 or 80
         private const val KEY_BASE_URL = "base_url"
         private const val DEFAULT_BASE_URL = "http://72.61.172.248:5050/api/"
     }
@@ -92,6 +94,26 @@ class SessionManager @Inject constructor(
     fun clearBluetoothPrinter() {
         checkInitialization()
         prefs.edit { remove(BLUETOOTH) }
+    }
+
+    fun savePrinterType(type: String) {
+        checkInitialization()
+        prefs.edit { putString(PRINTER_TYPE, type) }
+    }
+
+    fun getPrinterType(): String {
+        checkInitialization()
+        return prefs.getString(PRINTER_TYPE, "TCP") ?: "BLUETOOTH"
+    }
+
+    fun savePaperWidth(width: Int) {
+        checkInitialization()
+        prefs.edit { putInt(KEY_PAPER_WIDTH, width) }
+    }
+
+    fun getPaperWidth(): Int {
+        checkInitialization()
+        return prefs.getInt(KEY_PAPER_WIDTH, 80)
     }
 
     fun getUserLogin(): Boolean {

@@ -24,10 +24,9 @@ import com.warriortech.resb.data.local.entity.PrintTemplateEntity
 import com.warriortech.resb.data.local.entity.PrintTemplateLineEntity
 import com.warriortech.resb.data.local.entity.PrintTemplateSectionEntity
 import com.warriortech.resb.network.SessionManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
 
 /**
@@ -41,6 +40,9 @@ class PrinterHelper(
 
     companion object {
         private const val TAG = "PrinterHelper"
+        
+        // Mutex to ensure only one Bluetooth print job happens at a time across all instances
+        private val bluetoothMutex = Mutex()
         
         // ESC/POS Commands
         private val ESC_ALIGN_LEFT = byteArrayOf(0x1b, 0x61, 0x00)
@@ -151,6 +153,7 @@ class PrinterHelper(
         
         return sendDataToPrinter(target, mac = sessionManager.getBluetoothPrinter(), ipAddress = ipAddress, data = data)
     }
+
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     private suspend fun sendDataToPrinter(target: String, mac: String?, ipAddress: String?, data: ByteArray): Boolean {
         return withContext(Dispatchers.IO) {
@@ -158,11 +161,8 @@ class PrinterHelper(
                 if (target == "BLUETOOTH") {
                     if (mac != null) {
                         var success = false
-                        printViaBluetoothMac(mac, data) { s, _ -> success = s }
-                        // Note: printViaBluetoothMac is asynchronous with its own scope, 
-                        // this might return before actual completion. Ideally it should be a suspending function.
-                        // For now keeping it as is but returning true if mac exists to signal "attempted".
-                        true 
+                        printViaBluetoothMacSync(mac, data) { s, _ -> success = s }
+                        success 
                     } else false
                 } else if (target == "TCP" && ipAddress != null) {
                     printViaTcpSync(ipAddress, 9100, data)
@@ -354,55 +354,68 @@ class PrinterHelper(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun printViaBluetoothMac(macAddress: String, data: ByteArray, onResult: (success: Boolean, message: String) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            var socket: BluetoothSocket? = null
-            try {
-                val adapter = BluetoothAdapter.getDefaultAdapter()
-                if (adapter == null || !adapter.isEnabled) {
-                    withContext(Dispatchers.Main) { onResult(false,"❌ Bluetooth not available or disabled") }
-                    return@launch
-                }
-
-                val device: BluetoothDevice? = adapter.getRemoteDevice(macAddress)
-                if (device == null) {
-                    withContext(Dispatchers.Main) { onResult(false,"❌ Device not found for MAC: $macAddress") }
-                    return@launch
-                }
-
-                if (adapter.isDiscovering) adapter.cancelDiscovery()
-
-                val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-                socket = device.createRfcommSocketToServiceRecord(uuid)
-
+    suspend fun printViaBluetoothMacSync(macAddress: String, data: ByteArray, onResult: (success: Boolean, message: String) -> Unit) {
+        bluetoothMutex.withLock {
+            withContext(Dispatchers.IO) {
+                var socket: BluetoothSocket? = null
                 try {
-                    socket.connect()
-                } catch (e: IOException) {
-                    try {
-                        val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
-                        socket = m.invoke(device, 1) as BluetoothSocket
-                        socket.connect()
-                    } catch (fallback: Exception) {
-                        withContext(Dispatchers.Main) { onResult(false,"❌ Connection failed: ${fallback.message}") }
-                        return@launch
+                    val adapter = BluetoothAdapter.getDefaultAdapter()
+                    if (adapter == null || !adapter.isEnabled) {
+                        withContext(Dispatchers.Main) { onResult(false,"❌ Bluetooth not available or disabled") }
+                        return@withContext
                     }
-                }
 
-                socket.outputStream.use { out ->
+                    val device: BluetoothDevice? = adapter.getRemoteDevice(macAddress)
+                    if (device == null) {
+                        withContext(Dispatchers.Main) { onResult(false,"❌ Device not found for MAC: $macAddress") }
+                        return@withContext
+                    }
+
+                    if (adapter.isDiscovering) adapter.cancelDiscovery()
+
+                    val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+                    socket = device.createRfcommSocketToServiceRecord(uuid)
+
+                    try {
+                        socket.connect()
+                    } catch (e: IOException) {
+                        try {
+                            val m = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType)
+                            socket = m.invoke(device, 1) as BluetoothSocket
+                            socket.connect()
+                        } catch (fallback: Exception) {
+                            withContext(Dispatchers.Main) { onResult(false,"❌ Connection failed: ${fallback.message}") }
+                            return@withContext
+                        }
+                    }
+
+                    val out = socket.outputStream
                     out.write(data)
                     out.flush()
-                }
+                    
+                    // Crucial: Wait for the printer to process the buffer before closing
+                    delay(800)
 
-                withContext(Dispatchers.Main) {
-                    onResult(true,"✅ Print successful on ${device.name} (${device.address})")
+                    withContext(Dispatchers.Main) {
+                        onResult(true,"✅ Print successful on ${device.name} (${device.address})")
+                    }
+                } catch (e: SecurityException) {
+                    withContext(Dispatchers.Main) { onResult(false,"❌ Permission denied: ${e.message}") }
+                } catch (e: IOException) {
+                    withContext(Dispatchers.Main) { onResult(false,"❌ I/O error: ${e.message}") }
+                } finally {
+                    try { socket?.close() } catch (_: IOException) {}
+                    // Cooldown delay for the printer hardware
+                    delay(300)
                 }
-            } catch (e: SecurityException) {
-                withContext(Dispatchers.Main) { onResult(false,"❌ Permission denied: ${e.message}") }
-            } catch (e: IOException) {
-                withContext(Dispatchers.Main) { onResult(false,"❌ I/O error: ${e.message}") }
-            } finally {
-                try { socket?.close() } catch (_: IOException) {}
             }
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun printViaBluetoothMac(macAddress: String, data: ByteArray, onResult: (success: Boolean, message: String) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            printViaBluetoothMacSync(macAddress, data, onResult)
         }
     }
 

@@ -611,7 +611,7 @@ class BillingViewModel @Inject constructor(
                             discount = response.disc_amt,
                             roundOff = response.round_off,
                             total = response.grand_total,
-                            paperWidth = 80,
+                            paperWidth = sessionManager.getPaperWidth(),
                             received_amt = response.received_amt,
                             pending_amt = response.pending_amt
                         )
@@ -812,7 +812,7 @@ class BillingViewModel @Inject constructor(
                     discount = uiState.value.discountFlat,
                     roundOff = uiState.value.roundOff,
                     total = uiState.value.totalAmount,
-                    paperWidth = if(sessionManager.getBluetoothPrinter() != null) 58 else 80,
+                    paperWidth = sessionManager.getPaperWidth(),
                     received_amt = uiState.value.totalAmount,
                     pending_amt = 0.0
                 )

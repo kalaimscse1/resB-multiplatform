@@ -1,6 +1,7 @@
 package com.warriortech.resb.screens.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -45,6 +46,8 @@ fun PrinterSettingsScreen(
     val kitchenCategories by viewModel.kitchenCategories.collectAsStateWithLifecycle()
     var editingPrinter by remember { mutableStateOf<TblPrinterResponse?>(null) }
     var printerToDelete by remember { mutableStateOf<TblPrinterResponse?>(null) }
+    val printerType by viewModel.printerType.collectAsStateWithLifecycle()
+    val paperWidth by viewModel.paperWidth.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.loadPrinters()
@@ -97,81 +100,171 @@ fun PrinterSettingsScreen(
             )
         }
     ) { paddingValues ->
-        when (val state = uiState) {
-            is PrinterSettingsViewModel.PrinterSettingsUiState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Printer Type Selection
+            MobileOptimizedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Printer Connection Type",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = printerType == "BLUETOOTH",
+                                onClick = { viewModel.savePrinterType("BLUETOOTH") }
+                            )
+                            Text(
+                                text = "BLUETOOTH",
+                                modifier = Modifier.clickable { viewModel.savePrinterType("BLUETOOTH") }
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = printerType == "TCP",
+                                onClick = { viewModel.savePrinterType("TCP") }
+                            )
+                            Text(
+                                text = "TCP (Network)",
+                                modifier = Modifier.clickable { viewModel.savePrinterType("TCP") }
+                            )
+                        }
+                    }
                 }
             }
 
-            is PrinterSettingsViewModel.PrinterSettingsUiState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Error: ${state.message}")
+            // Paper Width Selection
+            MobileOptimizedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Paper Size",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = paperWidth == 58,
+                                onClick = { viewModel.savePaperWidth(58) }
+                            )
+                            Text(
+                                text = "2 inch (58mm)",
+                                modifier = Modifier.clickable { viewModel.savePaperWidth(58) }
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = paperWidth == 80,
+                                onClick = { viewModel.savePaperWidth(80) }
+                            )
+                            Text(
+                                text = "3 inch (80mm)",
+                                modifier = Modifier.clickable { viewModel.savePaperWidth(80) }
+                            )
+                        }
+                    }
                 }
             }
 
-            is PrinterSettingsViewModel.PrinterSettingsUiState.Success -> {
-                if (state.printers.isEmpty()) {
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+
+            when (val state = uiState) {
+                is PrinterSettingsViewModel.PrinterSettingsUiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No Printer available", style = MaterialTheme.typography.bodyMedium)
+                        CircularProgressIndicator()
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(state.printers) { printer ->
-                            MobileOptimizedCard(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = printer.printer_name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = printer.kitchen_cat.kitchen_cat_name,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = printer.ip_address,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                }
 
-                                    Row {
-                                        IconButton(onClick = { editingPrinter = printer }) {
-                                            Icon(Icons.Default.Edit,
-                                                contentDescription = "Edit",
-                                                tint = BluePrimary)
-                                        }
-                                        IconButton(onClick = { printerToDelete = printer }) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.error
+                is PrinterSettingsViewModel.PrinterSettingsUiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Error: ${state.message}")
+                    }
+                }
+
+                is PrinterSettingsViewModel.PrinterSettingsUiState.Success -> {
+                    if (state.printers.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No Printer available", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(state.printers) { printer ->
+                                MobileOptimizedCard(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = printer.printer_name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Medium
                                             )
+                                            Text(
+                                                text = printer.kitchen_cat.kitchen_cat_name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = printer.ip_address,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Row {
+                                            IconButton(onClick = { editingPrinter = printer }) {
+                                                Icon(
+                                                    Icons.Default.Edit,
+                                                    contentDescription = "Edit",
+                                                    tint = BluePrimary
+                                                )
+                                            }
+                                            IconButton(onClick = { printerToDelete = printer }) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = "Delete",
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
                                         }
                                     }
                                 }

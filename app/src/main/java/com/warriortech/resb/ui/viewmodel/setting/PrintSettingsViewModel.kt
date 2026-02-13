@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.local.dao.PrintTemplateDao
 import com.warriortech.resb.data.local.entity.PrintTemplateEntity
+import com.warriortech.resb.network.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,8 @@ import kotlinx.coroutines.flow.flowOf
 
 @HiltViewModel
 class PrintSettingsViewModel @Inject constructor(
-    private val printTemplateDao: PrintTemplateDao
+    private val printTemplateDao: PrintTemplateDao,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _templates = MutableStateFlow<List<PrintTemplateEntity>>(emptyList())
@@ -36,6 +38,9 @@ class PrintSettingsViewModel @Inject constructor(
 
     private val _sectionsLine = MutableStateFlow<List<PrintTemplateLineEntity>>(emptyList())
     val sectionsLine = _sectionsLine.asStateFlow()
+
+    private val _printerType = MutableStateFlow(sessionManager.getPrinterType())
+    val printerType: StateFlow<String> = _printerType.asStateFlow()
 
     init {
         loadTemplates()
@@ -204,5 +209,10 @@ class PrintSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             printTemplateDao.insertPlatformOverride(override)
         }
+    }
+
+    fun savePrinterType(type: String) {
+        sessionManager.savePrinterType(type)
+        _printerType.value = type
     }
 }

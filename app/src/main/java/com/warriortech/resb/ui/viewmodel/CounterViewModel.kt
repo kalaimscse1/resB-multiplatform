@@ -339,7 +339,7 @@ class CounterViewModel @Inject constructor(
                                         discount = response.disc_amt,
                                         roundOff = response.round_off,
                                         total = response.grand_total,
-                                        paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 80 else 80,
+                                        paperWidth = sessionManager.getPaperWidth(),
                                         received_amt = response.received_amt,
                                         pending_amt = response.pending_amt
                                     )

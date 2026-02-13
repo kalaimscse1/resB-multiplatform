@@ -324,6 +324,7 @@ fun resolvePreviewValue(key: String, bill: Bill, item: BillItem?, sessionManager
     val profile = sessionManager.getRestaurantProfile()
     val settings = sessionManager.getGeneralSetting()
     val cleanKey = key.uppercase().trim()
+    val charWidth = if (sessionManager.getPaperWidth() == 58) 32 else 48
     
     return when {
         cleanKey == "BUSINESS NAME" || cleanKey == "RESTAURANT NAME" || cleanKey == "COMPANY VALUE" -> profile?.company_name ?: ""
@@ -356,8 +357,8 @@ fun resolvePreviewValue(key: String, bill: Bill, item: BillItem?, sessionManager
         cleanKey == "AMT VALUE" -> String.format("%.2f", item?.amount ?: 0.0)
         cleanKey == "SN" -> item?.sn?.toString() ?: ""
         cleanKey == "FOOTER" || cleanKey == "BILL FOOTER" || cleanKey == "THANK VALUE" -> settings?.bill_footer ?: ""
-        cleanKey == "SEPARATOR" -> "--------------------------------"
-        cleanKey == "DOUBLE_SEPARATOR" -> "================================"
+        cleanKey == "SEPARATOR" -> "-".repeat(charWidth)
+        cleanKey == "DOUBLE_SEPARATOR" -> "=".repeat(charWidth)
         key.startsWith("FIXED:") -> key.removePrefix("FIXED:")
         else -> key
     }

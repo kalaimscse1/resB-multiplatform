@@ -264,7 +264,7 @@ class KotViewModel @Inject constructor(
         }
 
     }
-
+    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     fun reprint(): ApiResponse<Boolean> {
         var data = false
         var msg = ""
@@ -296,7 +296,7 @@ class KotViewModel @Inject constructor(
                         waiterName = _kot.value?.staff_name,
                         items = items,
                         orderCreatedAt = "${_kot.value?.order_date} + ${_kot.value?.order_create_time}",
-                        paperWidth = 48,
+                        paperWidth = sessionManager.getPaperWidth(),
                         modify = "REPRINT",
                         kottype= _kot.value?.order_type?:""
                     )
@@ -320,7 +320,7 @@ class KotViewModel @Inject constructor(
         }
         return ApiResponse(data = data, message = msg, success = true)
     }
-
+    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     fun modify(): ApiResponse<Boolean> {
         var data = false
         var msg = ""
@@ -342,7 +342,7 @@ class KotViewModel @Inject constructor(
                 tableStatus = if (table != "--") "TAKEAWAY" else "TABLE"
             ).collect { result ->
                 result.fold(
-                    onSuccess = { order ->
+                    onSuccess =  { order ->
                         val orderItems = _billedItems.value.entries.map { (menuItem, quantity) ->
                             OrderItem(
                                 quantity = quantity,
@@ -370,7 +370,7 @@ class KotViewModel @Inject constructor(
                                     waiterName = _kot.value?.staff_name,
                                     items = items,
                                     orderCreatedAt = "${_kot.value?.order_date} + ${_kot.value?.order_create_time}",
-                                    paperWidth = 48,
+                                    paperWidth = sessionManager.getPaperWidth(),
                                     modify = "MODIFIED",
                                     kottype= _kot.value?.order_type?:""
                                 )
