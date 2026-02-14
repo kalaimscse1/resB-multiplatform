@@ -378,7 +378,7 @@ class MenuViewModel @Inject constructor(
                         waiterName = orderId.waiterName,
                         items = items,
                         orderCreatedAt = orderId.orderCreatedAt,
-                        paperWidth = orderId.paperWidth,
+                        paperWidth = sessionManager.getPaperWidth(),
                         kottype =  orderId.kottype
                     )
                     val ip = orderRepository.getIpAddress(category)

@@ -212,7 +212,7 @@ class PaidBillsViewModel @Inject constructor(
                     discount = bill?.disc_amt ?: 0.0,
                     roundOff = bill?.round_off ?: 0.0,
                     total = bill?.grand_total ?: 0.0,
-                    paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 58 else 80,
+                    paperWidth = sessionManager.getPaperWidth(),
                     received_amt = bill?.received_amt ?: 0.0,
                     pending_amt = bill?.pending_amt?:0.0
                 )
@@ -342,7 +342,7 @@ class PaidBillsViewModel @Inject constructor(
                     discount = bill.disc_amt,
                     roundOff = bill.round_off,
                     total = bill.grand_total,
-                    paperWidth = if(sessionManager.getBluetoothPrinter() !=null) 58 else 80,
+                    paperWidth = sessionManager.getPaperWidth(),
                     received_amt = bill.received_amt,
                     pending_amt = bill.pending_amt
                 )

@@ -2,7 +2,6 @@ package com.warriortech.resb.ui.components
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.graphics.Color
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -18,6 +17,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,16 +39,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.warriortech.resb.ui.theme.PrimaryGreen
+import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.util.getDeviceInfo
 import com.warriortech.resb.util.getScreenSizeInfo
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -316,8 +312,8 @@ fun MobileOptimizedButton(
     } else {
         if (enabled) {
             listOf(
-                MaterialTheme.colorScheme.surface,
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
             )
         } else {
             listOf(
@@ -331,16 +327,16 @@ fun MobileOptimizedButton(
         modifier = modifier
             .fillMaxWidth()
             .height(buttonHeight)
-//            .shadow(
-//                elevation = if (enabled) 8.dp else 0.dp,
-//                shape = RoundedCornerShape(cornerRadius),
-//                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-//            )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(brush = Brush.verticalGradient(gradientColors))
+            .background(SurfaceLight)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(gradientColors),
+                shape = RoundedCornerShape(cornerRadius)
+            )
             .clickable(
                 enabled = enabled && !isLoading,
-                indication = ripple(color = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary),
+                indication = ripple(color = if (isPrimary) PrimaryGreen else MaterialTheme.colorScheme.primary),
                 interactionSource = remember { MutableInteractionSource() }
             ) { if (!isLoading) onClick() },
         contentAlignment = Alignment.Center
@@ -348,7 +344,7 @@ fun MobileOptimizedButton(
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
-                color = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                color = if (isPrimary) PrimaryGreen else MaterialTheme.colorScheme.primary,
                 strokeWidth = 2.dp
             )
         } else {
@@ -360,15 +356,15 @@ fun MobileOptimizedButton(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                        tint = if (isPrimary) PrimaryGreen else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(if (screenInfo.isExpanded) 24.dp else 20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
                     text = text,
-                    color = if (isPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.labelLarge.copy(
+                        brush = Brush.verticalGradient(gradientColors),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = fontSize
                     ),

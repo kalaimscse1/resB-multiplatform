@@ -37,17 +37,19 @@ data class MergeTable(
 )
 data class TableStatusResponse(
     var table_id: Long,
-    var area_id: Long,
-    var area_name: String,
-    var table_name: String,
-    var seating_capacity: Long,
-    var is_ac: String,
-    var table_status: String,
-    var table_availability: String,
-    var is_active: Boolean,
-    var grandTotal: Double,
+    var area_id:Long,
+    var area_name:String,
+    var table_name:String,
+    var seating_capacity:Long,
+    var is_ac:String,
+    var table_status:String,
+    var table_availability:String,
+    var is_active:Boolean,
+    var grandTotal:Double,
     var staff_name:String,
     var order_time:String,
     var bill_no:String,
-    var order_master_id:String
+    var order_master_id:String,
+    var delivery_amt:Double,
+    var disc_amt:Double
 )

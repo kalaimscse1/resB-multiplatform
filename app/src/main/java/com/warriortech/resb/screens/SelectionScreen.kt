@@ -483,7 +483,7 @@ fun TableItem(
                                 textAlign = TextAlign.Start,
                                 modifier = Modifier.weight(1f)
                             )
-                            Text("₹${table.grandTotal.toInt()}",
+                            Text("₹${table.grandTotal + table.delivery_amt - table.disc_amt}",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                                 color = if(table.bill_no.isEmpty()) ErrorRed else BluePrimary,
                                 textAlign = TextAlign.End,
