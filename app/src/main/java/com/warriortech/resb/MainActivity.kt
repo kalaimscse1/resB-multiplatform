@@ -124,14 +124,27 @@ class MainActivity : ComponentActivity() {
                 val drawerWidth = when {
                     isTablet -> if (isCollapsed.value) 80.dp else 320.dp
                     isLargeScreen -> if (isCollapsed.value) 72.dp else 280.dp
-                    isLandscape -> if (isCollapsed.value) 72.dp else (screenWidth * 0.6f).dp.coerceAtMost(300.dp)
-                    else -> if (isCollapsed.value) 72.dp else (screenWidth * 0.8f).dp.coerceAtMost(300.dp)
-                }
-                val animatedDrawerWidth by animateDpAsState(targetValue = drawerWidth, label = "drawerWidth")
+                    isLandscape -> if (isCollapsed.value) 72.dp else (screenWidth * 0.6f).dp.coerceAtMost(
+                        300.dp
+                    )
 
-                val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-                val showDrawer = currentRoute != null && currentRoute !in listOf("login", "splash", "registration")
-                
+                    else -> if (isCollapsed.value) 72.dp else (screenWidth * 0.8f).dp.coerceAtMost(
+                        300.dp
+                    )
+                }
+                val animatedDrawerWidth by animateDpAsState(
+                    targetValue = drawerWidth,
+                    label = "drawerWidth"
+                )
+
+                val currentRoute =
+                    navController.currentBackStackEntryAsState().value?.destination?.route
+                val showDrawer = currentRoute != null && currentRoute !in listOf(
+                    "login",
+                    "splash",
+                    "registration"
+                )
+
                 val drawerContent = @Composable {
                     DrawerContent(
                         isCollapsed = isCollapsed.value,
@@ -141,10 +154,15 @@ class MainActivity : ComponentActivity() {
                             scope.launch { drawerState.close() }
                             if (route == "logout") {
                                 scope.launch {
-                                    val sharedPref = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
+                                    val sharedPref =
+                                        context.getSharedPreferences("user_prefs", MODE_PRIVATE)
                                     sessionManager.saveUserLogin(false)
                                     sharedPref.edit { clear() }
-                                    Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Logged out successfully",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                     navController.navigate("login") {
                                         popUpTo(0) { inclusive = true }
                                         launchSingleTop = true
@@ -152,7 +170,9 @@ class MainActivity : ComponentActivity() {
                                 }
                             } else {
                                 navController.navigate(route) {
-                                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        inclusive = false
+                                    }
                                     launchSingleTop = true
                                 }
                             }
@@ -221,9 +241,17 @@ fun AppNavigation(
                     val isLoggedInPref = sessionManager.getUserLogin()
                     if (isLoggedInPref) {
                         if (sessionManager.getUser()?.role == "WAITER") {
-                            navController.navigate("selects") { popUpTo("splash") { inclusive = true } }
+                            navController.navigate("selects") {
+                                popUpTo("splash") {
+                                    inclusive = true
+                                }
+                            }
                         } else {
-                            navController.navigate("dashboard") { popUpTo("splash") { inclusive = true } }
+                            navController.navigate("dashboard") {
+                                popUpTo("splash") {
+                                    inclusive = true
+                                }
+                            }
                         }
                     } else {
                         navController.navigate("login") { popUpTo("splash") { inclusive = true } }
@@ -237,7 +265,11 @@ fun AppNavigation(
                     if (sessionManager.getUser()?.role == "WAITER") {
                         navController.navigate("selects") { popUpTo("splash") { inclusive = true } }
                     } else {
-                        navController.navigate("dashboard") { popUpTo("splash") { inclusive = true } }
+                        navController.navigate("dashboard") {
+                            popUpTo("splash") {
+                                inclusive = true
+                            }
+                        }
                     }
                 },
                 onRegisterClick = { navController.navigate("registration") },
@@ -280,7 +312,11 @@ fun AppNavigation(
                 tableId = 1L,
                 onBackPressed = { navController.popBackStack() },
                 onOrderPlaced = {
-                    navController.navigate("takeaway_menu") { popUpTo("takeaway_menu") { inclusive = true } }
+                    navController.navigate("takeaway_menu") {
+                        popUpTo("takeaway_menu") {
+                            inclusive = true
+                        }
+                    }
                     selectedTable = null
                 },
                 drawerState = drawerState,
@@ -300,7 +336,11 @@ fun AppNavigation(
                 tableId = 1L,
                 onBackPressed = { navController.popBackStack() },
                 onOrderPlaced = {
-                    navController.navigate("delivery_menu") { popUpTo("delivery_menu") { inclusive = true } }
+                    navController.navigate("delivery_menu") {
+                        popUpTo("delivery_menu") {
+                            inclusive = true
+                        }
+                    }
                     selectedTable = null
                 },
                 drawerState = drawerState,
@@ -328,7 +368,8 @@ fun AppNavigation(
         composable("payment_screen/{amountToPayFromRoute}/{orderId}/{bill_no}/{customerId}/{voucherType}") { entry ->
             PaymentScreen(
                 navController = navController,
-                amountToPayFromRoute = entry.arguments?.getString("amountToPayFromRoute")?.toDoubleOrNull() ?: 0.0,
+                amountToPayFromRoute = entry.arguments?.getString("amountToPayFromRoute")
+                    ?.toDoubleOrNull() ?: 0.0,
                 orderMasterId = entry.arguments?.getString("orderId") ?: "",
                 sessionManager = sessionManager,
                 billNo = entry.arguments?.getString("bill_no") ?: "",
@@ -337,13 +378,22 @@ fun AppNavigation(
                 orderDetailsResponse = selecteItems
             )
         }
-        composable("kitchen") { KitchenScreen(navController = navController, drawerState = drawerState) }
+        composable("kitchen") {
+            KitchenScreen(
+                navController = navController,
+                drawerState = drawerState
+            )
+        }
         composable("orders") {
             OrderScreen(
                 drawerState = drawerState,
                 onNavigateToBilling = { items, orderId ->
                     selectedItems = items
-                    navController.navigate("billing_screen/${orderId}") { popUpTo("orders") { inclusive = true } }
+                    navController.navigate("billing_screen/${orderId}") {
+                        popUpTo("orders") {
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
@@ -352,7 +402,11 @@ fun AppNavigation(
                 drawerState = drawerState,
                 onNavigateToBilling = { items, orderId ->
                     selectedItems = items
-                    navController.navigate("billing_screen/${orderId}") { popUpTo("orders") { inclusive = true } }
+                    navController.navigate("billing_screen/${orderId}") {
+                        popUpTo("orders") {
+                            inclusive = true
+                        }
+                    }
                 }
             )
         }
@@ -364,27 +418,87 @@ fun AppNavigation(
                 sessionManager = sessionManager
             )
         }
-        composable("area_setting") { AreaSettingsScreen(onBackPressed = { navController.popBackStack() }, drawerState = drawerState, navController = navController) }
-        composable("table_setting") { TableSettingsScreen(onBackPressed = { navController.popBackStack() }, drawerState = drawerState, navController = navController) }
-        composable("menu_setting") { MenuSettingsScreen(onBackPressed = { navController.popBackStack() }, drawerState = drawerState, navController = navController) }
-        composable("menu_item_setting") { MenuItemSettingsScreen(onBackPressed = { navController.popBackStack() }, sessionManager = sessionManager, drawerState = drawerState, navController = navController) }
-        composable("menu_Category_setting") { MenuCategorySettingsScreen(onBackPressed = { navController.popBackStack() }, drawerState = drawerState, navController = navController) }
-        composable("staff_setting") { StaffSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("customer_setting") { CustomerSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
+        composable("area_setting") {
+            AreaSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("table_setting") {
+            TableSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("menu_setting") {
+            MenuSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("menu_item_setting") {
+            MenuItemSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                sessionManager = sessionManager,
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("menu_Category_setting") {
+            MenuCategorySettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("staff_setting") {
+            StaffSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("customer_setting") {
+            CustomerSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
         composable("counter_selection") {
             CounterSelectionScreen(
                 onCounterSelected = { counter ->
-                    navController.navigate("counter/${counter.id}") { popUpTo("counter_selection") { inclusive = true } }
+                    navController.navigate("counter/${counter.id}") {
+                        popUpTo("counter_selection") {
+                            inclusive = true
+                        }
+                    }
                 },
                 drawerState = drawerState
             )
         }
         composable("counter/{counterId}") { backStackEntry ->
             val counterId = backStackEntry.arguments?.getString("counterId")?.toLongOrNull() ?: 1L
-            CounterScreen(onBackPressed = { navController.popBackStack() }, onProceedToBilling = { items, orderId -> selectedItems = items; navController.navigate("billing_screen/${orderId}") }, drawerState = drawerState, counterId = counterId, navController = navController)
+            CounterScreen(
+                onBackPressed = { navController.popBackStack() },
+                onProceedToBilling = { items, orderId ->
+                    selectedItems = items; navController.navigate("billing_screen/${orderId}")
+                },
+                drawerState = drawerState,
+                counterId = counterId,
+                navController = navController
+            )
         }
         composable("counter") {
-            CounterScreen(onBackPressed = { navController.popBackStack() }, onProceedToBilling = { items, orderId -> selectedItems = items; navController.navigate("billing_screen/${orderId}") }, drawerState = drawerState, navController = navController)
+            CounterScreen(
+                onBackPressed = { navController.popBackStack() },
+                onProceedToBilling = { items, orderId ->
+                    selectedItems = items; navController.navigate("billing_screen/${orderId}")
+                },
+                drawerState = drawerState,
+                navController = navController
+            )
         }
         composable("dashboard") {
             DashboardScreen(
@@ -392,65 +506,207 @@ fun AppNavigation(
                 onNavigateToOrders = { navController.navigate("orders") },
                 onNavigateToBilling = { navController.navigate("counter") },
                 onDineInSelected = { navController.navigate("selects") },
-                onTakeawaySelected = { isTakeaway = "TAKEAWAY"; selectedTable = null; navController.navigate("takeaway_menu") },
+                onTakeawaySelected = {
+                    isTakeaway = "TAKEAWAY"; selectedTable =
+                    null; navController.navigate("takeaway_menu")
+                },
                 sessionManager = sessionManager,
                 onQuickBill = { navController.navigate("quick_bills") },
                 onNavigateToDue = { navController.navigate("due") },
                 navController = navController
             )
         }
-        composable("reports") { ReportScreen(sessionManager = sessionManager, drawerState = drawerState) }
-        composable("registration") { RegistrationScreen(navController = navController, sessionManager = sessionManager) }
+        composable("reports") {
+            ReportScreen(
+                sessionManager = sessionManager,
+                drawerState = drawerState
+            )
+        }
+        composable("registration") {
+            RegistrationScreen(
+                navController = navController,
+                sessionManager = sessionManager
+            )
+        }
         composable("ai_assistant") { AIAssistantScreen(onBackPressed = { navController.popBackStack() }) }
         composable("language_setting") { LanguageSettingsScreen(navController = navController) }
-        composable("role_setting") { RoleSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("printer_setting") { PrinterSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("tax_setting") { TaxSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("tax_split_setting") { TaxSplitSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("restaurant_profile_setting") { RestaurantProfileScreen(onBackPressed = { navController.popBackStack() }, apiService = apiService, sessionManager = sessionManager, navController = navController) }
-        composable("general_settings") { GeneralSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("voucher_setting") { VoucherSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("counter_setting") { CounterSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable(route = "reset_data") { ResetScreen(onBackPressed = { navController.popBackStack() }, sessionManager = sessionManager, navController = navController) }
-        composable("quick_bills") { ItemWiseBillScreen(drawerState = drawerState, navController = navController, onProceedToBilling = { selecteItems = it }, sessionManager = sessionManager) }
-        composable("modifier_setting") { ModifierSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("item_wise") { ItemWiseReportScreen(sessionManager = sessionManager, drawerState = drawerState, navController = navController) }
-        composable("category_wise") { CategoryWiseReportScreen(sessionManager = sessionManager, drawerState = drawerState, navController = navController) }
-        composable("change_company") { ChangeCompanyScreen(onBackPressed = { navController.popBackStack() }, sessionManager = sessionManager, navController = navController) }
-        composable("support_screen") { SupportScreen(onBackPressed = { navController.popBackStack() }, drawerState = drawerState, navController = navController) }
+        composable("role_setting") {
+            RoleSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("printer_setting") {
+            PrinterSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("tax_setting") {
+            TaxSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("tax_split_setting") {
+            TaxSplitSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("restaurant_profile_setting") {
+            RestaurantProfileScreen(
+                onBackPressed = { navController.popBackStack() },
+                apiService = apiService,
+                sessionManager = sessionManager,
+                navController = navController
+            )
+        }
+        composable("general_settings") {
+            GeneralSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("voucher_setting") {
+            VoucherSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("counter_setting") {
+            CounterSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable(route = "reset_data") {
+            ResetScreen(
+                onBackPressed = { navController.popBackStack() },
+                sessionManager = sessionManager,
+                navController = navController
+            )
+        }
+        composable("quick_bills") {
+            ItemWiseBillScreen(
+                drawerState = drawerState,
+                navController = navController,
+                onProceedToBilling = { selecteItems = it },
+                sessionManager = sessionManager
+            )
+        }
+        composable("modifier_setting") {
+            ModifierSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("item_wise") {
+            ItemWiseReportScreen(
+                sessionManager = sessionManager,
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("category_wise") {
+            CategoryWiseReportScreen(
+                sessionManager = sessionManager,
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
+        composable("change_company") {
+            ChangeCompanyScreen(
+                onBackPressed = { navController.popBackStack() },
+                sessionManager = sessionManager,
+                navController = navController
+            )
+        }
+        composable("support_screen") {
+            SupportScreen(
+                onBackPressed = { navController.popBackStack() },
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
         composable("kot_report") {
             KotReportScreen(
-                onEditClick = { navController.navigate("kot_modify/${it.order_master_id}"); kotRes = it },
+                onEditClick = {
+                    navController.navigate("kot_modify/${it.order_master_id}"); kotRes = it
+                },
                 drawerState = drawerState
             )
         }
         composable("kot_modify/{orderId}") { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-            KotModifyScreen(navController = navController, orderMasterId = orderId, kotResponse = kotRes)
+            KotModifyScreen(
+                navController = navController,
+                orderMasterId = orderId,
+                kotResponse = kotRes
+            )
         }
-        composable("unit_setting") { UnitSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("kitchen_category_setting") { KitchenCategorySettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("voucher_type_setting") { VoucherTypeSettingsScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
-        composable("change_password") { ChangePasswordScreen(onBackPressed = { navController.popBackStack() }, navController = navController) }
+        composable("unit_setting") {
+            UnitSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("kitchen_category_setting") {
+            KitchenCategorySettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("voucher_type_setting") {
+            VoucherTypeSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
+        composable("change_password") {
+            ChangePasswordScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
         composable("paid_bills") { PaidBillsScreen(navController = navController) }
         composable("bill_edit/{bill_no}") { backStackEntry ->
             val billNo = backStackEntry.arguments?.getString("bill_no") ?: ""
             BillEditScreen(navController = navController, billNo = billNo)
         }
         composable("due") { UnpaidBillsScreen(navController = navController) }
-        composable("quick_bill") { QuickBillScreen(navController = navController, orderDetailsResponse = selecteItems) }
+        composable("quick_bill") {
+            QuickBillScreen(
+                navController = navController,
+                orderDetailsResponse = selecteItems
+            )
+        }
         composable("hsn_reports") { HsnReportScreen(drawerState = drawerState) }
         composable("gstR_Docs") { GSTRReportScreen(drawerState = drawerState) }
         composable("group_screen") { GroupScreen(drawerState = drawerState) }
         composable("ledger_screen") { LedgerScreen(drawerState = drawerState) }
-        composable("day_entry") { DayEntryScreen(drawerState = drawerState, navController = navController) }
+        composable("day_entry") {
+            DayEntryScreen(
+                drawerState = drawerState,
+                navController = navController
+            )
+        }
         composable("day_entry_report") { DayEntryReportScreen(drawerState = drawerState) }
         composable("modify_day_entry/{entry_no}") { backStackEntry ->
             val entryNo = backStackEntry.arguments?.getString("entry_no") ?: ""
-            DayEntryModifyScreen(drawerState = drawerState, navController = navController, entryNo = entryNo.trim().replace(Regex("[^a-zA-Z0-9_-]"), ""))
+            DayEntryModifyScreen(
+                drawerState = drawerState,
+                navController = navController,
+                entryNo = entryNo.trim().replace(Regex("[^a-zA-Z0-9_-]"), "")
+            )
         }
         composable("day_book_report") { DayBookReportScreen(drawerState = drawerState) }
-        composable("bluetooth") { BluetoothPrinterScreen(sessionManager = sessionManager, navController = navController) }
+        composable("bluetooth") {
+            BluetoothPrinterScreen(
+                sessionManager = sessionManager,
+                navController = navController
+            )
+        }
     }
 }
 
@@ -554,23 +810,110 @@ fun DrawerContent(
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("Masters") },
                         icon = { DrawerIcon(Icons.Filled.Inventory, null, isCollapsed) },
-                        selected = currentDestination?.route in listOf("menu_item_setting", "menu_setting", "menu_Category_setting", "table_setting", "area_setting", "group_screen", "ledger_screen"),
+                        selected = currentDestination?.route in listOf(
+                            "menu_item_setting",
+                            "menu_setting",
+                            "menu_Category_setting",
+                            "table_setting",
+                            "area_setting",
+                            "group_screen",
+                            "ledger_screen"
+                        ),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.MASTERS) ExpandedMenu.NONE else ExpandedMenu.MASTERS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                         colors = drawerItemColors
                     )
                     AnimatedVisibility(expandedMenu == ExpandedMenu.MASTERS) {
                         Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Menu Items") }, icon = { DrawerIcon(Icons.Default.Restaurant, null, isCollapsed) }, selected = currentDestination?.route == "menu_item_setting", onClick = { onDestinationClicked("menu_item_setting") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Menu Chart") }, icon = { DrawerIcon(Icons.AutoMirrored.Filled.MenuBook, null, isCollapsed) }, selected = currentDestination?.route == "menu_setting", onClick = { onDestinationClicked("menu_setting") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Menu Categories") }, icon = { DrawerIcon(Icons.Default.Category, null, isCollapsed) }, selected = currentDestination?.route == "menu_Category_setting", onClick = { onDestinationClicked("menu_Category_setting") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Menu Items") },
+                                icon = { DrawerIcon(Icons.Default.Restaurant, null, isCollapsed) },
+                                selected = currentDestination?.route == "menu_item_setting",
+                                onClick = { onDestinationClicked("menu_item_setting") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Menu Chart") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.AutoMirrored.Filled.MenuBook,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "menu_setting",
+                                onClick = { onDestinationClicked("menu_setting") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Menu Categories") },
+                                icon = { DrawerIcon(Icons.Default.Category, null, isCollapsed) },
+                                selected = currentDestination?.route == "menu_Category_setting",
+                                onClick = { onDestinationClicked("menu_Category_setting") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
                             if (sessionManager.getGeneralSetting()?.is_table_allowed == true) {
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Tables") }, icon = { DrawerIcon(Icons.Default.TableRestaurant, null, isCollapsed) }, selected = currentDestination?.route == "table_setting", onClick = { onDestinationClicked("table_setting") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Areas") }, icon = { DrawerIcon(Icons.Default.LocationOn, null, isCollapsed) }, selected = currentDestination?.route == "area_setting", onClick = { onDestinationClicked("area_setting") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Tables") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.TableRestaurant,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "table_setting",
+                                    onClick = { onDestinationClicked("table_setting") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Areas") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.LocationOn,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "area_setting",
+                                    onClick = { onDestinationClicked("area_setting") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
                             }
                             if (sessionManager.getGeneralSetting()?.is_accounts == true) {
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Ledger") }, icon = { DrawerIcon(Icons.Default.AccountBalance, null, isCollapsed) }, selected = currentDestination?.route == "ledger_screen", onClick = { onDestinationClicked("ledger_screen") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Account Group") }, icon = { DrawerIcon(Icons.Default.Exposure, null, isCollapsed) }, selected = currentDestination?.route == "group_screen", onClick = { onDestinationClicked("group_screen") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Ledger") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.AccountBalance,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "ledger_screen",
+                                    onClick = { onDestinationClicked("ledger_screen") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Account Group") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.Exposure,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "group_screen",
+                                    onClick = { onDestinationClicked("group_screen") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
                             }
                         }
                     }
@@ -588,10 +931,43 @@ fun DrawerContent(
                     AnimatedVisibility(expandedMenu == ExpandedMenu.ORDERS) {
                         Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
                             if (sessionManager.getGeneralSetting()?.is_table_allowed == true) {
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Dine In") }, icon = { DrawerIcon(Icons.Default.Restaurant, null, isCollapsed) }, selected = currentDestination?.route == "selects", onClick = { onDestinationClicked("selects") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Dine In") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.Restaurant,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "selects",
+                                    onClick = { onDestinationClicked("selects") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
                             }
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Takeaway") }, icon = { DrawerIcon(Icons.Default.Fastfood, null, isCollapsed) }, selected = currentDestination?.route == "takeaway_menu", onClick = { onDestinationClicked("takeaway_menu") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Delivery") }, icon = { DrawerIcon(Icons.Default.DeliveryDining, null, isCollapsed) }, selected = currentDestination?.route == "delivery_menu", onClick = { onDestinationClicked("delivery_menu") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Takeaway") },
+                                icon = { DrawerIcon(Icons.Default.Fastfood, null, isCollapsed) },
+                                selected = currentDestination?.route == "takeaway_menu",
+                                onClick = { onDestinationClicked("takeaway_menu") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Delivery") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.Default.DeliveryDining,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "delivery_menu",
+                                onClick = { onDestinationClicked("delivery_menu") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
                         }
                     }
                 }
@@ -608,7 +984,20 @@ fun DrawerContent(
                         )
                         AnimatedVisibility(expandedMenu == ExpandedMenu.ACCOUNTSENTRY) {
                             Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Day Entry") }, icon = { DrawerIcon(Icons.Default.AccountCircle, null, isCollapsed) }, selected = currentDestination?.route == "day_entry", onClick = { onDestinationClicked("day_entry") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Day Entry") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.Default.AccountCircle,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "day_entry",
+                                    onClick = { onDestinationClicked("day_entry") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
                             }
                         }
                     }
@@ -623,8 +1012,22 @@ fun DrawerContent(
                     )
                     AnimatedVisibility(expandedMenu == ExpandedMenu.BILLING) {
                         Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Counter Billing") }, icon = { DrawerIcon(Icons.Default.PointOfSale, null, isCollapsed) }, selected = currentDestination?.route == "counter", onClick = { onDestinationClicked("counter") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Quick Bills") }, icon = { DrawerIcon(Icons.Default.Bolt, null, isCollapsed) }, selected = currentDestination?.route == "quick_bills", onClick = { onDestinationClicked("quick_bills") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Counter Billing") },
+                                icon = { DrawerIcon(Icons.Default.PointOfSale, null, isCollapsed) },
+                                selected = currentDestination?.route == "counter",
+                                onClick = { onDestinationClicked("counter") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Quick Bills") },
+                                icon = { DrawerIcon(Icons.Default.Bolt, null, isCollapsed) },
+                                selected = currentDestination?.route == "quick_bills",
+                                onClick = { onDestinationClicked("quick_bills") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
                         }
                     }
                 }
@@ -633,26 +1036,102 @@ fun DrawerContent(
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("Reports") },
                         icon = { DrawerIcon(Icons.Default.Assessment, null, isCollapsed) },
-                        selected = currentDestination?.route in listOf("reports", "orders", "item_wise", "category_wise", "due", "kot_report", "paid_bills"),
+                        selected = currentDestination?.route in listOf(
+                            "reports",
+                            "orders",
+                            "item_wise",
+                            "category_wise",
+                            "due",
+                            "kot_report",
+                            "paid_bills"
+                        ),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.REPORTS) ExpandedMenu.NONE else ExpandedMenu.REPORTS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                         colors = drawerItemColors
                     )
                     AnimatedVisibility(expandedMenu == ExpandedMenu.REPORTS) {
                         Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Orders") }, icon = { DrawerIcon(Icons.Default.Receipt, null, isCollapsed) }, selected = currentDestination?.route == "orders", onClick = { onDestinationClicked("orders") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Paid Bills") }, icon = { DrawerIcon(Icons.AutoMirrored.Filled.ListAlt, null, isCollapsed) }, selected = currentDestination?.route == "paid_bills", onClick = { onDestinationClicked("paid_bills") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Due") }, icon = { Icon(Icons.Filled.Payment, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(if (isCollapsed) 50.dp else 24.dp)) }, selected = currentDestination?.route == "due", onClick = { onDestinationClicked("due") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Sales") }, icon = { DrawerIcon(Icons.Default.Assessment, null, isCollapsed) }, selected = currentDestination?.route == "reports", onClick = { onDestinationClicked("reports") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Item Wise") }, icon = { DrawerIcon(Icons.Default.Restaurant, null, isCollapsed) }, selected = currentDestination?.route == "item_wise", onClick = { onDestinationClicked("item_wise") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("Category Wise") }, icon = { DrawerIcon(Icons.Default.Category, null, isCollapsed) }, selected = currentDestination?.route == "category_wise", onClick = { onDestinationClicked("category_wise") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("KOT Report") }, icon = { DrawerIcon(Icons.Default.Kitchen, null, isCollapsed) }, selected = currentDestination?.route == "kot_report", onClick = { onDestinationClicked("kot_report") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Orders") },
+                                icon = { DrawerIcon(Icons.Default.Receipt, null, isCollapsed) },
+                                selected = currentDestination?.route == "orders",
+                                onClick = { onDestinationClicked("orders") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Paid Bills") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.AutoMirrored.Filled.ListAlt,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "paid_bills",
+                                onClick = { onDestinationClicked("paid_bills") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Due") },
+                                icon = {
+                                    Icon(
+                                        Icons.Filled.Payment,
+                                        null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(if (isCollapsed) 50.dp else 24.dp)
+                                    )
+                                },
+                                selected = currentDestination?.route == "due",
+                                onClick = { onDestinationClicked("due") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Sales") },
+                                icon = { DrawerIcon(Icons.Default.Assessment, null, isCollapsed) },
+                                selected = currentDestination?.route == "reports",
+                                onClick = { onDestinationClicked("reports") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Item Wise") },
+                                icon = { DrawerIcon(Icons.Default.Restaurant, null, isCollapsed) },
+                                selected = currentDestination?.route == "item_wise",
+                                onClick = { onDestinationClicked("item_wise") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Category Wise") },
+                                icon = { DrawerIcon(Icons.Default.Category, null, isCollapsed) },
+                                selected = currentDestination?.route == "category_wise",
+                                onClick = { onDestinationClicked("category_wise") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("KOT Report") },
+                                icon = { DrawerIcon(Icons.Default.Kitchen, null, isCollapsed) },
+                                selected = currentDestination?.route == "kot_report",
+                                onClick = { onDestinationClicked("kot_report") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
                         }
                     }
 
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("GST Reports") },
-                        icon = { DrawerIcon(Icons.AutoMirrored.Filled.ReceiptLong, null, isCollapsed) },
+                        icon = {
+                            DrawerIcon(
+                                Icons.AutoMirrored.Filled.ReceiptLong,
+                                null,
+                                isCollapsed
+                            )
+                        },
                         selected = currentDestination?.route in listOf("hsn_reports", "gstR_Docs"),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.GSTREPORTS) ExpandedMenu.NONE else ExpandedMenu.GSTREPORTS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
@@ -660,24 +1139,85 @@ fun DrawerContent(
                     )
                     AnimatedVisibility(expandedMenu == ExpandedMenu.GSTREPORTS) {
                         Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("HSN Reports") }, icon = { DrawerIcon(Icons.AutoMirrored.Filled.ListAlt, null, isCollapsed) }, selected = currentDestination?.route == "hsn_reports", onClick = { onDestinationClicked("hsn_reports") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                            NavigationDrawerItem(label = { if (!isCollapsed) Text("GSTR-Docs") }, icon = { DrawerIcon(Icons.AutoMirrored.Filled.ReceiptLong, null, isCollapsed) }, selected = currentDestination?.route == "gstR_Docs", onClick = { onDestinationClicked("gstR_Docs") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("HSN Reports") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.AutoMirrored.Filled.ListAlt,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "hsn_reports",
+                                onClick = { onDestinationClicked("hsn_reports") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("GSTR-Docs") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.AutoMirrored.Filled.ReceiptLong,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "gstR_Docs",
+                                onClick = { onDestinationClicked("gstR_Docs") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
                         }
                     }
 
                     if (sessionManager.getGeneralSetting()?.is_accounts == true) {
                         NavigationDrawerItem(
                             label = { if (!isCollapsed) Text("Accounts Reports") },
-                            icon = { DrawerIcon(Icons.AutoMirrored.Filled.ReceiptLong, null, isCollapsed) },
-                            selected = currentDestination?.route in listOf("day_entry_report", "day_book_report"),
+                            icon = {
+                                DrawerIcon(
+                                    Icons.AutoMirrored.Filled.ReceiptLong,
+                                    null,
+                                    isCollapsed
+                                )
+                            },
+                            selected = currentDestination?.route in listOf(
+                                "day_entry_report",
+                                "day_book_report"
+                            ),
                             onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.ACCOUNTSREPORT) ExpandedMenu.NONE else ExpandedMenu.ACCOUNTSREPORT) },
                             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                             colors = drawerItemColors
                         )
                         AnimatedVisibility(expandedMenu == ExpandedMenu.ACCOUNTSREPORT) {
                             Column(modifier = Modifier.padding(start = if (!isCollapsed) 32.dp else 0.dp)) {
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Ledger Report") }, icon = { DrawerIcon(Icons.AutoMirrored.Filled.ListAlt, null, isCollapsed) }, selected = currentDestination?.route == "day_entry_report", onClick = { onDestinationClicked("day_entry_report") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
-                                NavigationDrawerItem(label = { if (!isCollapsed) Text("Day Book Report") }, icon = { DrawerIcon(Icons.AutoMirrored.Filled.ReceiptLong, null, isCollapsed) }, selected = currentDestination?.route == "day_book_report", onClick = { onDestinationClicked("day_book_report") }, modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding), colors = subMenuColors)
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Ledger Report") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.AutoMirrored.Filled.ListAlt,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "day_entry_report",
+                                    onClick = { onDestinationClicked("day_entry_report") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
+                                NavigationDrawerItem(
+                                    label = { if (!isCollapsed) Text("Day Book Report") },
+                                    icon = {
+                                        DrawerIcon(
+                                            Icons.AutoMirrored.Filled.ReceiptLong,
+                                            null,
+                                            isCollapsed
+                                        )
+                                    },
+                                    selected = currentDestination?.route == "day_book_report",
+                                    onClick = { onDestinationClicked("day_book_report") },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = subMenuColors
+                                )
                             }
                         }
                     }
@@ -708,7 +1248,13 @@ fun DrawerContent(
 
                 NavigationDrawerItem(
                     label = { if (!isCollapsed) Text("Collapse Drawer") },
-                    icon = { DrawerIcon(if (isCollapsed) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Toggle Collapse", isCollapsed) },
+                    icon = {
+                        DrawerIcon(
+                            if (isCollapsed) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            "Toggle Collapse",
+                            isCollapsed
+                        )
+                    },
                     selected = false,
                     onClick = onCollapseToggle,
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),

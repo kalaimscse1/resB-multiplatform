@@ -1,3 +1,7 @@
+import java.util.Properties
+import java.io.FileInputStream
+import java.io.FileOutputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +9,30 @@ plugins {
     alias(libs.plugins.dagger.hilt)
     alias(libs.plugins.kotlin.ksp)
 }
+
+val versionPropsFile = file("${project.rootDir}/version.properties")
+
+fun loadVersionProps(): Properties {
+    val props = Properties()
+    if (versionPropsFile.exists()) {
+        props.load(FileInputStream(versionPropsFile))
+    } else {
+        props["major"] = "1"
+        props["minor"] = "0"
+        props["patch"] = "0"
+        props["build"] = "1"
+    }
+    return props
+}
+
+val versionProps = loadVersionProps()
+val major = versionProps["major"]?.toString()?.toInt() ?: 1
+val minor = versionProps["minor"]?.toString()?.toInt() ?: 0
+val patch = versionProps["patch"]?.toString()?.toInt() ?: 0
+val build = versionProps["build"]?.toString()?.toInt() ?: 1
+
+val computedVersionCode = major * 10000 + minor * 1000 + patch * 100 + build
+val computedVersionName = "$major.$minor.$patch.$build"
 
 android {
     namespace = "com.warriortech.resb"
@@ -14,8 +42,8 @@ android {
         applicationId = "com.warriortech.resb"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = computedVersionCode
+        versionName = computedVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         javaCompileOptions {
@@ -74,6 +102,22 @@ android {
         checkDependencies = true
         abortOnError = true
         baseline = file("lint-baseline.xml")
+    }
+}
+
+tasks.register("incrementVersion") {
+    doLast {
+        val props = loadVersionProps()
+        val currentBuild = props["build"]?.toString()?.toInt() ?: 0
+        props["build"] = (currentBuild + 1).toString()
+        props.store(FileOutputStream(versionPropsFile), null)
+        println("Version incremented to build: ${props["build"]}")
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name == "assembleRelease" || name == "bundleRelease") {
+        dependsOn("incrementVersion")
     }
 }
 
