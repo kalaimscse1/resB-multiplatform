@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
@@ -1271,6 +1272,33 @@ fun DrawerContent(
                     onClick = { onDestinationClicked("logout") },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                     colors = drawerItemColors
+                )
+            }
+            // Copyright section at the bottom
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ModernDivider(modifier = Modifier.padding(bottom = 12.dp))
+                Text(
+                    text = "Powered by AllBillGo",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Miraking Software Technologies",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "© 2026 All Rights Reserved",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    fontSize = 10.sp
                 )
             }
         }

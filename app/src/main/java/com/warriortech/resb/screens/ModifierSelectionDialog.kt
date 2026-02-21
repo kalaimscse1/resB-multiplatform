@@ -24,16 +24,15 @@ fun ModifierSelectionDialog(
     onDismiss: () -> Unit
 ) {
     var currentSelectedModifiers by remember { mutableStateOf(selectedModifiers) }
-
-    val totalPrice = remember(currentSelectedModifiers) {
-        menuItem.rate + currentSelectedModifiers.sumOf { it.add_on_price }
+    var manualModifier by remember { 
+        mutableStateOf(selectedModifiers.find { it.add_on_id == -1L }?.add_on_name ?: "") 
     }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 500.dp),
+                .fillMaxHeight(0.8f),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -49,94 +48,16 @@ fun ModifierSelectionDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // AddOn List
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(availableModifiers) { modifier ->
-                        ModifierItem(
-                            modifier = modifier,
-                            isSelected = currentSelectedModifiers.contains(modifier),
-                            onSelectionChanged = { isSelected ->
-                                currentSelectedModifiers = if (isSelected) {
-                                    currentSelectedModifiers + modifier
-                                } else {
-                                    currentSelectedModifiers - modifier
-                                }
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-//
-//                // Total Price
-//                Text(
-//                    text = "Total: ₹%.2f".format(totalPrice),
-//                    style = MaterialTheme.typography.titleMedium,
-//                    fontWeight = FontWeight.Bold,
-//                    color = MaterialTheme.colorScheme.primary
-//                )
-//
-//                Spacer(modifier = Modifier.height(16.dp))
-
-                // Action Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    Button(
-                        onClick = {
-                            onModifiersSelected(currentSelectedModifiers)
-                            onDismiss()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Add to Order")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ModifierSelectionDialog(
-    availableModifiers: List<Modifiers>,
-    selectedModifiers: List<Modifiers>,
-    onModifiersSelected: (List<Modifiers>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var currentSelectedModifiers by remember { mutableStateOf(selectedModifiers) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.8f)
-                .padding(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Select AddOn",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                // Manual Input
+                OutlinedTextField(
+                    value = manualModifier,
+                    onValueChange = { manualModifier = it },
+                    label = { Text("Manual Instructions") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    placeholder = { Text("e.g. Less Spicy, No Onions") }
                 )
 
+                // AddOn List
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -158,6 +79,7 @@ fun ModifierSelectionDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -171,18 +93,36 @@ fun ModifierSelectionDialog(
 
                     Button(
                         onClick = {
-                            onModifiersSelected(currentSelectedModifiers)
-                            onDismiss()
+                            val finalModifiers = currentSelectedModifiers.toMutableList()
+                            if (manualModifier.isNotBlank()) {
+                                finalModifiers.add(
+                                    Modifiers(
+                                        add_on_id = -1L,
+                                        add_on_name = manualModifier,
+                                        add_on_price = 0.0,
+                                        item_cat = availableModifiers.firstOrNull()?.item_cat ?: menuItem.toFakeCategory()
+                                    )
+                                )
+                            }
+                            onModifiersSelected(finalModifiers)
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Apply")
+                        Text("Add to Order")
                     }
                 }
             }
         }
     }
 }
+
+// Helper to handle cases where item_cat is needed but not available
+fun TblMenuItemResponse.toFakeCategory() = com.warriortech.resb.model.MenuCategory(
+    item_cat_id = this.item_cat_id,
+    item_cat_name = this.item_cat_name,
+    order_by = "0",
+    is_active = true
+)
 
 @Composable
 private fun ModifierItem(
@@ -207,7 +147,7 @@ private fun ModifierItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
@@ -224,43 +164,12 @@ private fun ModifierItem(
                     fontWeight = FontWeight.Medium
                 )
 
-//                if (modifier.modifier_name_tamil.isNotEmpty()) {
-//                    Text(
-//                        text = modifier.modifier_name_tamil,
-//                        style = MaterialTheme.typography.bodyMedium,
-//                        color = MaterialTheme.colorScheme.onSurfaceVariant
-//                    )
-//                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-//                    val typeText = when (modifier.modifier_type) {
-//                        ModifierType.ADDITION -> "Addition"
-//                        ModifierType.REMOVAL -> "Remove"
-//                        ModifierType.SUBSTITUTION -> "Substitute"
-//                    }
-//
-//                    Text(
-//                        text = typeText,
-//                        style = MaterialTheme.typography.bodySmall,
-//                        color = MaterialTheme.colorScheme.secondary
-//                    )
-
-                    if (modifier.add_on_price != 0.0) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (modifier.add_on_price > 0)
-                                "+₹${modifier.add_on_price}"
-                            else
-                                "₹${modifier.add_on_price}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (modifier.add_on_price > 0)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.primary
-                        )
-                    }
+                if (modifier.add_on_price != 0.0) {
+                    Text(
+                        text = "+₹${modifier.add_on_price}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

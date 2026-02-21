@@ -245,6 +245,10 @@ class MenuViewModel @Inject constructor(
                 currentItems[menuItem] = currentQuantity - 1
             } else {
                 currentItems.remove(menuItem)
+                // Also clear modifiers if item is removed
+                val currentModifiers = _selectedModifiers.value.toMutableMap()
+                currentModifiers.remove(menuItem.menu_item_id)
+                _selectedModifiers.value = currentModifiers
             }
             _newselectedItems.value = currentItems
         } else {
@@ -254,6 +258,10 @@ class MenuViewModel @Inject constructor(
                 currentItems[menuItem] = currentQuantity - 1
             } else {
                 currentItems.remove(menuItem)
+                // Also clear modifiers if item is removed
+                val currentModifiers = _selectedModifiers.value.toMutableMap()
+                currentModifiers.remove(menuItem.menu_item_id)
+                _selectedModifiers.value = currentModifiers
             }
             _selectedItems.value = currentItems
         }
@@ -262,6 +270,7 @@ class MenuViewModel @Inject constructor(
     fun clearOrder() {
         _newselectedItems.value = mutableMapOf()
         _selectedItems.value = mutableMapOf()
+        _selectedModifiers.value = emptyMap()
         _isExistingOrderLoaded.value = false
         _orderState.value = OrderUiState.Idle
     }
@@ -396,6 +405,7 @@ class MenuViewModel @Inject constructor(
                                 _orderState.value = OrderUiState.Success(order)
 
                                 _selectedItems.value = emptyMap()
+                                _selectedModifiers.value = emptyMap()
                             },
                             onFailure = { error ->
                                 _orderState.value = OrderUiState.Error(
@@ -417,6 +427,7 @@ class MenuViewModel @Inject constructor(
                 _orderState.value = OrderUiState.Success(order)
 
                 _selectedItems.value = emptyMap()
+                _selectedModifiers.value = emptyMap()
             }
         }
     }
@@ -424,28 +435,36 @@ class MenuViewModel @Inject constructor(
     fun getOrderTotal(tableStatus: String): Double {
         return if (_isExistingOrderLoaded.value) {
             _selectedItems.value.entries.sumOf { (menuItem, quantity) ->
-                menuItem.actual_rate * quantity
+                val baseRate = menuItem.actual_rate
+                val modifiersRate = _selectedModifiers.value[menuItem.menu_item_id]?.sumOf { it.add_on_price } ?: 0.0
+                (baseRate + modifiersRate) * quantity
             }
         } else {
             _selectedItems.value.entries.sumOf { (menuItem, quantity) ->
-                if (tableStatus == "AC")
-                    menuItem.ac_rate * quantity
+                val baseRate = if (tableStatus == "AC")
+                    menuItem.ac_rate
                 else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY")
-                    menuItem.parcel_rate * quantity
+                    menuItem.parcel_rate
                 else
-                    menuItem.rate * quantity
+                    menuItem.rate
+                
+                val modifiersRate = _selectedModifiers.value[menuItem.menu_item_id]?.sumOf { it.add_on_price } ?: 0.0
+                (baseRate + modifiersRate) * quantity
             }
         }
     }
 
     fun getOrderNewTotal(tableStatus: String): Double {
         return _newselectedItems.value.entries.sumOf { (menuItem, quantity) ->
-            if (tableStatus == "AC")
-                menuItem.ac_rate * quantity
+            val baseRate = if (tableStatus == "AC")
+                menuItem.ac_rate
             else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY")
-                menuItem.parcel_rate * quantity
+                menuItem.parcel_rate
             else
-                menuItem.rate * quantity
+                menuItem.rate
+            
+            val modifiersRate = _selectedModifiers.value[menuItem.menu_item_id]?.sumOf { it.add_on_price } ?: 0.0
+            (baseRate + modifiersRate) * quantity
         }
     }
 
@@ -494,10 +513,26 @@ class MenuViewModel @Inject constructor(
     }
 
     fun addMenuItemWithModifiers(menuItem: TblMenuItemResponse, modifiers: List<Modifiers>) {
-        val currentItems = _selectedItems.value.toMutableMap()
-        val existingCount = currentItems[menuItem] ?: 0
-        currentItems[menuItem] = existingCount + 1
-        _selectedItems.value = currentItems
+        // Save modifiers
+        val currentModifiers = _selectedModifiers.value.toMutableMap()
+        currentModifiers[menuItem.menu_item_id] = modifiers
+        _selectedModifiers.value = currentModifiers
+
+        // Add item to order if not already there, or just trigger UI update
+        if (_isExistingOrderLoaded.value) {
+            val currentItems = _newselectedItems.value.toMutableMap()
+            if (!currentItems.containsKey(menuItem)) {
+                currentItems[menuItem] = 1
+            }
+            _newselectedItems.value = currentItems
+        } else {
+            val currentItems = _selectedItems.value.toMutableMap()
+            if (!currentItems.containsKey(menuItem)) {
+                currentItems[menuItem] = 1
+            }
+            _selectedItems.value = currentItems
+        }
+
         hideModifierDialog()
     }
 
