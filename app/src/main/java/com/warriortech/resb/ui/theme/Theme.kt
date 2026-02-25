@@ -17,7 +17,7 @@ val MontserratFontFamily = FontFamily(
     Font(R.font.montserrat_regular, FontWeight.Normal),
     Font(R.font.montserrat_bold, FontWeight.Bold)
 )
-
+const val system_background_light = 17170538
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryBlue,
     onPrimary = Color.White,
@@ -33,7 +33,8 @@ private val LightColorScheme = lightColorScheme(
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
     onErrorContainer = Color(0xFF410002),
-    background = Color.White,
+    background = Color(system_background_light
+    ),
     onBackground = TextPrimary,
     surface = SurfaceLight,
     onSurface = TextPrimary,

@@ -58,6 +58,7 @@ val Divider = Color(0xFFE5E7EB)
 
 // Optional shadows
 val CardShadow = Color(0x1F000000)
+val lightGrey = Color(0xFF918F8F)
 
 val Black = Color(0xFF000000)
 val PinkPrimary = Color(0xFFFF4081)

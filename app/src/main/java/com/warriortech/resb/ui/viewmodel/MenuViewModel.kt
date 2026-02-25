@@ -267,6 +267,34 @@ class MenuViewModel @Inject constructor(
         }
     }
 
+    fun updateItemQuantity(menuItem: TblMenuItemResponse, newQty: Int) {
+        if (newQty <= 0) {
+            // Remove item
+            if (_isExistingOrderLoaded.value) {
+                val currentItems = _newselectedItems.value.toMutableMap()
+                currentItems.remove(menuItem)
+                _newselectedItems.value = currentItems
+            } else {
+                val currentItems = _selectedItems.value.toMutableMap()
+                currentItems.remove(menuItem)
+                _selectedItems.value = currentItems
+            }
+            val currentModifiers = _selectedModifiers.value.toMutableMap()
+            currentModifiers.remove(menuItem.menu_item_id)
+            _selectedModifiers.value = currentModifiers
+        } else {
+            if (_isExistingOrderLoaded.value) {
+                val currentItems = _newselectedItems.value.toMutableMap()
+                currentItems[menuItem] = newQty
+                _newselectedItems.value = currentItems
+            } else {
+                val currentItems = _selectedItems.value.toMutableMap()
+                currentItems[menuItem] = newQty
+                _selectedItems.value = currentItems
+            }
+        }
+    }
+
     fun clearOrder() {
         _newselectedItems.value = mutableMapOf()
         _selectedItems.value = mutableMapOf()
