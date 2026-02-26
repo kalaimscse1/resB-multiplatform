@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.warriortech.resb.ui.viewmodel.MenuViewModel
+import com.warriortech.resb.ui.viewmodel.CartItemKey
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -36,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,16 +54,13 @@ import com.warriortech.resb.ui.theme.SecondaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.model.Modifiers
-import com.warriortech.resb.ui.theme.Black
 import com.warriortech.resb.ui.theme.BluePrimary
-import com.warriortech.resb.ui.theme.lightGrey
-import com.warriortech.resb.ui.theme.ErrorRed
 import com.warriortech.resb.util.AnimatedSnackbarDemo
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.SuccessDialog
 import kotlinx.coroutines.delay
 
-private val DeepBlue = Color(0xFF005DA4)
+private val DeepBlue = PrimaryGreen
 
 @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
 @SuppressLint(
@@ -97,12 +94,18 @@ fun MenuScreen(
     val isExistingOrderLoaded by viewModel.isExistingOrderLoaded.collectAsStateWithLifecycle()
     val orderDetailsResponse by viewModel.orderDetailsResponse.collectAsStateWithLifecycle()
     val showAlertMessage by viewModel.showAlert.collectAsStateWithLifecycle()
+    val activeCartItem by viewModel.activeCartItem.collectAsStateWithLifecycle()
 
     // Modifier-related state
     val showModifierDialog by viewModel.showModifierDialog.collectAsStateWithLifecycle()
     val selectedMenuItemForModifier by viewModel.selectedMenuItemForModifier.collectAsStateWithLifecycle()
     val modifierGroups by viewModel.modifierGroups.collectAsStateWithLifecycle()
-    val selectedModifiers by viewModel.selectedModifiers.collectAsStateWithLifecycle()
+    val selectedModifiers: Map<Long, List<Modifiers>> by viewModel.selectedModifiers.collectAsStateWithLifecycle(initialValue = emptyMap())
+
+    val selectedWithoutModifiers by viewModel.selectedWithoutModifiers.collectAsStateWithLifecycle()
+    val selectedWithModifiers by viewModel.selectedWithModifiers.collectAsStateWithLifecycle()
+    val newSelectedWithoutModifiers by viewModel.newSelectedWithoutModifiers.collectAsStateWithLifecycle()
+    val newSelectedWithModifiers by viewModel.newSelectedWithModifiers.collectAsStateWithLifecycle()
 
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showOrderDialog by remember { mutableStateOf(false) }
@@ -111,9 +114,7 @@ fun MenuScreen(
     var sucess by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var alert by remember { mutableStateOf(false) }
-    var barcodeError by remember { mutableStateOf<String?>(null) }
     
-    var selectedItemForQty by remember { mutableStateOf<TblMenuItemResponse?>(null) }
     var showQtyInputDialog by remember { mutableStateOf(false) }
 
     val effectiveStatus = remember(isTakeaway, tableStatusFromVM) {
@@ -180,21 +181,17 @@ fun MenuScreen(
         }
         ItemSearchDialog(
             allItems = allItems,
-            selectedItems = selectedItems,
-            newSelectedItems = newselectedItems,
-            isExistingOrderLoaded = isExistingOrderLoaded,
             onItemSelected = { item ->
                 viewModel.addItemToOrder(item)
-                selectedItemForQty = item
             },
             onDismiss = { showSearchDialog = false }
         )
     }
 
-    if (showQtyInputDialog && selectedItemForQty != null) {
+    if (showQtyInputDialog && activeCartItem != null) {
         QuantityInputDialog(
             onConfirm = { qty ->
-                viewModel.updateItemQuantity(selectedItemForQty!!, qty)
+                viewModel.updateItemQuantity(activeCartItem!!, qty)
                 showQtyInputDialog = false
             },
             onDismiss = { showQtyInputDialog = false }
@@ -244,7 +241,7 @@ fun MenuScreen(
                     }
                 },
                 actions = {
-                    if (effectiveStatus == "TAKEAWAY" || tableStatusFromVM == "DELIVERY" && sessionManager.getUser()?.role == "ADMIN" || sessionManager.getUser()?.role == "CASHIER"){
+                    if ((effectiveStatus == "TAKEAWAY" || tableStatusFromVM == "DELIVERY") && (sessionManager.getUser()?.role == "ADMIN" || sessionManager.getUser()?.role == "CASHIER")){
                         IconButton(onClick = {
                             navController.navigate("takeaway_orders") {
                                 launchSingleTop = true
@@ -269,7 +266,6 @@ fun MenuScreen(
                             viewModel.findAndAddItemByBarcode(barcode)
                         },
                         onError = { error ->
-                            barcodeError = error
                             scope.launch {
                                 snackbarHostState.showSnackbar(error)
                             }
@@ -458,7 +454,7 @@ fun MenuScreen(
                         backgroundColor = Color.White,
                         contentColor = TextPrimary
                     ) {
-                        categories.forEachIndexed { index, category ->
+                        categories.forEach { category ->
                             Tab(
                                 selected = selectedCategory == category,
                                 onClick = { viewModel.selectedCategory.value = category },
@@ -497,18 +493,15 @@ fun MenuScreen(
                             itemsIndexed(
                                 filteredMenuItems,
                                 key = { _, item -> item.menu_item_id }
-                            ) { index, menuItem ->
+                            ) { _, menuItem ->
                                 MenuItemCard(
                                     menuItem = menuItem,
-                                    quantity = if (isExistingOrderLoaded) newselectedItems[menuItem]
-                                        ?: 0
-                                    else selectedItems[menuItem] ?: 0,
-                                    existingQuantity = if (isExistingOrderLoaded) selectedItems[menuItem]
-                                        ?: 0 else 0,
+                                    qtyWithoutModifiers = if (isExistingOrderLoaded) newSelectedWithoutModifiers[menuItem.menu_item_id] ?: 0 else selectedWithoutModifiers[menuItem.menu_item_id] ?: 0,
+                                    qtyWithModifiers = if (isExistingOrderLoaded) newSelectedWithModifiers[menuItem.menu_item_id] ?: 0 else selectedWithModifiers[menuItem.menu_item_id] ?: 0,
+                                    existingQuantity = if (isExistingOrderLoaded) selectedItems[menuItem] ?: 0 else 0,
                                     modifiers = selectedModifiers[menuItem.menu_item_id] ?: emptyList(),
                                     onAddItem = {
                                         viewModel.addItemToOrder(menuItem)
-                                        selectedItemForQty = menuItem
                                     },
                                     onRemoveItem = {
                                         viewModel.removeItemFromOrder(menuItem)
@@ -516,10 +509,12 @@ fun MenuScreen(
                                     tableStatus = effectiveStatus.toString(),
                                     isExistingOrder = isExistingOrderLoaded,
                                     onModifierClick = { viewModel.showModifierDialog(menuItem) },
-                                    isSelected = selectedItemForQty == menuItem,
-                                    onSelect = { selectedItemForQty = menuItem },
+                                    isSelected = activeCartItem?.menuItem == menuItem,
+                                    onSelect = { 
+                                        viewModel.setActiveItem(menuItem)
+                                    },
                                     backgroundColor = Color.White,
-                                    contentColor = if (selectedItemForQty == menuItem) DeepBlue.copy(alpha = 0.1f) else Color.White,
+                                    contentColor = if (activeCartItem?.menuItem == menuItem) DeepBlue.copy(alpha = 0.1f) else Color.White,
                                     textColor = DeepBlue
                                 )
                             }
@@ -549,18 +544,16 @@ fun MenuScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 listOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "").forEach { key ->
                     KeypadButton(text = key) {
-                        selectedItemForQty?.let { item ->
+                        activeCartItem?.let { cartKey ->
                             when (key) {
                                 "." -> showQtyInputDialog = true
                                 "0" -> {
-                                    val currentQty = if (isExistingOrderLoaded) newselectedItems[item] ?: 0 else selectedItems[item] ?: 0
-                                    if (currentQty > 0) {
-                                        viewModel.updateItemQuantity(item, 0)
-                                    }
+                                    viewModel.updateItemQuantity(cartKey, 0)
                                 }
                                 in "1".."9" -> {
-                                    viewModel.updateItemQuantity(item, key.toInt())
+                                    viewModel.updateItemQuantity(cartKey, key.toInt())
                                 }
+                                else -> {}
                             }
                         }
                     }
@@ -672,12 +665,12 @@ fun QuantityInputDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("DefaultLocale")
 @Composable
 fun MenuItemCard(
     menuItem: TblMenuItemResponse,
-    quantity: Int,
+    qtyWithoutModifiers: Int,
+    qtyWithModifiers: Int,
     existingQuantity: Int = 0,
     modifiers: List<Modifiers> = emptyList(),
     onAddItem: () -> Unit,
@@ -734,12 +727,21 @@ fun MenuItemCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (quantity > 0) {
+                    if (qtyWithoutModifiers > 0) {
                         Text(
-                            text = "x $quantity",
+                            text = "x $qtyWithoutModifiers",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = DeepBlue,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                    }
+                    if (qtyWithModifiers > 0) {
+                        Text(
+                            text = "x $qtyWithModifiers (M)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryGreen,
                             modifier = Modifier.padding(end = 12.dp)
                         )
                     }
@@ -762,7 +764,7 @@ fun MenuItemCard(
                 }
             }
 
-            AnimatedVisibility(visible = quantity > 0 || existingQuantity > 0 || modifiers.isNotEmpty()) {
+            AnimatedVisibility(visible = (qtyWithoutModifiers + qtyWithModifiers) > 0 || existingQuantity > 0 || modifiers.isNotEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -795,9 +797,6 @@ fun MenuItemCard(
 @Composable
 fun ItemSearchDialog(
     allItems: List<TblMenuItemResponse>,
-    selectedItems: Map<TblMenuItemResponse, Int>,
-    newSelectedItems: Map<TblMenuItemResponse, Int>,
-    isExistingOrderLoaded: Boolean,
     onItemSelected: (TblMenuItemResponse) -> Unit,
     onDismiss: () -> Unit
 ) {
