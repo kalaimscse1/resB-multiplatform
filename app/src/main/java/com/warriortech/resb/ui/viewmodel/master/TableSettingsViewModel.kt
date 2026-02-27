@@ -45,6 +45,7 @@ class TableSettingsViewModel @Inject constructor(
                             is_ac = it.is_ac,
                             table_status = it.table_status,
                             table_availability = it.table_availability,
+                            is_open = it.is_open,
                             is_active = it.is_active
                         )
                     }.let { list ->

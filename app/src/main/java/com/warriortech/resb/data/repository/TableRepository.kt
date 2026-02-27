@@ -138,6 +138,7 @@ class TableRepository @Inject constructor(
                             table_status = it.table_status,
                             area_id = it.area_id.toInt(),
                             table_availability = it.table_availability,
+                            is_open = it.is_open,
                             is_active = it.is_active,
                             is_synced = SyncStatus.SYNCED,
                             last_synced_at = System.currentTimeMillis()
@@ -177,6 +178,7 @@ class TableRepository @Inject constructor(
                 is_ac = table.is_ac,
                 table_status = table.table_status,
                 table_availability = table.table_availability,
+                is_open = table.is_open,
                 is_active = table.is_active,
                 is_synced = SyncStatus.PENDING_SYNC,
                 last_synced_at = System.currentTimeMillis()
@@ -222,6 +224,7 @@ class TableRepository @Inject constructor(
                 is_ac = table.is_ac,
                 table_status = table.table_status,
                 table_availability = table.table_availability,
+                is_open = table.is_open,
                 is_active = table.is_active,
                 is_synced = SyncStatus.PENDING_SYNC,
                 last_synced_at = null,
@@ -253,6 +256,18 @@ class TableRepository @Inject constructor(
             throw e
         }
     }
+    suspend fun updateTableOpenStatus(tableId: Long, status: Boolean) : Boolean{
+        try {
+            val response = apiService.updateTableOpenStatus(tableId, status, sessionManager.getCompanyCode() ?: "")
+            return response.isSuccessful
+
+        }catch (e: Exception) {
+            Timber.e(e, "Failed to update table status: $status")
+            throw e
+        }
+
+    }
+
 
     suspend fun deleteTable(lng: Long) {
         try {
@@ -292,6 +307,7 @@ class TableRepository @Inject constructor(
                 is_ac = it.is_ac ?: "",
                 table_status = it.table_status ?: "",
                 table_availability = it.table_availability ?: "",
+                is_open = it.is_open ?: false,
                 is_active = it.is_active ?: false
             )
         }

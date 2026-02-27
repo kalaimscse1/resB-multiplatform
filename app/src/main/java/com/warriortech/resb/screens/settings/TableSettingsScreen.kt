@@ -423,6 +423,7 @@ fun TableDialog(
                                 is_ac = isAc,
                                 table_status = tableStatus,
                                 table_availability = "AVAILABLE",
+                                is_open = false,
                                 is_active = isActive
                             )
                             onSave(newTable)
@@ -464,6 +465,7 @@ fun TableDialog(
                             is_ac = isAc,
                             table_status = tableStatus,
                             table_availability = "AVAILABLE",
+                            is_open = false,
                             is_active = isActive
                         )
                         onSave(newTable)

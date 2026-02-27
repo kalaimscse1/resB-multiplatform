@@ -58,10 +58,12 @@ import com.warriortech.resb.ui.components.ModernDivider
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.ResbTheme
 import com.warriortech.resb.ui.theme.SurfaceLight
+import com.warriortech.resb.ui.viewmodel.TableViewModel
 import com.warriortech.resb.util.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -224,6 +226,7 @@ fun AppNavigation(
     var selectedItems by remember { mutableStateOf(listOf<TblOrderDetailsResponse>()) }
     var kotRes by remember { mutableStateOf<KotResponse?>(null) }
     var selecteItems by remember { mutableStateOf<Map<TblMenuItemResponse, Int>>(mutableMapOf()) }
+    val tableViewModel: TableViewModel = hiltViewModel()
 
     LaunchedEffect(Unit) {
         val subscriptionManager = SubscriptionManager(sessionManager)
@@ -284,6 +287,7 @@ fun AppNavigation(
                     selectedTable = table
                     navController.navigate("menu")
                 },
+                viewModel = tableViewModel,
                 drawerState = drawerState,
                 sessionManager = sessionManager,
                 navController = navController
@@ -294,8 +298,13 @@ fun AppNavigation(
                 isTakeaway = isTakeaway,
                 tableStatId = selectedTable != null || isTakeaway == "TABLE",
                 tableId = selectedTable?.table_id ?: 1L,
-                onBackPressed = { navController.popBackStack() },
-                onOrderPlaced = { navController.popBackStack() },
+                onBackPressed = {
+                    selectedTable?.let { tableViewModel.updateTableOpenStatus(it.table_id, false) }
+                    navController.popBackStack()
+                },
+                onOrderPlaced = {
+                    navController.popBackStack()
+                },
                 drawerState = drawerState,
                 onBillPlaced = { items, orderId ->
                     selectedItems = items
@@ -636,6 +645,14 @@ fun AppNavigation(
                     navController.navigate("kot_modify/${it.order_master_id}"); kotRes = it
                 },
                 drawerState = drawerState
+            )
+        }
+        composable("kot_modify/{orderId}") { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            KotModifyScreen(
+                navController = navController,
+                orderMasterId = orderId,
+                kotResponse = kotRes
             )
         }
         composable("kot_modify/{orderId}") { backStackEntry ->

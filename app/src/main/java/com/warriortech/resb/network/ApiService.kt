@@ -179,6 +179,15 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<ResponseBody>
 
+    @GET("table/table/updateTableOpenStatusByTableId/{table_id}")
+    suspend fun updateTableOpenStatus(
+        @Path("table_id") tableId: Long,
+        @Query("is_open") status: Boolean,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Int>
+
+
+
     /**
      * Menu Management
      */

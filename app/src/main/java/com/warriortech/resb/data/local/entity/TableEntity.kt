@@ -19,6 +19,7 @@ data class TblTableEntity(
     val is_ac: String?,
     val table_status: String?,
     val table_availability: String?,
+    val is_open: Boolean?,
     val is_active: Boolean?,
     val is_synced: SyncStatus = SyncStatus.PENDING_SYNC,
     val last_synced_at: Long? = null,

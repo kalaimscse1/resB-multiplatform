@@ -45,7 +45,7 @@ import com.warriortech.resb.data.local.entity.*
         KotSettingsEntity::class,
         PrintPlatformOverrideEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 

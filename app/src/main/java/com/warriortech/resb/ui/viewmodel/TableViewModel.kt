@@ -123,6 +123,17 @@ class TableViewModel @Inject constructor(
         }
     }
 
+    fun updateTableOpenStatus(tableId: Long, status: Boolean) {
+        viewModelScope.launch {
+            try {
+                tableRepository.updateTableOpenStatus(tableId, status)
+            }catch (e: Exception) {
+                _tablesState.value = TablesState.Error(e.message ?: "TableOpenStaus Failed")
+            }
+        }
+    }
+
+
     fun confirmSelection() {
         viewModelScope.launch {
             val action = _selectionAction.value

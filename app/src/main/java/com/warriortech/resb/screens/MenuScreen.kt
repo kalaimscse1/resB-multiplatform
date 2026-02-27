@@ -12,6 +12,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.warriortech.resb.ui.viewmodel.MenuViewModel
 import com.warriortech.resb.ui.viewmodel.CartItemKey
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -124,6 +125,10 @@ fun MenuScreen(
             "DELIVERY" -> "DELIVERY"
             else -> tableStatusFromVM
         }
+    }
+
+    BackHandler {
+        onBackPressed()
     }
 
     LaunchedEffect(key1 = isTakeaway, key2 = tableId, key3 = tableStatId) {

@@ -74,6 +74,7 @@ fun SelectionScreen(
     val selectionAction by viewModel.selectionAction.collectAsState()
     
     var showTableOptions by remember { mutableStateOf<TableStatusResponse?>(null) }
+    var showAlreadyOpenDialog by remember { mutableStateOf<String?>(null) }
     
     BackHandler {
         if (isSelectionMode) {
@@ -150,6 +151,19 @@ fun SelectionScreen(
                     TextButton(onClick = { showTableOptions = null }) {
                         Text("Cancel")
                     }
+                }
+            }
+        )
+    }
+
+    if (showAlreadyOpenDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showAlreadyOpenDialog = null },
+            title = { Text("Table Already Open") },
+            text = { Text("Table ${showAlreadyOpenDialog} is already being accessed by another user.") },
+            confirmButton = {
+                Button(onClick = { showAlreadyOpenDialog = null }) {
+                    Text("OK")
                 }
             }
         )
@@ -248,7 +262,14 @@ fun SelectionScreen(
                                 } else {
                                     ResponsiveTableGrid(
                                         filteredTables = filteredTables,
-                                        onTableSelected = onTableSelected,
+                                        onTableSelected = { table ->
+                                            if (table.is_open) {
+                                                showAlreadyOpenDialog = table.table_name
+                                            } else {
+                                                viewModel.updateTableOpenStatus(table.table_id, true)
+                                                onTableSelected(table)
+                                            }
+                                        },
                                         sessionManager = sessionManager,
                                         isSelectionMode = isSelectionMode,
                                         selectedTables = selectedTables,
@@ -316,7 +337,14 @@ fun SelectionScreen(
                         } else {
                             ResponsiveTableGrid(
                                 filteredTables = filteredTables,
-                                onTableSelected = onTableSelected,
+                                onTableSelected = { table ->
+                                    if (table.is_open) {
+                                        showAlreadyOpenDialog = table.table_name
+                                    } else {
+                                        viewModel.updateTableOpenStatus(table.table_id, true)
+                                        onTableSelected(table)
+                                    }
+                                },
                                 sessionManager = sessionManager,
                                 isSelectionMode = isSelectionMode,
                                 selectedTables = selectedTables,
@@ -382,6 +410,7 @@ fun ResponsiveTableGrid(
                             is_ac = table.is_ac,
                             table_status = table.table_status,
                             table_availability = table.table_availability,
+                            is_open = table.is_open,
                             is_active = table.is_active
                         )
                         onTableSelected(tbl)

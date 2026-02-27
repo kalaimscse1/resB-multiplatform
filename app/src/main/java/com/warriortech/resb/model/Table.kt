@@ -9,6 +9,7 @@ data class Table(
     val is_ac: String,  // e.g., "AC hall", "Non-AC"
     val table_status: String,
     val table_availability: String,
+    val is_open : Boolean,
     val is_active: Boolean// e.g., "available", "occupied", "reserved"
 )
 
@@ -20,6 +21,7 @@ data class TblTable(
     val is_ac: String,  // e.g., "AC hall", "Non-AC"
     val table_status: String,
     val table_availability: String,
+    val is_open : Boolean,
     val is_active: Boolean
 )
 data class ChangeTable(
@@ -44,6 +46,7 @@ data class TableStatusResponse(
     var is_ac:String,
     var table_status:String,
     var table_availability:String,
+    var is_open: Boolean,
     var is_active:Boolean,
     var grandTotal:Double,
     var staff_name:String,

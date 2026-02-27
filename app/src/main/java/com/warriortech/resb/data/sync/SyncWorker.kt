@@ -282,6 +282,7 @@ class SyncWorker @AssistedInject constructor(
         is_ac = is_ac.toString(),
         table_status = table_status.toString(),
         table_availability = table_availability.toString(),
+        is_open = is_open?:false,
         is_active = is_active == true
     )
 
@@ -294,6 +295,7 @@ class SyncWorker @AssistedInject constructor(
         is_ac = is_ac,
         table_status = table_status,
         table_availability = table_availability,
+        is_open = is_open?:false,
         is_active = is_active,
         is_synced = SyncStatus.SYNCED,
         last_synced_at = System.currentTimeMillis()
