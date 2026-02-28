@@ -111,7 +111,7 @@ fun SelectionScreen(
         }
         while (true) {
             viewModel.loadTables()
-            delay(7 * 1000)
+            delay(3 * 1000)
         }
     }
 
@@ -160,7 +160,7 @@ fun SelectionScreen(
         AlertDialog(
             onDismissRequest = { showAlreadyOpenDialog = null },
             title = { Text("Table Already Open") },
-            text = { Text("Table ${showAlreadyOpenDialog} is already being accessed by another user.") },
+            text = { Text("${showAlreadyOpenDialog} is already open by another user.") },
             confirmButton = {
                 Button(onClick = { showAlreadyOpenDialog = null }) {
                     Text("OK")

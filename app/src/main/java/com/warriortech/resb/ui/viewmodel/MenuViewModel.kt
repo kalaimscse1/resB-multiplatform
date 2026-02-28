@@ -462,4 +462,14 @@ class MenuViewModel @Inject constructor(
             else _orderState.value = OrderUiState.Error("Item not found: $barcode")
         }
     }
+
+    fun updateTableOpenStatus(tableId: Long, status: Boolean) {
+        viewModelScope.launch {
+            try {
+                tableRepository.updateTableOpenStatus(tableId, status)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to update table open status")
+            }
+        }
+    }
 }

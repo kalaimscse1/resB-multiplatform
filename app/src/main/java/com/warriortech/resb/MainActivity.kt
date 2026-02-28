@@ -303,10 +303,12 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onOrderPlaced = {
+                    selectedTable?.let { tableViewModel.updateTableOpenStatus(it.table_id, false) }
                     navController.popBackStack()
                 },
                 drawerState = drawerState,
                 onBillPlaced = { items, orderId ->
+                    selectedTable?.let { tableViewModel.updateTableOpenStatus(it.table_id, false) }
                     selectedItems = items
                     navController.navigate("billing_screen/${orderId}")
                 },
