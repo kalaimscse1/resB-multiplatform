@@ -16,7 +16,7 @@ import com.warriortech.resb.util.getCurrentTimeModern
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
-import kotlin.math.round
+import retrofit2.Response
 
 class BillRepository @Inject constructor(
     private val apiService: ApiService,
@@ -424,6 +424,32 @@ class BillRepository @Inject constructor(
             response.body()
         } else
             null
+    }
+
+    suspend fun getYearlySummary(year: String): Flow<Result<List<BillingSummary>>> = flow {
+        try {
+            val response = apiService.getYearlySummary(sessionManager.getCompanyCode() ?: "", year)
+            if (response.isSuccessful) {
+                emit(Result.success(response.body() ?: emptyList()))
+            } else {
+                emit(Result.failure(Exception("Failed to fetch yearly summary")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
+    suspend fun getMonthlySummary(month: String, year: String): Flow<Result<List<TblBillingResponse>>> = flow {
+        try {
+            val response = apiService.getMonthlySummary(sessionManager.getCompanyCode() ?: "", month, year)
+            if (response.isSuccessful) {
+                emit(Result.success(response.body() ?: emptyList()))
+            } else {
+                emit(Result.failure(Exception("Failed to fetch monthly summary")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 }
 

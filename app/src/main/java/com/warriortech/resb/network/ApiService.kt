@@ -186,6 +186,11 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Int>
 
+    @GET("table/table/resetAllTableOpenStatus")
+    suspend fun resetAllTableOpenStatus(
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Int>
+
 
 
     /**
@@ -801,6 +806,21 @@ interface ApiService {
 
     ): Response<List<CategoryReport>>
 
+    @GET("payment/getYearlySummary")
+    suspend fun getYearlySummary(
+        @Header("X-Tenant-ID") tenantId: String,
+        @Query("year") year: String
+    ): Response<List<BillingSummary>>
+
+    @GET("payment/getMonthlySummary")
+    suspend fun getMonthlySummary(
+        @Header("X-Tenant-ID") tenantId: String,
+        @Query("month") month: String,
+        @Query("year") year: String
+    ): Response<List<TblBillingResponse>>
+
+
+
     /**
      * Customers Management
      */
@@ -1042,6 +1062,24 @@ interface ApiService {
         @Query("fromDate") fromDate: String,
         @Query("toDate") toDate: String
     ): Response<List<GSTRDOCS>>
+
+    @GET("report/getGstB2CReport")
+    suspend fun getGstB2CReport(
+        @Header("X-Tenant-ID") tenantId: String,
+        @Query("fromDate") fromDate: String,
+        @Query("toDate") toDate: String
+    ): Response<List<ReportGstB2CResponse>>
+
+    @GET("report/getGstB2BReport")
+    suspend fun getGstB2BReport(
+        @Header("X-Tenant-ID") tenantId: String,
+        @Query("fromDate") fromDate: String,
+        @Query("toDate") toDate: String
+    ): Response<List<GstB2BResponse>>
+
+
+
+
 
     /**
      * Ledger Management

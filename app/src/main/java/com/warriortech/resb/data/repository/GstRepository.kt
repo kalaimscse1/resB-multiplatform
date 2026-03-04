@@ -1,8 +1,6 @@
 package com.warriortech.resb.data.repository
 
-import com.warriortech.resb.model.GSTRDOCS
-import com.warriortech.resb.model.HsnReport
-import com.warriortech.resb.model.ReportGSTResponse
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import kotlinx.coroutines.flow.Flow
@@ -64,5 +62,33 @@ class GstRepository @Inject constructor(
             emit(Result.failure(e))
         }
 
+    }
+
+    suspend fun getGstB2CReport(fromDate: String, toDate: String): Flow<Result<List<ReportGstB2CResponse>>> = flow {
+        try {
+            val tenantId = sessionManager.getCompanyCode() ?: ""
+            val response = apiService.getGstB2CReport(tenantId, fromDate, toDate)
+            if (response.isSuccessful) {
+                response.body()?.let { emit(Result.success(it)) } ?: emit(Result.failure(Exception("No data received")))
+            } else {
+                emit(Result.failure(Exception("API Error: ${response.code()} ${response.message()}")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
+    suspend fun getGstB2BReport(fromDate: String, toDate: String): Flow<Result<List<GstB2BResponse>>> = flow {
+        try {
+            val tenantId = sessionManager.getCompanyCode() ?: ""
+            val response = apiService.getGstB2BReport(tenantId, fromDate, toDate)
+            if (response.isSuccessful) {
+                response.body()?.let { emit(Result.success(it)) } ?: emit(Result.failure(Exception("No data received")))
+            } else {
+                emit(Result.failure(Exception("API Error: ${response.code()} ${response.message()}")))
+            }
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
     }
 }

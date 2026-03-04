@@ -53,6 +53,8 @@ import com.warriortech.resb.screens.accounts.transaction.DayEntryScreen
 import com.warriortech.resb.screens.reports.*
 import com.warriortech.resb.screens.reports.gst.GSTRReportScreen
 import com.warriortech.resb.screens.reports.gst.HsnReportScreen
+import com.warriortech.resb.screens.reports.gst.GstB2CReportScreen
+import com.warriortech.resb.screens.reports.gst.GstB2BReportScreen
 import com.warriortech.resb.screens.settings.*
 import com.warriortech.resb.ui.components.ModernDivider
 import com.warriortech.resb.ui.theme.PrimaryGreen
@@ -703,6 +705,10 @@ fun AppNavigation(
         }
         composable("hsn_reports") { HsnReportScreen(drawerState = drawerState) }
         composable("gstR_Docs") { GSTRReportScreen(drawerState = drawerState) }
+        composable("gst_b2c_report") { GstB2CReportScreen(drawerState = drawerState) }
+        composable("gst_b2b_report") { GstB2BReportScreen(drawerState = drawerState) }
+        composable("yearly_summary") { YearlySummaryReportScreen(drawerState = drawerState) }
+        composable("monthly_summary") { MonthlySummaryReportScreen(drawerState = drawerState) }
         composable("group_screen") { GroupScreen(drawerState = drawerState) }
         composable("ledger_screen") { LedgerScreen(drawerState = drawerState) }
         composable("day_entry") {
@@ -1063,7 +1069,9 @@ fun DrawerContent(
                             "category_wise",
                             "due",
                             "kot_report",
-                            "paid_bills"
+                            "paid_bills",
+                            "yearly_summary",
+                            "monthly_summary"
                         ),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.REPORTS) ExpandedMenu.NONE else ExpandedMenu.REPORTS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
@@ -1133,6 +1141,22 @@ fun DrawerContent(
                                 colors = subMenuColors
                             )
                             NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Yearly Summary") },
+                                icon = { DrawerIcon(Icons.Default.History, null, isCollapsed) },
+                                selected = currentDestination?.route == "yearly_summary",
+                                onClick = { onDestinationClicked("yearly_summary") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Monthly Summary") },
+                                icon = { DrawerIcon(Icons.Default.CalendarMonth, null, isCollapsed) },
+                                selected = currentDestination?.route == "monthly_summary",
+                                onClick = { onDestinationClicked("monthly_summary") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
                                 label = { if (!isCollapsed) Text("KOT Report") },
                                 icon = { DrawerIcon(Icons.Default.Kitchen, null, isCollapsed) },
                                 selected = currentDestination?.route == "kot_report",
@@ -1152,7 +1176,7 @@ fun DrawerContent(
                                 isCollapsed
                             )
                         },
-                        selected = currentDestination?.route in listOf("hsn_reports", "gstR_Docs"),
+                        selected = currentDestination?.route in listOf("hsn_reports", "gstR_Docs", "gst_b2c_report", "gst_b2b_report"),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.GSTREPORTS) ExpandedMenu.NONE else ExpandedMenu.GSTREPORTS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                         colors = drawerItemColors
@@ -1184,6 +1208,34 @@ fun DrawerContent(
                                 },
                                 selected = currentDestination?.route == "gstR_Docs",
                                 onClick = { onDestinationClicked("gstR_Docs") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("GST B2C Report") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.AutoMirrored.Filled.ReceiptLong,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "gst_b2c_report",
+                                onClick = { onDestinationClicked("gst_b2c_report") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("GST B2B Report") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.AutoMirrored.Filled.ReceiptLong,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "gst_b2b_report",
+                                onClick = { onDestinationClicked("gst_b2b_report") },
                                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                 colors = subMenuColors
                             )

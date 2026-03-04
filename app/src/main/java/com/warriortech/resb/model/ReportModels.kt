@@ -98,3 +98,32 @@ data class CategoryReport(
     val qty: Int,
     val grand_total: Double
 )
+
+data class ReportGstB2CResponse(
+    val tax_percentage: Double,
+    val tax_amount: Double,
+    val cess: Double,
+    var type: String? = "B2C"
+)
+
+data class GstB2BResponse(
+    val customer_name: String,
+    val gst_no: String,
+    val invoice_number: String,
+    val invoice_date: String,
+    val invoice_value: Double,
+    val taxable_value: Double,
+    val sgst: Double,
+    val cgst: Double,
+    val igst: Double,
+)
+
+data class BillingSummary(
+    val month: String?,
+    val amount: Double?,
+    val discount: Double?,
+    val tax: Double?,
+    val others: Double?,
+    val total: Double?,
+    val billCount: Long?
+)

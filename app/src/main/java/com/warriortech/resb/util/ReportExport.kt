@@ -3,14 +3,12 @@ package com.warriortech.resb.util
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.itextpdf.text.BaseColor
 import com.itextpdf.text.Document
 import com.itextpdf.text.Element
 import com.itextpdf.text.Font
-import com.itextpdf.text.Image
 import com.itextpdf.text.PageSize
 import com.itextpdf.text.Paragraph
 import com.itextpdf.text.Phrase
@@ -18,19 +16,11 @@ import com.itextpdf.text.Rectangle
 import com.itextpdf.text.pdf.PdfPCell
 import com.itextpdf.text.pdf.PdfPTable
 import com.itextpdf.text.pdf.PdfWriter
-import com.warriortech.resb.model.Bill
-import com.warriortech.resb.model.CategoryReport
-import com.warriortech.resb.model.ItemReport
-import com.warriortech.resb.model.TblBillingResponse
-import com.warriortech.resb.model.TblMenuItemResponse
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
-import com.warriortech.resb.ui.theme.LightGrayPrimary
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -857,6 +847,80 @@ object ReportExport {
             Toast.LENGTH_LONG
         ).show()
     }
+
+    fun yearlySummaryExportToPdf(context: Context, summaries: List<BillingSummary>) {
+        try {
+            val pdfDir = File(context.getExternalFilesDir(null), "reports")
+            if (!pdfDir.exists()) pdfDir.mkdirs()
+
+            val file = File(pdfDir, "YearlySummaryReport.pdf")
+            val document = Document(PageSize.A4, 10f, 10f, 20f, 20f)
+            PdfWriter.getInstance(document, FileOutputStream(file))
+            document.open()
+
+            val titleFont = Font(Font.FontFamily.HELVETICA, 16f, Font.BOLD)
+            val title = Paragraph("Yearly Summary Report\n\n", titleFont)
+            title.alignment = Element.ALIGN_CENTER
+            document.add(title)
+
+            val table = PdfPTable(7)
+            table.widthPercentage = 100f
+            val headers = listOf("Month", "Amount", "Discount", "Tax", "Others", "Bill Count", "Total")
+            headers.forEach {
+                val cell = PdfPCell(Phrase(it, Font(Font.FontFamily.HELVETICA, 12f, Font.BOLD)))
+                cell.backgroundColor = BaseColor.LIGHT_GRAY
+                table.addCell(cell)
+            }
+
+            summaries.forEach { summary ->
+                table.addCell(summary.month ?: "")
+                table.addCell(String.format("%.2f", summary.amount ?: 0.0))
+                table.addCell(String.format("%.2f", summary.discount ?: 0.0))
+                table.addCell(String.format("%.2f", summary.tax ?: 0.0))
+                table.addCell(String.format("%.2f", summary.others ?: 0.0))
+                table.addCell(summary.billCount?.toString() ?: "0")
+                table.addCell(String.format("%.2f", summary.total ?: 0.0))
+            }
+
+            document.add(table)
+            document.close()
+            shareFile(context, file, "application/pdf")
+        } catch (e: Exception) {
+            Toast.makeText(context, "Export Failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun yearlySummaryExportToExcel(context: Context, summaries: List<BillingSummary>) {
+        try {
+            val excelDir = File(context.getExternalFilesDir(null), "reports")
+            if (!excelDir.exists()) excelDir.mkdirs()
+
+            val file = File(excelDir, "YearlySummaryReport.xlsx")
+            val workbook = XSSFWorkbook()
+            val sheet = workbook.createSheet("Yearly Summary")
+
+            val headerRow = sheet.createRow(0)
+            val headers = listOf("Month", "Amount", "Discount", "Tax", "Others", "Bill Count", "Total")
+            headers.forEachIndexed { i, h -> headerRow.createCell(i).setCellValue(h) }
+
+            summaries.forEachIndexed { index, summary ->
+                val row = sheet.createRow(index + 1)
+                row.createCell(0).setCellValue(summary.month ?: "")
+                row.createCell(1).setCellValue(summary.amount ?: 0.0)
+                row.createCell(2).setCellValue(summary.discount ?: 0.0)
+                row.createCell(3).setCellValue(summary.tax ?: 0.0)
+                row.createCell(4).setCellValue(summary.others ?: 0.0)
+                row.createCell(5).setCellValue(summary.billCount?.toDouble() ?: 0.0)
+                row.createCell(6).setCellValue(summary.total ?: 0.0)
+            }
+
+            val outputStream = FileOutputStream(file)
+            workbook.write(outputStream)
+            outputStream.close()
+            workbook.close()
+            shareFile(context, file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        } catch (e: Exception) {
+            Toast.makeText(context, "Export Failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
 }
-
-
