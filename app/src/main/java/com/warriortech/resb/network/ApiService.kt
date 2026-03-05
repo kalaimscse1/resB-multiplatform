@@ -924,8 +924,12 @@ interface ApiService {
      * Kitchen KOT Management
      */
 
-    @GET("order/orderDetails/getRunningKots")
-    suspend fun getKitchenKOTs(@Header("X-Tenant-ID") tenantId: String): Response<KitchenKOTResponse>
+    @GET("order/orderDetails/kot")
+    suspend fun getKitchenKOTs(
+        @Header("X-Tenant-ID") tenantId: String,
+        @Query("fromDate") fromDate: String,
+        @Query("toDate") toDate: String
+    ): Response<List<KitchenKOT>>
 
     @PUT("kitchen/kot/{kotId}/status")
     suspend fun updateKOTStatus(

@@ -1,31 +1,28 @@
 package com.warriortech.resb.model
 
 data class KitchenKOT(
-    val kotId: Int,
-    val kotNumber: String,
+    val kotNumber: Long,
     val tableNumber: String,
     val orderType: String, // DINE_IN, TAKEAWAY, DELIVERY
     val waiterName: String?,
     val orderTime: String,
     val status: KOTStatus,
     val items: List<KitchenKOTItem>,
-    val orderId: Long?
+    val orderId: String?
 )
 
 data class KitchenKOTItem(
     val itemName: String,
     val quantity: Int,
     val category: String,
-    val specialInstructions: String? = null,
-    val modifiers: List<String> = emptyList(),
     val addOns: List<String> = emptyList()
 )
 
 enum class KOTStatus {
     PENDING,
     IN_PROGRESS,
-    READY,
-    SERVED
+    COMPLETED,
+    CANCELLED
 }
 
 data class KOTStatusUpdate(

@@ -19,7 +19,12 @@ class KitchenViewModel @Inject constructor(
     private val kitchenRepository: KitchenRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(KitchenUiState())
+    sealed class KitchenUiState {
+        object Loading : KitchenUiState()
+        data class Success(val kots: List<KitchenKOT>) : KitchenUiState()
+        data class Error(val message: String) : KitchenUiState()
+    }
+    private val _uiState = MutableStateFlow<KitchenUiState>(KitchenUiState.Loading)
     val uiState: StateFlow<KitchenUiState> = _uiState.asStateFlow()
 
     private val _selectedFilter = MutableStateFlow(KOTStatus.PENDING)
@@ -31,24 +36,10 @@ class KitchenViewModel @Inject constructor(
 
     fun loadKOTs() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = KitchenUiState.Loading
 
             kitchenRepository.getKitchenKOTs().collect { result ->
-                result.fold(
-                    onSuccess = { kots ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            kots = kots,
-                            error = null
-                        )
-                    },
-                    onFailure = { error ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = error.message ?: "Failed to load KOTs"
-                        )
-                    }
-                )
+                _uiState.value = KitchenUiState.Success(result)
             }
         }
     }
@@ -62,9 +53,7 @@ class KitchenViewModel @Inject constructor(
                         loadKOTs()
                     },
                     onFailure = { error ->
-                        _uiState.value = _uiState.value.copy(
-                            error = error.message ?: "Failed to update KOT status"
-                        )
+                        _uiState.value = KitchenUiState.Error("Failed to update KOT status.")
                     }
                 )
             }
@@ -75,17 +64,8 @@ class KitchenViewModel @Inject constructor(
         _selectedFilter.value = status
     }
 
-    fun getFilteredKOTs(): List<KitchenKOT> {
-        return _uiState.value.kots.filter { it.status == _selectedFilter.value }
-    }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.value = KitchenUiState.Loading
     }
 }
-
-data class KitchenUiState(
-    val isLoading: Boolean = false,
-    val kots: List<KitchenKOT> = emptyList(),
-    val error: String? = null
-)

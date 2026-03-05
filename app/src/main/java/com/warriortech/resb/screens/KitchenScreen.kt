@@ -1,9 +1,12 @@
 package com.warriortech.resb.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -25,7 +30,9 @@ import androidx.navigation.NavController
 import com.warriortech.resb.model.KitchenKOT
 import com.warriortech.resb.model.KOTStatus
 import com.warriortech.resb.ui.viewmodel.KitchenViewModel
-import androidx.compose.material3.DrawerState
+import com.warriortech.resb.ui.theme.PrimaryGreen
+import com.warriortech.resb.ui.theme.SurfaceLight
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,139 +43,130 @@ fun KitchenScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedFilter by viewModel.selectedFilter.collectAsState()
+    val scope = rememberCoroutineScope()
+    val configuration = LocalConfiguration.current
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh logic
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(30000)
-        viewModel.loadKOTs()
+        while(true) {
+            viewModel.loadKOTs()
+            kotlinx.coroutines.delay(30000)
+        }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Kitchen Dashboard",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Kitchen Dashboard", color = SurfaceLight) },
+                navigationIcon = {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = SurfaceLight)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.loadKOTs() }) {
+                        Icon(Icons.Default.Restaurant, contentDescription = "Refresh", tint = SurfaceLight)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryGreen)
             )
-
-            Button(
-                onClick = { viewModel.loadKOTs() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ),
-                modifier = Modifier.height(30.dp)
-            ) {
-                Text("Refresh")
-            }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Status Filter Tabs
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            items(KOTStatus.values()) { status ->
-                FilterChip(
-                    onClick = { viewModel.setFilter(status) },
-                    label = {
-                        Text(
-                            text = "${status.name} (${uiState.kots.count { it.status == status }})",
-                            color = if (selectedFilter == status) Color.White else MaterialTheme.colorScheme.onSurface
-                        )
-                    },
-                    selected = selectedFilter == status,
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = Color.White
-                    )
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Error handling
-        uiState.error?.let { error ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = { viewModel.clearError() }) {
-                        Text("Dismiss")
+            // Status Filter Tabs
+            when(val state = uiState){
+                is KitchenViewModel.KitchenUiState.Loading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PrimaryGreen)
                     }
                 }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Loading state
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            // KOT List
-            val filteredKOTs = viewModel.getFilteredKOTs()
-
-            if (filteredKOTs.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                is KitchenViewModel.KitchenUiState.Success -> {
+                    val kotItems = state.kots
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 2.dp,
+                        color = Color.White
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Kitchen,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No ${selectedFilter.name.lowercase()} KOTs",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        LazyRow(
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(KOTStatus.values()) { status ->
+                                FilterChip(
+                                    onClick = { viewModel.setFilter(status) },
+                                    label = {
+                                        Text(
+                                            text = "${status.name} (${kotItems.count { it.status == status }})",
+                                        )
+                                    },
+                                    selected = selectedFilter == status,
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PrimaryGreen,
+                                        selectedLabelColor = Color.White,
+                                        labelColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    if (state.kots.isEmpty() && uiState !is KitchenViewModel.KitchenUiState.Loading) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = PrimaryGreen)
+                        }
+                    } else {
+                        val filteredKOTs = state.kots.filter { it.status == selectedFilter }
+
+                        if (filteredKOTs.isEmpty()) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Kitchen, null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                                    Spacer(Modifier.height(16.dp))
+                                    Text("No ${selectedFilter.name.lowercase()} KOTs", color = Color.Gray)
+                                }
+                            }
+                        } else {
+                            // Responsive Grid based on device width
+                            val gridColumns = when {
+                                configuration.screenWidthDp < 600 -> 1 // Mobile
+                                configuration.screenWidthDp < 900 -> 2 // Tablet
+                                else -> 3 // Android TV / Large Tablet
+                            }
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(gridColumns),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(filteredKOTs) { kot ->
+                                    KOTCard(
+                                        kot = kot,
+                                        onStatusUpdate = { newStatus ->
+                                            viewModel.updateKOTStatus(kot.kotNumber.toInt(), newStatus)
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(filteredKOTs) { kot ->
-                        KOTCard(
-                            kot = kot,
-                            onStatusUpdate = { newStatus ->
-                                viewModel.updateKOTStatus(kot.kotId, newStatus)
+                is KitchenViewModel.KitchenUiState.Error -> {
+                    val error = state.message
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        action = {
+                            TextButton(onClick = { viewModel.clearError() }) {
+                                Text("Dismiss", color = Color.White)
                             }
-                        )
-                    }
+                        }
+                    ) { Text(error) }
                 }
             }
         }
@@ -181,23 +179,12 @@ fun KOTCard(
     onStatusUpdate: (KOTStatus) -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                2.dp,
-                when (kot.status) {
-                    KOTStatus.PENDING -> Color.Red
-                    KOTStatus.IN_PROGRESS -> Color.Blue
-                    KOTStatus.READY -> Color.Green
-                    KOTStatus.SERVED -> Color.Gray
-                },
-                RoundedCornerShape(8.dp)
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -208,154 +195,95 @@ fun KOTCard(
                     Text(
                         text = "KOT #${kot.kotNumber}",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryGreen
                     )
                     Text(
                         text = "${kot.tableNumber} • ${kot.orderType}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.Gray
                     )
                 }
-
                 StatusBadge(status = kot.status)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Divider(modifier = Modifier.padding(vertical = 12.dp))
 
-            // Order time and waiter
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccessTime,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = kot.orderTime,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            // Time and Waiter
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccessTime, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                    Spacer(Modifier.width(4.dp))
+                    Text(kot.orderTime, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
-
-                kot.waiterName?.let { waiter ->
-                    Text(
-                        text = "Waiter: $waiter",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                kot.waiterName?.let {
+                    Text("Waiter: $it", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Items
+            // Items List
             Column {
                 kot.items.forEach { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
                                 text = item.itemName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
                             )
-                            if (item.modifiers.isNotEmpty()) {
-                                Text(
-                                    text = "• ${item.modifiers.joinToString(", ")}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            item.specialInstructions?.let { instructions ->
-                                Text(
-                                    text = "Note: $instructions",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                                )
-                            }
+                            Text(
+                                text = "×${item.quantity}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryGreen
+                            )
                         }
-
-                        Text(
-                            text = "×${item.quantity}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        if (item.addOns.isNotEmpty()) {
+                            val extras = ( item.addOns).joinToString(", ")
+                            Text(
+                                text = "Extras: $extras",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.DarkGray
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            // Action Buttons
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (kot.status) {
                     KOTStatus.PENDING -> {
                         Button(
                             onClick = { onStatusUpdate(KOTStatus.IN_PROGRESS) },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text("Start Cooking")
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                        ) { Text("Start Cooking") }
                     }
-
                     KOTStatus.IN_PROGRESS -> {
                         Button(
-                            onClick = { onStatusUpdate(KOTStatus.READY) },
+                            onClick = { onStatusUpdate(KOTStatus.COMPLETED) },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Green
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Mark Ready")
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                        ) { Text("Mark Ready") }
                     }
-
-                    KOTStatus.READY -> {
+                    KOTStatus.COMPLETED -> {
                         Button(
-                            onClick = { onStatusUpdate(KOTStatus.SERVED) },
+                            onClick = { onStatusUpdate(KOTStatus.COMPLETED) },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Restaurant,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Mark Served")
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                        ) { Text("Mark Served") }
                     }
-
-                    KOTStatus.SERVED -> {
-                        // No actions for served items
-                    }
+                    else -> {}
                 }
             }
         }
@@ -364,23 +292,22 @@ fun KOTCard(
 
 @Composable
 fun StatusBadge(status: KOTStatus) {
-    val (backgroundColor, textColor, text) = when (status) {
-        KOTStatus.PENDING -> Triple(Color.Red.copy(alpha = 0.1f), Color.Red, "PENDING")
-        KOTStatus.IN_PROGRESS -> Triple(Color.Blue.copy(alpha = 0.1f), Color.Blue, "COOKING")
-        KOTStatus.READY -> Triple(Color.Green.copy(alpha = 0.1f), Color.Green, "READY")
-        KOTStatus.SERVED -> Triple(Color.Gray.copy(alpha = 0.1f), Color.Gray, "SERVED")
+    val color = when (status) {
+        KOTStatus.PENDING -> Color.Red
+        KOTStatus.IN_PROGRESS -> Color.Blue
+        KOTStatus.COMPLETED -> Color(0xFF4CAF50)
+        KOTStatus.CANCELLED -> Color.Gray
     }
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(backgroundColor)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, color)
     ) {
         Text(
-            text = text,
+            text = status.name,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = textColor,
+            color = color,
             fontWeight = FontWeight.Bold
         )
     }

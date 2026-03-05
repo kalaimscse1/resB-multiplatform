@@ -252,6 +252,12 @@ fun AppNavigation(
                                     inclusive = true
                                 }
                             }
+                        } else if (sessionManager.getUser()?.role == "CHEFF") {
+                            navController.navigate("kitchen") {
+                                popUpTo("splash") {
+                                    inclusive = true
+                                }
+                            }
                         } else {
                             navController.navigate("dashboard") {
                                 popUpTo("splash") {
@@ -270,6 +276,8 @@ fun AppNavigation(
                 onLoginSuccess = {
                     if (sessionManager.getUser()?.role == "WAITER") {
                         navController.navigate("selects") { popUpTo("splash") { inclusive = true } }
+                    } else if (sessionManager.getUser()?.role == "CHEFF") {
+                        navController.navigate("kitchen") { popUpTo("splash") { inclusive = true } }
                     } else {
                         navController.navigate("dashboard") {
                             popUpTo("splash") {
@@ -1295,6 +1303,17 @@ fun DrawerContent(
                     }
                 }
 
+                if (role in listOf("CHEFF")) {
+                    NavigationDrawerItem(
+                        label = { if (!isCollapsed) Text("Kitchen") },
+                        icon = { DrawerIcon(Icons.Default.Kitchen, null, isCollapsed) },
+                        selected = currentDestination?.route == "kitchen",
+                        onClick = { onDestinationClicked("kitchen") },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                        colors = drawerItemColors
+                    )
+                }
+
                 if (role in listOf("RESBADMIN", "ADMIN")) {
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("Settings") },
@@ -1306,7 +1325,7 @@ fun DrawerContent(
                     )
                 }
 
-                if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CASHIER", "CHEF")) {
+                if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CASHIER", "CHEFF")) {
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("Support") },
                         icon = { DrawerIcon(Icons.Default.SupportAgent, null, isCollapsed) },
@@ -1335,7 +1354,7 @@ fun DrawerContent(
                 Spacer(modifier = Modifier.weight(1f))
             }
             ModernDivider()
-            if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CHEF", "CASHIER")) {
+            if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CHEFF", "CASHIER")) {
                 NavigationDrawerItem(
                     label = { if (!isCollapsed) Text("Logout") },
                     icon = { DrawerIcon(Icons.AutoMirrored.Filled.Logout, null, isCollapsed) },
