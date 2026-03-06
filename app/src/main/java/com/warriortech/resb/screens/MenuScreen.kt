@@ -127,14 +127,6 @@ fun MenuScreen(
         }
     }
 
-    // Handle table unlocking when leaving the screen
-    DisposableEffect(tableId) {
-        onDispose {
-            if (isTakeaway == "TABLE") {
-                viewModel.updateTableOpenStatus(tableId, false)
-            }
-        }
-    }
 
     BackHandler {
         onBackPressed()

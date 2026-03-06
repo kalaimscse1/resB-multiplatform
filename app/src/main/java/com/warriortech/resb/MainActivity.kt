@@ -313,12 +313,10 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onOrderPlaced = {
-
                     navController.popBackStack()
                 },
                 drawerState = drawerState,
                 onBillPlaced = { items, orderId ->
-
                     selectedItems = items
                     navController.navigate("billing_screen/${orderId}")
                 },

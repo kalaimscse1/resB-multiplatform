@@ -69,6 +69,7 @@ class OrderRepository @Inject constructor(
                 }
             } else {
                 orderMasterResponse = null
+                apiService.updateTableOpenStatus(tableId,false,sessionManager.getCompanyCode() ?: "")
             }
 
             val tableInfo = apiService.getTablesByStatus(
