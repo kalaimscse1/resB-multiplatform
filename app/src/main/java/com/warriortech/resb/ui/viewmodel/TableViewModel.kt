@@ -78,18 +78,27 @@ class TableViewModel @Inject constructor(
     private fun setupTablesPipeline() {
         combine(_selectedSection, refreshTrigger) { section, _ -> section }
             .flatMapLatest { section ->
-                if (section != null && section != 0L) {
+                val flow = if (section != null && section != 0L) {
                     tableRepository.getTablesBySection(section)
                 } else {
                     tableRepository.getActiveTables()
                 }
-            }
-            .onStart { _tablesState.value = TablesState.Loading }
-            .catch { e ->
-                _tablesState.value = TablesState.Error(e.message ?: "Unknown error occurred")
+                
+                flow.onStart { 
+                    // Only show loading if we don't already have data to prevent flickering
+                    if (_tablesState.value !is TablesState.Success) {
+                        _tablesState.value = TablesState.Loading
+                    }
+                }.catch { e ->
+                    _tablesState.value = TablesState.Error(e.message ?: "Unknown error occurred")
+                    emit(emptyList())
+                }
             }
             .onEach { tables ->
-                _tablesState.value = TablesState.Success(tables)
+                // Only update Success if we have results or if we weren't in an error state
+                if (tables.isNotEmpty() || _tablesState.value !is TablesState.Error) {
+                    _tablesState.value = TablesState.Success(tables)
+                }
             }
             .launchIn(viewModelScope)
     }
