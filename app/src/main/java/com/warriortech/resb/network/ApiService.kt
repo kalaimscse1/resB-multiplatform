@@ -2,7 +2,6 @@ package com.warriortech.resb.network
 
 import com.warriortech.resb.model.*
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -60,6 +59,12 @@ interface ApiService {
         @Body auditingRequest: TblAuditingRequest,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<TblAuditingResponse>
+
+    @GET("auditing/getAuditingAll")
+    suspend fun getAuditing(
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblAuditingResponse>>
+
 
 
     /**
@@ -765,12 +770,6 @@ interface ApiService {
 
     @GET("report/gst-summary")
     suspend fun getGSTSummary(@Header("X-Tenant-ID") tenantId: String): Response<GSTSummaryReport>
-
-//    @GET("report/sales-summary/{date}")
-//    suspend fun getSalesSummaryByDate(
-//        @Path("date") date: String,
-//        @Header("X-Tenant-ID") tenantId: String
-//    ): Response<SalesSummaryReport>
 
     @GET("api/reports/today-sales")
     suspend fun getReportsForDate(

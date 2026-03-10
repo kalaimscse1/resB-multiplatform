@@ -66,6 +66,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.warriortech.resb.screens.reports.auditing.AuditingScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -739,6 +740,9 @@ fun AppNavigation(
                 navController = navController
             )
         }
+        composable("auditing_report"){
+            AuditingScreen(drawerState = drawerState)
+        }
     }
 }
 
@@ -1077,7 +1081,8 @@ fun DrawerContent(
                             "kot_report",
                             "paid_bills",
                             "yearly_summary",
-                            "monthly_summary"
+                            "monthly_summary",
+                            "auditing_report"
                         ),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.REPORTS) ExpandedMenu.NONE else ExpandedMenu.REPORTS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
@@ -1167,6 +1172,15 @@ fun DrawerContent(
                                 icon = { DrawerIcon(Icons.Default.Kitchen, null, isCollapsed) },
                                 selected = currentDestination?.route == "kot_report",
                                 onClick = { onDestinationClicked("kot_report") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Auditing Report") },
+                                icon = { DrawerIcon(Icons.Default.Assessment, null, isCollapsed) },
+                                selected = currentDestination?.route == "auditing_report",
+                                onClick = { onDestinationClicked("auditing_report") },
                                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                 colors = subMenuColors
                             )
