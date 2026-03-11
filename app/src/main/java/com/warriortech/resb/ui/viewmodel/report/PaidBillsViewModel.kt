@@ -1,28 +1,17 @@
 package com.warriortech.resb.ui.viewmodel.report
 
 import android.util.Log
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.BillRepository
-import com.warriortech.resb.data.repository.LedgerDetailsRepository
 import com.warriortech.resb.data.repository.OrderRepository
-import com.warriortech.resb.model.Bill
-import com.warriortech.resb.model.BillItem
-import com.warriortech.resb.model.Modifiers
-import com.warriortech.resb.model.OrderItem
-import com.warriortech.resb.model.TblBillingRequest
-import com.warriortech.resb.model.TblBillingResponse
-import com.warriortech.resb.model.TblMenuItemResponse
-import com.warriortech.resb.model.TblOrderDetailsResponse
+import com.warriortech.resb.data.repository.LedgerDetailsRepository
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
-import com.warriortech.resb.ui.viewmodel.report.KotViewModel.KotActionState
 import com.warriortech.resb.util.ReportExport
 import com.warriortech.resb.util.getCurrentDateModern
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -51,13 +40,37 @@ class PaidBillsViewModel @Inject constructor(
     private val _editableItems = MutableStateFlow<List<TblMenuItemResponse>>(emptyList())
     val editable: StateFlow<List<TblMenuItemResponse>> = _editableItems.asStateFlow()
 
-    private val _billedItems = MutableStateFlow<Map<TblMenuItemResponse,Int>>(emptyMap())
-    val billedItems: StateFlow<Map<TblMenuItemResponse,Int>> = _billedItems.asStateFlow()
-
+    private val _billedItems = MutableStateFlow<Map<TblMenuItemResponse, Int>>(emptyMap())
+    val billedItems: StateFlow<Map<TblMenuItemResponse, Int>> = _billedItems.asStateFlow()
 
     val orderId = MutableStateFlow<String?>(null)
+    private val _orderDetails = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
 
-    val _orderDetails = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
+    // Editable totals and payment modes
+    private val _orderAmt = MutableStateFlow(0.0)
+    val orderAmt: StateFlow<Double> = _orderAmt.asStateFlow()
+
+    private val _taxAmt = MutableStateFlow(0.0)
+    val taxAmt: StateFlow<Double> = _taxAmt.asStateFlow()
+
+    private val _grandTotal = MutableStateFlow(0.0)
+    val grandTotal: StateFlow<Double> = _grandTotal.asStateFlow()
+
+    private val _cash = MutableStateFlow(0.0)
+    val cash: StateFlow<Double> = _cash.asStateFlow()
+
+    private val _card = MutableStateFlow(0.0)
+    val card: StateFlow<Double> = _card.asStateFlow()
+
+    private val _upi = MutableStateFlow(0.0)
+    val upi: StateFlow<Double> = _upi.asStateFlow()
+
+    private val _due = MutableStateFlow(0.0)
+    val due: StateFlow<Double> = _due.asStateFlow()
+
+    private val _discount = MutableStateFlow(0.0)
+    val discount: StateFlow<Double> = _discount.asStateFlow()
+
     fun loadPaidBills(fromDate: String, toDate: String) {
         viewModelScope.launch {
             try {
@@ -70,12 +83,10 @@ class PaidBillsViewModel @Inject constructor(
                         _uiState.value = PaidBillsUiState.Success(bills)
                     }.onFailure { error ->
                         _uiState.value = PaidBillsUiState.Error(error.message ?: "Unknown error")
-                        Log.e("PaidBillsViewModel", "Error loading paid bills", error)
                     }
                 }
             } catch (e: Exception) {
                 _uiState.value = PaidBillsUiState.Error(e.message ?: "Unknown error")
-                Log.e("PaidBillsViewModel", "Exception loading paid bills", e)
             }
         }
     }
@@ -84,66 +95,147 @@ class PaidBillsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val res = billRepository.getPaymentByBillNo(bill)
-                val orderDetail =
-                    orderRepository.getOrdersByOrderId(res?.order_master?.order_master_id ?: "")
-                orderId.value = orderDetail.body()?.firstOrNull()?.order_master_id
-                val orders = orderDetail.body()!!
-                _orderDetails.value = orders
-                val menutItems = orders.map {
-                    TblMenuItemResponse(
-                        menu_item_id = it.menuItem.menu_item_id,
-                        menu_item_name = it.menuItem.menu_item_name,
-                        menu_item_name_tamil = it.menuItem.menu_item_name_tamil,
-                        item_cat_id = it.menuItem.item_cat_id,
-                        item_cat_name = it.menuItem.item_cat_name,
-                        rate = it.rate,
-                        ac_rate = it.rate,
-                        parcel_rate = it.rate,
-                        parcel_charge = it.rate,
-                        tax_id = it.menuItem.tax_id,
-                        tax_name = it.menuItem.tax_name,
-                        tax_percentage = it.menuItem.tax_percentage,
-                        kitchen_cat_id = it.menuItem.kitchen_cat_id,
-                        kitchen_cat_name = it.menuItem.kitchen_cat_name,
-                        stock_maintain = it.menuItem.stock_maintain,
-                        rate_lock = it.menuItem.rate_lock,
-                        unit_id = it.menuItem.unit_id,
-                        unit_name = it.menuItem.unit_name,
-                        min_stock = it.menuItem.min_stock,
-                        hsn_code = it.menuItem.hsn_code,
-                        order_by = it.menuItem.order_by,
-                        is_inventory = it.menuItem.is_inventory,
-                        is_raw = it.menuItem.is_raw,
-                        is_available = it.menuItem.is_available,
-                        image = it.menuItem.image,
-                        qty = it.qty,
-                        cess_specific = it.cess_specific,
-                        cess_per = it.cess_per.toString(),
-                        is_favourite = it.menuItem.is_favourite,
-                        menu_item_code = it.menuItem.menu_item_code,
-                        menu_id = it.menuItem.menu_id,
-                        menu_name = it.menuItem.menu_name,
-                        is_active = it.menuItem.is_active,
-                        preparation_time = it.menuItem.preparation_time,
-                        actual_rate = it.actual_rate
-                    )
-                }
-                _billedItems.value = menutItems.associateWith { it.qty }.toMutableMap()
-                _editableItems.value = menutItems
-                _selectedBill.value = res
-            } catch (e: Exception) {
+                res?.let {
+                    _selectedBill.value = it
+                    _orderAmt.value = it.order_amt
+                    _taxAmt.value = it.tax_amt
+                    _grandTotal.value = it.grand_total
+                    _cash.value = it.cash
+                    _card.value = it.card
+                    _upi.value = it.upi
+                    _due.value = it.due
+                    _discount.value = it.disc_amt
 
+                    val orderDetail = orderRepository.getOrdersByOrderId(it.order_master.order_master_id)
+                    orderId.value = orderDetail.body()?.firstOrNull()?.order_master_id
+                    val orders = orderDetail.body()!!
+                    _orderDetails.value = orders
+                    val menuItems = orders.map { d ->
+                        TblMenuItemResponse(
+                            menu_item_id = d.menuItem.menu_item_id,
+                            menu_item_name = d.menuItem.menu_item_name,
+                            menu_item_name_tamil = d.menuItem.menu_item_name_tamil,
+                            item_cat_id = d.menuItem.item_cat_id,
+                            item_cat_name = d.menuItem.item_cat_name,
+                            rate = d.rate,
+                            ac_rate = d.rate,
+                            parcel_rate = d.rate,
+                            parcel_charge = d.rate,
+                            tax_id = d.menuItem.tax_id,
+                            tax_name = d.menuItem.tax_name,
+                            tax_percentage = d.menuItem.tax_percentage,
+                            kitchen_cat_id = d.menuItem.kitchen_cat_id,
+                            kitchen_cat_name = d.menuItem.kitchen_cat_name,
+                            stock_maintain = d.menuItem.stock_maintain,
+                            rate_lock = d.menuItem.rate_lock,
+                            unit_id = d.menuItem.unit_id,
+                            unit_name = d.menuItem.unit_name,
+                            min_stock = d.menuItem.min_stock,
+                            hsn_code = d.menuItem.hsn_code,
+                            order_by = d.menuItem.order_by,
+                            is_inventory = d.menuItem.is_inventory,
+                            is_raw = d.menuItem.is_raw,
+                            is_available = d.menuItem.is_available,
+                            image = d.menuItem.image,
+                            qty = d.qty,
+                            cess_specific = d.cess_specific,
+                            cess_per = d.cess_per.toString(),
+                            is_favourite = d.menuItem.is_favourite,
+                            menu_item_code = d.menuItem.menu_item_code,
+                            menu_id = d.menuItem.menu_id,
+                            menu_name = d.menuItem.menu_name,
+                            is_active = d.menuItem.is_active,
+                            preparation_time = d.menuItem.preparation_time,
+                            actual_rate = d.actual_rate
+                        )
+                    }
+                    _billedItems.value = menuItems.associateWith { item -> item.qty }
+                    _editableItems.value = menuItems
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error selecting bill")
             }
         }
+    }
 
+    fun updatePaymentAmounts(cash: Double, card: Double, upi: Double, discount: Double) {
+        _cash.value = cash
+        _card.value = card
+        _upi.value = upi
+        _discount.value = discount
+        calculateTotals()
+    }
+
+    private fun calculateTotals() {
+        val baseAmt = _billedItems.value.entries.sumOf { it.key.actual_rate * it.value }
+        val tax = _billedItems.value.entries.sumOf { (it.key.tax_percentage.toDouble() / 100) * (it.key.actual_rate * it.value) }
+        
+        _orderAmt.value = baseAmt
+        _taxAmt.value = tax
+        val total = baseAmt + tax - _discount.value
+        _grandTotal.value = total
+        
+        // Auto-adjust due if payments don't match total
+        val currentPayments = _cash.value + _card.value + _upi.value
+        _due.value = if (total > currentPayments) total - currentPayments else 0.0
+    }
+
+    fun updateItemQuantity(menuItem: TblMenuItemResponse, newQuantity: Int) {
+        val currentItems = _billedItems.value.toMutableMap()
+        if (newQuantity > 0) {
+            currentItems[menuItem] = newQuantity
+        } else {
+            currentItems.remove(menuItem)
+        }
+        _billedItems.value = currentItems.toMap()
+        calculateTotals()
+    }
+
+    fun removeItem(menuItem: TblMenuItemResponse) {
+        val currentItems = _billedItems.value.toMutableMap()
+        currentItems.remove(menuItem)
+        _billedItems.value = currentItems.toMap()
+        calculateTotals()
+    }
+
+    fun updateBill(billNo: String) {
+        viewModelScope.launch {
+            try {
+                val orderItems = _billedItems.value.entries.map { (menuItem, quantity) ->
+                    val originalDetail = _orderDetails.value.find { it.menuItem.menu_item_id == menuItem.menu_item_id }
+                    OrderItem(
+                        quantity = quantity,
+                        menuItem = menuItem,
+                        orderDetailsId = originalDetail?.order_details_id ?: 0L,
+                        kotNumber = originalDetail?.kot_number ?: 0
+                    )
+                }
+
+                orderRepository.updateOrderDetails(
+                    orderId = orderId.value,
+                    items = orderItems,
+                    tableStatus = ""
+                ).collect { result ->
+                    result.fold(
+                        onSuccess = {
+
+                            billRepository.updateBill(billNo, it.first().order_master_id)
+                            _uiState.value = PaidBillsUiState.Success(emptyList()) // Trigger success
+                        },
+                        onFailure = {
+                            _uiState.value = PaidBillsUiState.Error("Update failed: ${it.message}")
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = PaidBillsUiState.Error("Update exception: ${e.message}")
+            }
+        }
     }
 
     fun deleteBill(billNo: String) {
         viewModelScope.launch {
             try {
-                // Implement delete logic here
-                // You would call billRepository.deleteBill(billNo)
-                // For now, just refresh the list
                 billRepository.deleteBill(billNo)
                 ledgerDetailsRepository.deleteByEntryNo(billNo)
                 val currentState = _uiState.value
@@ -153,10 +245,76 @@ class PaidBillsViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.value = PaidBillsUiState.Error("Failed to delete bill: ${e.message}")
-                Log.e("PaidBillsViewModel", "Error deleting bill", e)
             }
         }
     }
+    fun sendBillViaWhatsApp(billNo: TblBillingResponse,context: android.content.Context) {
+        viewModelScope.launch {
+            try {
+                // Implement print logic here
+                // You would call billRepository.printBill(billNo)
+                val tamil = sessionManager.getGeneralSetting()?.tamil_receipt_print ?: false
+                val bill = billNo
+                var sn = 1
+                val orderDetails =
+                    orderRepository.getOrdersByOrderId(bill.order_master.order_master_id)
+                        .body()!!
+                val counter =
+                    sessionManager.getUser()?.counter_name ?: "Counter1"
+                val billItems = orderDetails.map { detail ->
+                    val menuItem = detail.menuItem
+                    val qty = detail.qty
+                    BillItem(
+                        sn = sn++,
+                        itemName = if (tamil) menuItem.menu_item_name_tamil else menuItem.menu_item_name,
+                        qty = qty,
+                        price = menuItem.rate,
+                        basePrice = detail.rate,
+                        amount = qty * menuItem.rate,
+                        sgstPercent = menuItem.tax_percentage.toDouble() / 2,
+                        cgstPercent = menuItem.tax_percentage.toDouble() / 2,
+                        igstPercent = if (detail.igst > 0) menuItem.tax_percentage.toDouble() else 0.0,
+                        cessPercent = if (detail.cess > 0) menuItem.cess_per.toDouble() else 0.0,
+                        sgst = detail.sgst,
+                        cgst = detail.cgst,
+                        igst = if (detail.igst > 0) detail.igst else 0.0,
+                        cess = if (detail.cess > 0) detail.cess else 0.0,
+                        cess_specific = if (detail.cess_specific > 0) detail.cess_specific else 0.0,
+                        taxPercent = menuItem.tax_percentage.toDouble(),
+                        taxAmount = detail.tax_amount
+                    )
+                }
+                val billDetails = Bill(
+                    company_code = sessionManager.getCompanyCode() ?: "",
+                    billNo = bill.bill_no,
+                    date = bill.bill_date.toString(),
+                    time = bill.bill_create_time.toString(),
+                    orderNo = bill.order_master.order_master_id,
+                    counter = counter,
+                    tableNo = bill.order_master.table_name,
+                    custName = bill.customer.customer_name,
+                    custNo = bill.customer.contact_no,
+                    custAddress = bill.customer.address,
+                    custGstin = bill.customer.gst_no,
+                    items = billItems,
+                    subtotal = bill.order_amt,
+                    deliveryCharge = 0.0, // Assuming no delivery charge
+                    discount = bill.disc_amt,
+                    roundOff = bill.round_off,
+                    total = bill.grand_total,
+                    paperWidth = sessionManager.getPaperWidth(),
+                    received_amt = bill.received_amt,
+                    pending_amt = bill.pending_amt
+                )
+                ReportExport.generateBillPdf(billDetails, context,sessionManager)
+
+            } catch (e: Exception) {
+                _uiState.value = PaidBillsUiState.Error("Failed to print bill: ${e.message}")
+                Log.e("PaidBillsViewModel", "Error printing bill", e)
+            }
+        }
+    }
+
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     fun printBill(billNo: String) {
         viewModelScope.launch {
@@ -237,123 +395,6 @@ class PaidBillsViewModel @Inject constructor(
         }
     }
 
-    fun updateBill(billNo: String) {
-        viewModelScope.launch {
-            val orderItem = _billedItems.value.entries.map { (menuItem, quantity) ->
-                val id =
-                    _orderDetails.value.filter { it.menuItem.menu_item_id == menuItem.menu_item_id }
-                OrderItem(
-                    quantity = quantity,
-                    menuItem = menuItem,
-                    orderDetailsId = id.first().order_details_id,
-                    kotNumber = id.first().kot_number
-                )
-            }
-            orderRepository.updateOrderDetails(
-                orderId = orderId.value,
-                items = orderItem,
-                tableStatus = ""
-            ).collect { result ->
-                result.fold(
-                    onSuccess = {
-                        billRepository.updateBill(billNo, it.first().order_master_id)
-                        loadPaidBills(getCurrentDateModern(),getCurrentDateModern())
-                    },
-                    onFailure = {
-                        _uiState.value =
-                            PaidBillsUiState.Error("Failed to print bill: ${it.message}")
-                    }
-                )
-            }
-        }
-    }
-    fun updateItemQuantity(menuItem: TblMenuItemResponse, newQuantity: Int) {
-        val currentItems = _billedItems.value.toMutableMap()
-        if (newQuantity > 0) {
-            currentItems[menuItem] = newQuantity
-        } else {
-            currentItems.remove(menuItem)
-        }
-        _billedItems.value = currentItems.toMap()
-    }
-
-    fun removeItem(menuItem: TblMenuItemResponse) {
-        val orderId =
-            _orderDetails.value.filter { it.menuItem.menu_item_id == menuItem.menu_item_id }
-        viewModelScope.launch {
-            val currentItems = _billedItems.value.toMutableMap()
-            _billedItems.value = currentItems.toMap()
-            orderRepository.deleteByid(orderDeatailId = orderId.first().order_details_id)
-        }
-
-    }
-
-    fun sendBillViaWhatsApp(billNo: TblBillingResponse,context: android.content.Context) {
-        viewModelScope.launch {
-            try {
-                // Implement print logic here
-                // You would call billRepository.printBill(billNo)
-                val tamil = sessionManager.getGeneralSetting()?.tamil_receipt_print ?: false
-                val bill = billNo
-                var sn = 1
-                val orderDetails =
-                    orderRepository.getOrdersByOrderId(bill.order_master.order_master_id)
-                        .body()!!
-                val counter =
-                    sessionManager.getUser()?.counter_name ?: "Counter1"
-                val billItems = orderDetails.map { detail ->
-                    val menuItem = detail.menuItem
-                    val qty = detail.qty
-                    BillItem(
-                        sn = sn++,
-                        itemName = if (tamil) menuItem.menu_item_name_tamil else menuItem.menu_item_name,
-                        qty = qty,
-                        price = menuItem.rate,
-                        basePrice = detail.rate,
-                        amount = qty * menuItem.rate,
-                        sgstPercent = menuItem.tax_percentage.toDouble() / 2,
-                        cgstPercent = menuItem.tax_percentage.toDouble() / 2,
-                        igstPercent = if (detail.igst > 0) menuItem.tax_percentage.toDouble() else 0.0,
-                        cessPercent = if (detail.cess > 0) menuItem.cess_per.toDouble() else 0.0,
-                        sgst = detail.sgst,
-                        cgst = detail.cgst,
-                        igst = if (detail.igst > 0) detail.igst else 0.0,
-                        cess = if (detail.cess > 0) detail.cess else 0.0,
-                        cess_specific = if (detail.cess_specific > 0) detail.cess_specific else 0.0,
-                        taxPercent = menuItem.tax_percentage.toDouble(),
-                        taxAmount = detail.tax_amount
-                    )
-                }
-                val billDetails = Bill(
-                    company_code = sessionManager.getCompanyCode() ?: "",
-                    billNo = bill.bill_no,
-                    date = bill.bill_date.toString(),
-                    time = bill.bill_create_time.toString(),
-                    orderNo = bill.order_master.order_master_id,
-                    counter = counter,
-                    tableNo = bill.order_master.table_name,
-                    custName = bill.customer.customer_name,
-                    custNo = bill.customer.contact_no,
-                    custAddress = bill.customer.address,
-                    custGstin = bill.customer.gst_no,
-                    items = billItems,
-                    subtotal = bill.order_amt,
-                    deliveryCharge = 0.0, // Assuming no delivery charge
-                    discount = bill.disc_amt,
-                    roundOff = bill.round_off,
-                    total = bill.grand_total,
-                    paperWidth = sessionManager.getPaperWidth(),
-                    received_amt = bill.received_amt,
-                    pending_amt = bill.pending_amt
-                )
-                ReportExport.generateBillPdf(billDetails, context,sessionManager)
-
-            } catch (e: Exception) {
-                _uiState.value = PaidBillsUiState.Error("Failed to print bill: ${e.message}")
-                Log.e("PaidBillsViewModel", "Error printing bill", e)
-            }
-        }
-    }
 
     fun clearSelection() {
         _selectedBill.value = null
@@ -365,4 +406,3 @@ class PaidBillsViewModel @Inject constructor(
         }
     }
 }
-

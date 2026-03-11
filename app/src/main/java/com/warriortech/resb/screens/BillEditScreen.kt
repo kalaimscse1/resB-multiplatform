@@ -4,20 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,10 +27,8 @@ import com.warriortech.resb.ui.components.ModernDivider
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.report.PaidBillsViewModel
-import com.warriortech.resb.model.TblBillingRequest
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.util.CurrencySettings
-import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,126 +38,119 @@ fun BillEditScreen(
     billNo: String
 ) {
     val selectedBill by viewModel.selectedBill.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    var editedNote by remember { mutableStateOf("") }
-    var editedDiscountAmt by remember { mutableStateOf("") }
-    var editedOthersAmt by remember { mutableStateOf("") }
-    val editableItems by viewModel.editable.collectAsStateWithLifecycle()
     val billItems by viewModel.billedItems.collectAsStateWithLifecycle()
-
+    
+    val orderAmt by viewModel.orderAmt.collectAsStateWithLifecycle()
+    val taxAmt by viewModel.taxAmt.collectAsStateWithLifecycle()
+    val grandTotal by viewModel.grandTotal.collectAsStateWithLifecycle()
+    val cash by viewModel.cash.collectAsStateWithLifecycle()
+    val card by viewModel.card.collectAsStateWithLifecycle()
+    val upi by viewModel.upi.collectAsStateWithLifecycle()
+    val discount by viewModel.discount.collectAsStateWithLifecycle()
+    val due by viewModel.due.collectAsStateWithLifecycle()
 
     LaunchedEffect(billNo) {
         viewModel.selectBill(billNo)
     }
 
-    LaunchedEffect(selectedBill) {
-        selectedBill?.let { bill ->
-            editedNote = bill.note
-            editedDiscountAmt = bill.disc_amt.toString()
-            editedOthersAmt = bill.others.toString()
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Bill #$billNo") },
+                title = { Text("Edit Bill #$billNo", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = {
                         viewModel.clearSelection()
                         navController.navigateUp()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryGreen,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryGreen)
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         if (selectedBill == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No Bill found")
+            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = PrimaryGreen)
             }
         } else {
-            selectedBill?.let { bill ->
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .background(SurfaceLight),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // --- Bill Info ---
-                    item {
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                            Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                                Text(
-                                    "Bill Information",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PrimaryGreen
-                                )
-                                ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
-                                BillInfoRow("Bill Number", bill.bill_no)
-                                BillInfoRow("Date", "${bill.bill_date} ${bill.bill_create_time}")
-                                BillInfoRow("Customer", bill.customer.customer_name)
-                                BillInfoRow("Staff", bill.staff.staff_name)
-                                BillInfoRow("Order Amount", CurrencySettings.format(bill.order_amt))
-                                BillInfoRow("Tax Amount", CurrencySettings.format(bill.tax_amt))
-                                BillInfoRow("Discount", CurrencySettings.format(bill.disc_amt))
-                                BillInfoRow("Other Charges", CurrencySettings.format(bill.others))
-                                BillInfoRow("Round Off", CurrencySettings.format(bill.round_off))
-                                BillInfoRow("Grand Total", CurrencySettings.format(bill.grand_total))
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(SurfaceLight),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // --- Bill Summary Card ---
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                            Text("Bill Summary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                            ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            BillInfoRow("Sub Total", CurrencySettings.format(orderAmt))
+                            BillInfoRow("Tax Total", CurrencySettings.format(taxAmt))
+                            BillInfoRow("Discount", CurrencySettings.format(discount))
+                            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Grand Total", fontWeight = FontWeight.Bold)
+                                Text(CurrencySettings.format(grandTotal), fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                            }
+                            if (due > 0) {
+                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Remaining Due", color = Color.Red, fontWeight = FontWeight.Bold)
+                                    Text(CurrencySettings.format(due), color = Color.Red, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
+                }
 
-                    // --- Billed Items ---
-                    item {
-                        Text(
-                            "Billed Items",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryGreen
-                        )
-                        ModernDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    }
-
-                    items(billItems.toList()) { (item, _) ->
-                        ItemRow(
-                            menuItem = item,
-                            quantity = item.qty,
-                            onQuantityChange = { newQty ->
-                                viewModel.updateItemQuantity(item, newQty)
-                            },
-                            onRemoveItem = { viewModel.removeItem(item) }
-                        )
-                    }
-
-                    // --- Save Button ---
-                    item {
-                        Button(
-                            onClick = {
-                                viewModel.updateBill(bill.bill_no)
-                                navController.navigateUp()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                        ) {
-                            Text("Update Changes", color = Color.White)
+                // --- Payment Modes Card ---
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                            Text("Payment Breakdown", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PaymentEditField("Cash", cash, Modifier.weight(1f)) { viewModel.updatePaymentAmounts(it, card, upi, discount) }
+                                PaymentEditField("Card", card, Modifier.weight(1f)) { viewModel.updatePaymentAmounts(cash, it, upi, discount) }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PaymentEditField("UPI", upi, Modifier.weight(1f)) { viewModel.updatePaymentAmounts(cash, card, it, discount) }
+                                PaymentEditField("Discount", discount, Modifier.weight(1f)) { viewModel.updatePaymentAmounts(cash, card, upi, it) }
+                            }
                         }
+                    }
+                }
+
+                // --- Billed Items ---
+                item {
+                    Text("Billed Items", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                }
+
+                items(billItems.toList()) { (item, qty) ->
+                    ItemRow(
+                        menuItem = item,
+                        quantity = qty,
+                        onQuantityChange = { newQty -> viewModel.updateItemQuantity(item, newQty) },
+                        onRemoveItem = { viewModel.removeItem(item) }
+                    )
+                }
+
+                // --- Action Button ---
+                item {
+                    Button(
+                        onClick = {
+                            viewModel.updateBill(billNo)
+                            navController.navigateUp()
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Save All Changes", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -168,15 +159,28 @@ fun BillEditScreen(
 }
 
 @Composable
+fun PaymentEditField(label: String, value: Double, modifier: Modifier = Modifier, onValueChange: (Double) -> Unit) {
+    OutlinedTextField(
+        value = if (value == 0.0) "" else value.toString(),
+        onValueChange = { str ->
+            val num = str.toDoubleOrNull() ?: 0.0
+            onValueChange(num)
+        },
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = modifier,
+        singleLine = true
+    )
+}
+
+@Composable
 fun BillInfoRow(label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Text(value, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -185,86 +189,34 @@ fun ItemRow(
     menuItem: TblMenuItemResponse,
     quantity: Int,
     onQuantityChange: (Int) -> Unit,
-    onRemoveItem: () -> Unit,
-    modifier: Modifier = Modifier
+    onRemoveItem: () -> Unit
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = menuItem.menu_item_name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = CurrencySettings.format(menuItem.actual_rate * quantity),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Column(Modifier.weight(1f)) {
+                Text(menuItem.menu_item_name, fontWeight = FontWeight.Bold)
+                Text(CurrencySettings.format(menuItem.actual_rate), style = MaterialTheme.typography.bodySmall)
             }
 
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
-                // Quantity controls
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IconButton(
-                        onClick = {
-                            if (quantity > 1) {
-                                onQuantityChange(quantity - 1)
-                            }
-                        },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Remove,
-                            contentDescription = "Decrease quantity"
-                        )
-                    }
-
-                    Text(
-                        text = quantity.toString(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.widthIn(min = 24.dp),
-                        textAlign = TextAlign.Center
-                    )
-
-                    IconButton(
-                        onClick = { onQuantityChange(quantity + 1) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Increase quantity"
-                        )
-                    }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { if (quantity > 1) onQuantityChange(quantity - 1) }) {
+                    Icon(Icons.Default.Remove, "Decrease", tint = Color.Gray)
                 }
-                // Remove item button
-                IconButton(
-                    onClick = onRemoveItem,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove item",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Text(quantity.toString(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 8.dp))
+                IconButton(onClick = { onQuantityChange(quantity + 1) }) {
+                    Icon(Icons.Default.Add, "Increase", tint = PrimaryGreen)
+                }
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = onRemoveItem) {
+                    Icon(Icons.Default.Delete, "Remove", tint = Color.Red)
                 }
             }
         }
