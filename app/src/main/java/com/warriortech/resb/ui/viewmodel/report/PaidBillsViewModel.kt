@@ -1,6 +1,9 @@
 package com.warriortech.resb.ui.viewmodel.report
 
+import android.Manifest
+import android.content.Context
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.BillRepository
@@ -113,6 +116,7 @@ class PaidBillsViewModel @Inject constructor(
                     val menuItems = orders.map { d ->
                         TblMenuItemResponse(
                             menu_item_id = d.menuItem.menu_item_id,
+                            menu_item_code = d.menuItem.menu_item_code,
                             menu_item_name = d.menuItem.menu_item_name,
                             menu_item_name_tamil = d.menuItem.menu_item_name_tamil,
                             item_cat_id = d.menuItem.item_cat_id,
@@ -141,7 +145,6 @@ class PaidBillsViewModel @Inject constructor(
                             cess_specific = d.cess_specific,
                             cess_per = d.cess_per.toString(),
                             is_favourite = d.menuItem.is_favourite,
-                            menu_item_code = d.menuItem.menu_item_code,
                             menu_id = d.menuItem.menu_id,
                             menu_name = d.menuItem.menu_name,
                             is_active = d.menuItem.is_active,
@@ -167,8 +170,11 @@ class PaidBillsViewModel @Inject constructor(
     }
 
     private fun calculateTotals() {
-        val baseAmt = _billedItems.value.entries.sumOf { it.key.actual_rate * it.value }
-        val tax = _billedItems.value.entries.sumOf { (it.key.tax_percentage.toDouble() / 100) * (it.key.actual_rate * it.value) }
+        val items = _billedItems.value
+        val baseAmt = items.entries.sumOf { it.key.actual_rate * it.value }
+        val tax = items.entries.sumOf { 
+            (it.key.tax_percentage.toDoubleOrNull() ?: 0.0) / 100 * (it.key.actual_rate * it.value) 
+        }
         
         _orderAmt.value = baseAmt
         _taxAmt.value = tax
@@ -218,8 +224,36 @@ class PaidBillsViewModel @Inject constructor(
                 ).collect { result ->
                     result.fold(
                         onSuccess = {
-
-                            billRepository.updateBill(billNo, it.first().order_master_id)
+                            val request = TblBillingRequest(
+                                bill_no = billNo,
+                                cash = _cash.value,
+                                card = _card.value,
+                                upi = _upi.value,
+                                due = _due.value,
+                                disc_amt = _discount.value,
+                                order_amt = _orderAmt.value,
+                                tax_amt = _taxAmt.value,
+                                grand_total = _grandTotal.value,
+                                received_amt = _cash.value + _card.value + _upi.value,
+                                pending_amt = _due.value,
+                                is_active = 1L,
+                                bill_date ="",
+                                bill_create_time = "",
+                                order_master_id = "" ,
+                                voucher_id = 1,
+                                staff_id = 1,
+                                customer_id = 1,
+                                cess = 0.0,
+                                cess_specific = 0.0,
+                                delivery_amt =0.0,
+                                round_off = 0.0,
+                                rounded_amt = 0.0,
+                                others = 0.0,
+                                change = 0.0,
+                                note = "" ,
+                                tendered_amt = 0.0
+                            )
+                            billRepository.updateBill(billNo, it.first().order_master_id, request)
                             _uiState.value = PaidBillsUiState.Success(emptyList()) // Trigger success
                         },
                         onFailure = {
@@ -248,7 +282,7 @@ class PaidBillsViewModel @Inject constructor(
             }
         }
     }
-    fun sendBillViaWhatsApp(billNo: TblBillingResponse,context: android.content.Context) {
+    fun sendBillViaWhatsApp(billNo: TblBillingResponse,context: Context) {
         viewModelScope.launch {
             try {
                 // Implement print logic here
@@ -315,7 +349,7 @@ class PaidBillsViewModel @Inject constructor(
         }
     }
 
-    @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBill(billNo: String) {
         viewModelScope.launch {
             try {

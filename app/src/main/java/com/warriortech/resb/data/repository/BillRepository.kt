@@ -314,7 +314,7 @@ class BillRepository @Inject constructor(
         } else null
     }
 
-    suspend fun updateBill(billNo: String, orderMasterId: String) {
+    suspend fun updateBill(billNo: String, orderMasterId: String,request: TblBillingRequest) {
         val bill =
             apiService.getPaymentByBillNo(billNo, sessionManager.getCompanyCode() ?: "").body()!!
         var order: List<TblOrderDetailsResponse> = emptyList()

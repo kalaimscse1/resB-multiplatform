@@ -8,13 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,8 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.ui.components.ModernDivider
-import com.warriortech.resb.ui.theme.PrimaryGreen
-import com.warriortech.resb.ui.theme.SurfaceLight
+import com.warriortech.resb.ui.theme.*
 import com.warriortech.resb.ui.viewmodel.report.PaidBillsViewModel
 import com.warriortech.resb.model.TblMenuItemResponse
 import com.warriortech.resb.util.CurrencySettings
@@ -130,10 +126,10 @@ fun BillEditScreen(
                     Text("Billed Items", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PrimaryGreen)
                 }
 
-                items(billItems.toList()) { (item, qty) ->
+                items(billItems.toList()) { (item, quantity) ->
                     ItemRow(
                         menuItem = item,
-                        quantity = qty,
+                        quantity = quantity,
                         onQuantityChange = { newQty -> viewModel.updateItemQuantity(item, newQty) },
                         onRemoveItem = { viewModel.removeItem(item) }
                     )
