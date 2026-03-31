@@ -40,3 +40,19 @@ data class TblCustomer(
     var igst_status: Boolean,
     var is_active: Long
 )
+
+data class TblCustomerInfoResponse(
+    var customer_info_id: Long = 0,
+    var customer: TblCustomer,
+    var address: String,
+    var contact_no: String,
+    var is_active: Boolean = true
+)
+
+data class TblCustomerInfoRequest(
+    var customer_info_id: Long = 0,
+    var customer_id: Long,
+    var address: String,
+    var contact_no: String,
+    var is_active: Boolean = true
+)

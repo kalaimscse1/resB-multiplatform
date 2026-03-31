@@ -2,6 +2,7 @@ package com.warriortech.resb.network
 
 import com.warriortech.resb.model.*
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
@@ -1340,4 +1341,43 @@ interface ApiService {
         @Query("msg") otp: String,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<ResponseBody>
+
+    /**
+     * Customer Info Management
+     */
+
+    @GET("customerInfocustomerInfo/getAll")
+    suspend fun getAllCustomerInfo(
+        @Header("X-Tenant-ID") tenantId: String
+    ): List<TblCustomerInfoResponse>
+
+    @GET("customerInfo/{id}")
+    suspend fun getCustomerInfoById(
+        @Path("id") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblCustomerInfoResponse>
+
+    @GET("customerInfo/active/{id}")
+    suspend fun getActiveCustomerInfoById(
+        @Path("id") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblCustomerInfoResponse>
+
+    @GET("customerInfo/active/customer/{customerId}")
+    suspend fun getActiveCustomerInfoByCustomerId(
+        @Path("customerId") customerId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblCustomerInfoResponse>
+
+    @POST("customerInfo/create")
+    suspend fun createCustomerInfo(
+        @Body customerInfoRequest: TblCustomerInfoRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblCustomerInfoResponse>
+
+    @PUT("customerInfo/update")
+    suspend fun updateCustomerInfo(
+        @Body customerInfoRequest: TblCustomerInfoRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Int>
 }

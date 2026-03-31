@@ -1,11 +1,10 @@
 package com.warriortech.resb.ui.viewmodel.setting
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.CustomerRepository
-import com.warriortech.resb.model.TblCustomer
+import com.warriortech.resb.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,10 +20,20 @@ class CustomerSettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private val _customers = MutableStateFlow<List<TblCustomer>>(emptyList())
+    val customers: StateFlow<List<TblCustomer>> = _customers.asStateFlow()
+
+    private val _additionalInfos = MutableStateFlow<List<TblCustomerInfoResponse>>(emptyList())
+    val additionalInfos: StateFlow<List<TblCustomerInfoResponse>> = _additionalInfos.asStateFlow()
+
     sealed class UiState {
         object Loading : UiState()
         data class Success(val customers: List<TblCustomer>) : UiState()
         data class Error(val message: String) : UiState()
+    }
+
+    init {
+        loadCustomers()
     }
 
     fun loadCustomers() {
@@ -32,6 +41,7 @@ class CustomerSettingsViewModel @Inject constructor(
             try {
                 _uiState.value = UiState.Loading
                 val customers = customerRepository.getAllCustomers()
+                _customers.value = customers
                 _uiState.value = UiState.Success(customers)
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Unknown error")
@@ -39,26 +49,49 @@ class CustomerSettingsViewModel @Inject constructor(
         }
     }
 
-    fun addCustomer(customer: TblCustomer) {
+    fun selectCustomer(customer: TblCustomer) {
         viewModelScope.launch {
             try {
-                customerRepository.insertCustomer(customer)
-                loadCustomers()
+                _additionalInfos.value = customerRepository.getCustomerInfosByCustomerId(customer.customer_id)
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to add customer")
+                _additionalInfos.value = emptyList()
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun updateCustomer(customer: TblCustomer) {
+    fun clearAdditionalInfos() {
+        _additionalInfos.value = emptyList()
+    }
+
+    fun saveCustomer(customer: TblCustomer, additionalInfos: List<TblCustomerInfoRequest>) {
         viewModelScope.launch {
             try {
+                val savedCustomer = if (customer.customer_id == 0L) {
+                    customerRepository.insertCustomer(customer)
+                } else {
+                    customerRepository.updateCustomer(customer)
+                }
+                
+                // Save additional infos
+                additionalInfos.forEach { info ->
+                    val request = TblCustomerInfoRequest(
+                        customer_info_id = info.customer_info_id,
+                        customer_id = savedCustomer.customer_id,
+                        address = info.address,
+                        contact_no = info.contact_no,
+                        is_active = true
+                    )
 
-                customerRepository.updateCustomer(customer)
+                    if (request.customer_info_id == 0L) {
+                        customerRepository.createCustomerInfo(request)
+                    } else {
+                        customerRepository.updateCustomerInfo(request)
+                    }
+                }
+                
                 loadCustomers()
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to update customer")
+                _uiState.value = UiState.Error(e.message ?: "Failed to save customer")
             }
         }
     }
