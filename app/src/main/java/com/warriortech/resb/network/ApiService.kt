@@ -371,6 +371,13 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<ResponseBody>
 
+    @POST("print/eod/{paperWidth}")
+    suspend fun printEOD(
+        @Path("paperWidth") paperWidth:Int,
+        @Body bill: EodReportRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<ResponseBody>
+
     @POST("print/bill/preview")
     suspend fun getBillPreview(
         @Body bill: Bill,
@@ -1380,4 +1387,37 @@ interface ApiService {
         @Body customerInfoRequest: TblCustomerInfoRequest,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Int>
+
+    /**
+     * Inventory Management
+     */
+
+    @PUT("itemMaster/updateStockMinus/{id}/{qty}")
+    suspend fun updateStockMinus(
+        @Path("id") id: Long,
+        @Path("qty") qty: Double,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Int>
+
+    @POST("itemDetails/createBulkItemDetails")
+    suspend fun createBulkItemDetails(
+        @Body itemDetails: List<TblItemDetailsRequest>,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblItemDetailsResponse>>
+
+    @GET("itemMaster/findByItemId/{id}")
+    suspend fun getItemMasterById(
+        @Path("id") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblItemMasterResponse>
+
+    /**
+     * Unit Conversion Management
+     */
+
+    @GET("settings/unitConversion/findByUnitId{unitId}")
+    suspend fun getUnitConversionByUnitId(
+        @Path("unitId") unitId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblUnitConversionResponse>>
 }

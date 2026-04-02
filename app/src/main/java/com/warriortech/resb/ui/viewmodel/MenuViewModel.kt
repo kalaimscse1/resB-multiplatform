@@ -7,14 +7,7 @@ import com.warriortech.resb.data.repository.MenuItemRepository
 import com.warriortech.resb.data.repository.ModifierRepository
 import com.warriortech.resb.data.repository.OrderRepository
 import com.warriortech.resb.data.repository.TableRepository
-import com.warriortech.resb.model.KOTItem
-import com.warriortech.resb.model.KOTRequest
-import com.warriortech.resb.model.MenuItem
-import com.warriortech.resb.model.Modifiers
-import com.warriortech.resb.model.Order
-import com.warriortech.resb.model.OrderItem
-import com.warriortech.resb.model.TblMenuItemResponse
-import com.warriortech.resb.model.TblOrderDetailsResponse
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.getCurrentTimeAsFloat
@@ -234,7 +227,38 @@ class MenuViewModel @Inject constructor(
     fun dismissAlert() { _showAlert.value = null }
 
     fun addItemToOrder(menuItem: TblMenuItemResponse) {
-        val key = CartItemKey(menuItem)
+        viewModelScope.launch {
+            try {
+                val response = menuRepository.getItemMasterById(menuItem.menu_item_id)
+                if (response.isSuccessful) {
+                    val itemMaster = response.body()
+                    if (itemMaster != null) {
+                        val stockQty = itemMaster.qty
+                        
+                        if (stockQty <= 0) {
+                            _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is Out of Stock."
+                            return@launch
+                        }
+                        
+                        if (menuItem.stock_maintain=="YES") {
+                            if (stockQty <= menuItem.min_stock.toDouble()) {
+                                _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is at Minimum Stock Level ($stockQty remaining)"
+                                // Warning only, proceed to add
+                            }
+                        }
+                    }
+                }
+                
+                doAddItem(menuItem)
+            } catch (e: Exception) {
+                Timber.e(e, "Error checking stock for item ${menuItem.menu_item_id}")
+                doAddItem(menuItem)
+            }
+        }
+    }
+
+    private fun doAddItem(menuItem: TblMenuItemResponse, modifiers: List<Modifiers> = emptyList()) {
+        val key = CartItemKey(menuItem, modifiers)
         if (_isExistingOrderLoaded.value) {
             val current = _newSelectedCartItems.value.toMutableMap()
             current[key] = (current[key] ?: 0) + 1
@@ -440,18 +464,35 @@ class MenuViewModel @Inject constructor(
     }
 
     fun addMenuItemWithModifiers(menuItem: TblMenuItemResponse, modifiers: List<Modifiers>) {
-        val key = CartItemKey(menuItem, modifiers)
-        if (_isExistingOrderLoaded.value) {
-            val current = _newSelectedCartItems.value.toMutableMap()
-            current[key] = (current[key] ?: 0) + 1
-            _newSelectedCartItems.value = current
-        } else {
-            val current = _selectedCartItems.value.toMutableMap()
-            current[key] = (current[key] ?: 0) + 1
-            _selectedCartItems.value = current
+        viewModelScope.launch {
+            try {
+                val response = menuRepository.getItemMasterById(menuItem.menu_item_id)
+                if (response.isSuccessful) {
+                    val itemMaster = response.body()
+                    if (itemMaster != null) {
+                        val stockQty = itemMaster.qty
+                        
+                        if (stockQty <= 0) {
+                            _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is Out of Stock."
+                            return@launch
+                        }
+                        
+                        if (menuItem.stock_maintain.equals("YES", ignoreCase = true)) {
+                            if (stockQty <= menuItem.min_stock.toDouble()) {
+                                _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is at Minimum Stock Level ($stockQty remaining)"
+                            }
+                        }
+                    }
+                }
+                
+                doAddItem(menuItem, modifiers)
+                hideModifierDialog()
+            } catch (e: Exception) {
+                Timber.e(e, "Error checking stock for item ${menuItem.menu_item_id}")
+                doAddItem(menuItem, modifiers)
+                hideModifierDialog()
+            }
         }
-        _activeCartItem.value = key
-        hideModifierDialog()
     }
 
     fun findAndAddItemByBarcode(barcode: String) {

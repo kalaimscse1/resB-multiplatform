@@ -97,6 +97,7 @@ class BillRepository @Inject constructor(
     ): Flow<Result<TblBillingResponse>> = flow {
         try {
             val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
+            val isInventory = sessionManager.getGeneralSetting()?.is_inventory == true
 
             var bill: TblBillingResponse? = null
             if (billNo != "--") {
@@ -145,6 +146,8 @@ class BillRepository @Inject constructor(
                 voucher_id = voucher?.voucher_id ?: 0L,
                 staff_id = sessionManager.getUser()?.staff_id ?: 0L,
                 customer_id = bill?.customer?.customer_id ?: customer.customer_id,
+                cust_contact_no = bill?.cust_contact_no ?: customer.contact_no,
+                cust_address = bill?.cust_address ?: customer.address,
                 order_amt = order.sumOf { it.total },
                 tax_amt = order.sumOf { it.tax_amount },
                 cess = order.sumOf { it.cess },
@@ -200,6 +203,76 @@ class BillRepository @Inject constructor(
                 ),
                 sessionManager.getCompanyCode() ?: ""
             )
+
+            if (isInventory) {
+                val ledgerDetail = apiService.findByContactNo(
+                    bill?.customer?.contact_no ?: customer.contact_no,
+                    tenant
+                ).body()
+                val ledger: TblLedgerDetails? = if (paymentMethod.name == "DUE") {
+                    val req = TblLedgerRequest(
+                        ledger_name = customer.customer_name,
+                        ledger_fullname = customer.customer_name,
+                        group_id = 17,
+                        address = customer.address,
+                        contact_no = customer.contact_no,
+                        email = customer.email_address,
+                        gst_no = customer.gst_no,
+                        igst_status = if (customer.igst_status) "YES" else "NO",
+                        due_date = getCurrentDateModern(),
+                        order_by = 0,
+                        address1 = "",
+                        place = "",
+                        pincode = 0,
+                        country = "",
+                        pan_no = "",
+                        state_code = "",
+                        state_name = "",
+                        sac_code = "",
+                        opening_balance = "",
+                        bank_details = "NO",
+                        tamil_text = "",
+                        distance = 0.0,
+                        is_default = false
+                    )
+                    if (ledgerDetail?.contact_no != customer.contact_no)
+                        apiService.createLedger(req, tenant).body()
+                    else
+                        null
+                } else null
+                val inventoryItems = order.filter { it.menuItem.stock_maintain == "YES" }
+                if (inventoryItems.isNotEmpty()) {
+                    val itemDetails = inventoryItems.map { item ->
+                        TblItemDetailsRequest(
+                            item_id = item.menuItem.menu_item_id,
+                            godown_id = 1, // Default godown
+                            party_member = "${voucher?.voucher_id ?: 0L}",
+                            party_id = "5",
+                            bill_no = result.bill_no,
+                            date = result.bill_date,
+                            member = when(paymentMethod.name){
+                                "CASH" -> "1"
+                                "CARD" -> "2"
+                                "UPI" -> "3"
+                                else -> "${ledger?.ledger_id?.toLong() ?: (ledgerDetail?.ledger_id?.toLong()
+                                    ?: 0)}"
+                            },
+                            member_id = result.bill_no,
+                            bag_per_amt = 0.0,
+                            bag_in = 0.0,
+                            bag_out = item.qty.toDouble(),
+                            weight_in = 0.0,
+                            weight_out = 0.0,
+                            amount_in = 0.0,
+                            amount_out = item.total
+                        )
+                    }
+                    apiService.createBulkItemDetails(itemDetails, tenant)
+                    inventoryItems.forEach { item ->
+                        apiService.updateStockMinus(item.menuItem.menu_item_id, item.qty.toDouble(), tenant)
+                    }
+                }
+            }
 
             if (sessionManager.getGeneralSetting()?.is_accounts == true) {
                 val ledgerDetail = apiService.findByContactNo(
@@ -262,18 +335,80 @@ class BillRepository @Inject constructor(
         try {
             val response = apiService.printReceipt(bill, sessionManager.getCompanyCode() ?: "")
             if (!response.isSuccessful) return@flow emit(Result.failure(Exception("Print failed")))
+//            val dummyEodReportRequest = EodReportRequest(
+//                companyCode = "KTS-RESB",
+//                fromDate = "2026-04-01",
+//                toDate = "2026-04-01",
+//                paymentSummary = listOf(
+//                    PaymentSummaryRow("CASH", 45, 18500.00),
+//                    PaymentSummaryRow("CARD", 28, 14250.50),
+//                    PaymentSummaryRow("UPI", 62, 27890.75),
+//                    PaymentSummaryRow("CREDIT", 10, 5200.00)
+//                ),
+//                onlineOrderSummary = listOf(
+//                    OnlineOrderSummaryRow("SWIGGY", 18, 9650.00),
+//                    OnlineOrderSummaryRow("ZOMATO", 22, 11840.50),
+//                    OnlineOrderSummaryRow("WEBSITE", 6, 3150.00)
+//                ),
+//                salesDetails = SalesDetails(
+//                    itemTotal = 78500.00,
+//                    itemDiscount = 2500.00,
+//                    itemTax = 7050.00,
+//                    billDiscount = 1200.00,
+//                    charges = 350.00,
+//                    roundOff = -0.25,
+//                    grandTotal = 82200.75
+//                ),
+//                groupSales = listOf(
+//                    GroupSalesRow("Beverages", 85, 12750.00),
+//                    GroupSalesRow("Starters", 64, 18420.50),
+//                    GroupSalesRow("Main Course", 102, 35210.00),
+//                    GroupSalesRow("Desserts", 38, 6120.25)
+//                ),
+//                cashSummary = listOf(
+//                    CashSummaryRow("Opening Cash", 5000.00),
+//                    CashSummaryRow("Cash Sales", 18500.00),
+//                    CashSummaryRow("Cash In", 2000.00),
+//                    CashSummaryRow("Cash Out", 1500.00),
+//                    CashSummaryRow("Closing Cash", 24000.00)
+//                ),
+//                expense = listOf(
+//                    ExpenseRow("Petty Cash Expense", 750.00),
+//                    ExpenseRow("Staff Food", 450.00),
+//                    ExpenseRow("Transport", 300.00)
+//                ),
+//                billCancelDetails = BillCancelDetails(
+//                    count = 3,
+//                    total = 1890.50
+//                ),
+//                dineTypeSummary = listOf(
+//                    DineTypeSummaryRow("DINE IN", 58, 34250.00),
+//                    DineTypeSummaryRow("TAKEAWAY", 49, 22340.25),
+//                    DineTypeSummaryRow("DELIVERY", 31, 15610.50)
+//                ),
+//                footerMessage = "Thank You! Visit Again"
+//            )
+//            val res = apiService.printEOD(bill.paperWidth,dummyEodReportRequest, sessionManager.getCompanyCode() ?: "")
+//            val byte = res.body()?.bytes() ?: return@flow emit(Result.failure(Exception("Empty print data")))
 
             val bytes = response.body()?.bytes()
                 ?: return@flow emit(Result.failure(Exception("Empty print data")))
             var msg = ""
             val printerType = sessionManager.getPrinterType()
-            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null)
+            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null) {
                 printerHelper.printViaBluetoothMac(
                     data = bytes,
                     macAddress = sessionManager.getBluetoothPrinter().toString()
                 ) { _, m -> msg = m }
-            else if (printerType == "TCP")
+//                printerHelper.printViaBluetoothMac(
+//                    data = byte,
+//                    macAddress = sessionManager.getBluetoothPrinter().toString()
+//                ) { _, m -> msg = m }
+            }
+            else if (printerType == "TCP") {
                 printerHelper.printViaTcp(ipAddress, data = bytes) { _, m -> msg = m }
+//                printerHelper.printViaTcp(ipAddress, data = byte) { _, m -> msg = m }
+            }
             else
                 emit(Result.failure(Exception("Printer not configured")))
             emit(Result.success(msg))
@@ -287,7 +422,7 @@ class BillRepository @Inject constructor(
         try {
             val target = sessionManager.getPrinterType()
             val address = if (target == "BLUETOOTH") sessionManager.getBluetoothPrinter().toString() else ipAddress
-            
+
             printerHelper.printBillWithTemplate(bill, "BILL", target, address)
             emit(Result.success("Print successful"))
         } catch (e: Exception) {
@@ -314,7 +449,7 @@ class BillRepository @Inject constructor(
         } else null
     }
 
-    suspend fun updateBill(billNo: String, orderMasterId: String,request: TblBillingRequest) {
+    suspend fun updateBill(billNo: String, orderMasterId: String, request: TblBillingRequest) {
         val bill =
             apiService.getPaymentByBillNo(billNo, sessionManager.getCompanyCode() ?: "").body()!!
         var order: List<TblOrderDetailsResponse> = emptyList()
@@ -334,6 +469,8 @@ class BillRepository @Inject constructor(
             voucher_id = bill.voucher.voucher_id,
             staff_id = bill.staff.staff_id,
             customer_id = bill.customer.customer_id,
+            cust_contact_no = bill.cust_contact_no,
+            cust_address = bill.cust_address,
             order_amt = order.sumOf { it.total },
             disc_amt = 0.0,
             tax_amt = order.sumOf { it.tax_amount },

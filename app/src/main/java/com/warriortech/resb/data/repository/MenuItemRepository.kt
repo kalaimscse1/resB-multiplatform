@@ -4,9 +4,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.warriortech.resb.data.local.dao.MenuItemDao
 import com.warriortech.resb.data.local.entity.SyncStatus
 import com.warriortech.resb.data.local.entity.TblMenuItem
-import com.warriortech.resb.model.Menu
-import com.warriortech.resb.model.TblMenuItemRequest
-import com.warriortech.resb.model.TblMenuItemResponse
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.NetworkMonitor
@@ -97,6 +95,10 @@ class MenuItemRepository @Inject constructor(
     }
     suspend fun getMenuItemById(id: Long): TblMenuItemResponse? {
         return menuItemDao.getMenuItemById(id)?.toModel()
+    }
+
+    suspend fun getItemMasterById(id: Long): Response<TblItemMasterResponse> {
+        return apiService.getItemMasterById(id, sessionManager.getCompanyCode() ?: "")
     }
 
     private suspend fun syncMenuItemsFromRemote() {

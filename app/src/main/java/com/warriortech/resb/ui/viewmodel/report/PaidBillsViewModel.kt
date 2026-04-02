@@ -243,6 +243,8 @@ class PaidBillsViewModel @Inject constructor(
                                 voucher_id = 1,
                                 staff_id = 1,
                                 customer_id = 1,
+                                cust_contact_no = "",
+                                cust_address = "",
                                 cess = 0.0,
                                 cess_specific = 0.0,
                                 delivery_amt =0.0,

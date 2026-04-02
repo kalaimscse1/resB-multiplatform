@@ -16,3 +16,10 @@ data class TaxSplit(
     var tax_split_percentage: String,
     var is_active: Boolean
 )
+
+data class TblUnitConversionResponse(
+    var unit_conv_id: Long,
+    var unit:TblUnit,
+    var conversion_no:Long,
+    var is_active:Boolean
+)
