@@ -51,6 +51,22 @@ class MenuItemRepository @Inject constructor(
             emit(emptyList())
         }
     }
+
+    suspend fun getMenuItemByIsInventory(): Flow<List<TblMenuItemResponse>> = flow{
+        val response = apiService.getMenuItemByIsInventory(sessionManager.getCompanyCode()?:"")
+        if (response.isSuccessful) {
+            val menuItems = response.body()
+            if (menuItems != null) {
+                emit(menuItems)
+            } else {
+                emit(emptyList())
+            }
+        } else {
+            emit(emptyList())
+            }
+    }
+
+
     suspend fun getMenuItems(category: String? = null): Flow<Result<List<TblMenuItemResponse>>> = flow {
         try {
 //            getAllMenuItems()

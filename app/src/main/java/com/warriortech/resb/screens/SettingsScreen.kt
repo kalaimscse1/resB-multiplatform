@@ -112,6 +112,7 @@ fun SettingsMainScreen(
                 SettingsModule.Tax,
                 SettingsModule.TaxSplit,
                 SettingsModule.Unit,
+                SettingsModule.UnitConversion,
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.RestaurantProfile,
@@ -145,6 +146,7 @@ fun SettingsMainScreen(
                 SettingsModule.Counter,
                 SettingsModule.Customer,
                 SettingsModule.Unit,
+                SettingsModule.UnitConversion,
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.Language,
@@ -312,6 +314,10 @@ fun SettingsModuleScreen(
 
         is SettingsModule.Unit -> {
             navController.navigate("unit_setting")
+        }
+
+        is SettingsModule.UnitConversion -> {
+            navController.navigate("unit_conversion_setting")
         }
 
         is SettingsModule.KitchenCategory -> {
@@ -521,6 +527,14 @@ sealed class SettingsModule(
         "Manage measurement units",
         Icons.Default.Scale,
         listOf("name", "is_active")
+    )
+
+    object UnitConversion : SettingsModule(
+        "unit_conversion",
+        "Unit Conversion",
+        "Manage unit conversion rules",
+        Icons.Default.Transform,
+        listOf("unit_id", "item_id", "conversion_no")
     )
 
     object KitchenCategory : SettingsModule(

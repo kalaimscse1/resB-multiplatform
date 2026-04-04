@@ -680,6 +680,12 @@ fun AppNavigation(
                 navController = navController
             )
         }
+        composable("unit_conversion_setting") {
+            UnitConversionSettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
         composable("kitchen_category_setting") {
             KitchenCategorySettingsScreen(
                 onBackPressed = { navController.popBackStack() },

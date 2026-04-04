@@ -295,6 +295,9 @@ interface ApiService {
     @GET("menu/menuItem/getMaxOrderBy")
     suspend fun getMenuItemOrderBy(@Header("X-Tenant-ID") tenantId: String): Response<Map<String, Long>>
 
+    @GET("menu/menuItem/getItemByIsInventory")
+    suspend fun getMenuItemByIsInventory(@Header("X-Tenant-ID") tenantId: String): Response<List<TblMenuItemResponse>>
+
     /**
      * Order Management
      */
@@ -1415,9 +1418,39 @@ interface ApiService {
      * Unit Conversion Management
      */
 
-    @GET("settings/unitConversion/findByUnitId{unitId}")
+    @GET("settings/unitConversion/findByUnitId/{unitId}")
     suspend fun getUnitConversionByUnitId(
         @Path("unitId") unitId: Long,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<List<TblUnitConversionResponse>>
+
+    @POST("settings/unitConversion/create")
+    suspend fun createUnitConversion(
+        @Body request: TblUnitConversionRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblUnitConversionResponse>
+
+    @PUT("settings/unitConversion/update/{unitConvId}")
+    suspend fun updateUnitConversion(
+        @Path("unitConvId") id: Long,
+        @Body request: TblUnitConversionRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblUnitConversionResponse>
+
+    @DELETE("settings/unitConversion/delete/{unitConvId}")
+    suspend fun deleteUnitConversion(
+        @Path("unitConvId") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Boolean>
+
+    @GET("settings/unitConversion/findAllActive")
+    suspend fun findAllActiveUnitConversions(
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblUnitConversionResponse>>
+
+    @GET("settings/unitConversion/findByItemId/{itemId}")
+    suspend fun getUnitConversionByItemId(
+        @Path("itemId") itemId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblUnitConversionResponse>
 }

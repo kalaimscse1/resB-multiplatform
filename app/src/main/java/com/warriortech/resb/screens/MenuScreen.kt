@@ -207,7 +207,7 @@ fun MenuScreen(
     showAlertMessage?.let { message ->
         AlertDialog(
             onDismissRequest = { viewModel.dismissAlert() },
-            title = { Text(if (message.contains("Stock", ignoreCase = true)) "Stock Alert" else "Modifier Required") },
+            title = { Text(if (message.contains("Stock", ignoreCase = true)) "Alert" else "Modifier Required") },
             text = { Text(message) },
             confirmButton = {
                 Button(onClick = { viewModel.dismissAlert() }) {

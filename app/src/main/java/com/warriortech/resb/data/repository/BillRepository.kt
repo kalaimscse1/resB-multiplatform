@@ -16,7 +16,6 @@ import com.warriortech.resb.util.getCurrentTimeModern
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
-import retrofit2.Response
 
 class BillRepository @Inject constructor(
     private val apiService: ApiService,
@@ -243,6 +242,7 @@ class BillRepository @Inject constructor(
                 val inventoryItems = order.filter { it.menuItem.stock_maintain == "YES" }
                 if (inventoryItems.isNotEmpty()) {
                     val itemDetails = inventoryItems.map { item ->
+                        val conv = apiService.getUnitConversionByItemId(item.menuItem.menu_item_id, tenant).body()
                         TblItemDetailsRequest(
                             item_id = item.menuItem.menu_item_id,
                             godown_id = 1, // Default godown
@@ -260,7 +260,7 @@ class BillRepository @Inject constructor(
                             member_id = result.bill_no,
                             bag_per_amt = 0.0,
                             bag_in = 0.0,
-                            bag_out = item.qty.toDouble(),
+                            bag_out = ((conv?.conversion_no ?: 1) * item.qty).toDouble(),
                             weight_in = 0.0,
                             weight_out = 0.0,
                             amount_in = 0.0,
@@ -269,7 +269,8 @@ class BillRepository @Inject constructor(
                     }
                     apiService.createBulkItemDetails(itemDetails, tenant)
                     inventoryItems.forEach { item ->
-                        apiService.updateStockMinus(item.menuItem.menu_item_id, item.qty.toDouble(), tenant)
+                        val conv = apiService.getUnitConversionByItemId(item.menuItem.menu_item_id, tenant).body()
+                        apiService.updateStockMinus(item.menuItem.menu_item_id, ((conv?.conversion_no ?: 1) * item.qty).toDouble(), tenant)
                     }
                 }
             }
