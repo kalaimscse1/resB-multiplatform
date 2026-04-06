@@ -37,6 +37,7 @@ fun UnitConversionSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val units by viewModel.units.collectAsStateWithLifecycle()
     val menuItems by viewModel.menuItems.collectAsStateWithLifecycle()
+    val consumeItems by viewModel.consumeItems.collectAsStateWithLifecycle()
     val conversions by viewModel.conversions.collectAsStateWithLifecycle()
 
     var selectedUnit by remember { mutableStateOf<TblUnit?>(null) }
@@ -138,6 +139,7 @@ fun UnitConversionSettingsScreen(
                 conversion = editingConversion,
                 unitId = selectedUnit?.unit_id ?: editingConversion?.unit?.unit_id ?: 0L,
                 menuItems = menuItems,
+                consumeItems = consumeItems,
                 onDismiss = {
                     showDialog = false
                     editingConversion = null
@@ -223,7 +225,12 @@ fun ConversionCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = conversion.item.menu_item_name,
+                    text = conversion.base_item.menu_item_name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = conversion.consume_item.menu_item_name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -258,14 +265,19 @@ fun UnitConversionDialog(
     conversion: TblUnitConversionResponse?,
     unitId: Long,
     menuItems: List<TblMenuItemResponse>,
+    consumeItems: List<TblMenuItemResponse>,
     onDismiss: () -> Unit,
     onSave: (TblUnitConversionRequest) -> Unit
 ) {
-    var selectedItem by remember { mutableStateOf(conversion?.item) }
+    var selectedBaseItem by remember { mutableStateOf(conversion?.base_item) }
+    var selectedConsumedItem by remember { mutableStateOf(conversion?.consume_item) }
+
     var conversionNo by remember { mutableStateOf(conversion?.conversion_no?.toString() ?: "") }
     var isActive by remember { mutableStateOf(conversion?.is_active ?: true) }
     
-    var itemExpanded by remember { mutableStateOf(false) }
+    var itemBaseExpanded by remember { mutableStateOf(false) }
+    var itemConsumeExpanded by remember { mutableStateOf(false) }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -275,11 +287,11 @@ fun UnitConversionDialog(
                 // Item Selector
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = selectedItem?.menu_item_name ?: "Select Item",
+                        value = selectedBaseItem?.menu_item_name ?: "Select Main Item",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Item") },
-                        modifier = Modifier.fillMaxWidth().clickable { itemExpanded = true },
+                        label = { Text("Main Item") },
+                        modifier = Modifier.fillMaxWidth().clickable { itemBaseExpanded = true },
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
                         enabled = false, // To make it clickable as a whole
                         colors = OutlinedTextFieldDefaults.colors(
@@ -289,19 +301,54 @@ fun UnitConversionDialog(
                         )
                     )
                     // Actual overlay for click since disabled TextField might consume it
-                    Box(modifier = Modifier.matchParentSize().clickable { itemExpanded = true })
+                    Box(modifier = Modifier.matchParentSize().clickable { itemBaseExpanded = true })
 
                     DropdownMenu(
-                        expanded = itemExpanded,
-                        onDismissRequest = { itemExpanded = false },
+                        expanded = itemBaseExpanded,
+                        onDismissRequest = { itemBaseExpanded = false },
                         modifier = Modifier.fillMaxWidth(0.7f).heightIn(max = 300.dp)
                     ) {
                         menuItems.forEach { item ->
                             DropdownMenuItem(
                                 text = { Text(item.menu_item_name) },
                                 onClick = {
-                                    selectedItem = item
-                                    itemExpanded = false
+                                    selectedBaseItem = item
+                                    itemBaseExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedConsumedItem?.menu_item_name ?: "Select Consume Item",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Consume Item") },
+                        modifier = Modifier.fillMaxWidth().clickable { itemConsumeExpanded = true },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+                        enabled = false, // To make it clickable as a whole
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                    // Actual overlay for click since disabled TextField might consume it
+                    Box(modifier = Modifier.matchParentSize().clickable { itemConsumeExpanded = true })
+
+                    DropdownMenu(
+                        expanded = itemConsumeExpanded,
+                        onDismissRequest = { itemConsumeExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.7f).heightIn(max = 300.dp)
+                    ) {
+                        consumeItems.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item.menu_item_name) },
+                                onClick = {
+                                    selectedConsumedItem = item
+                                    itemConsumeExpanded = false
                                 }
                             )
                         }
@@ -325,19 +372,20 @@ fun UnitConversionDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    selectedItem?.let {
+                    selectedBaseItem?.let {
                         onSave(
                             TblUnitConversionRequest(
                                 unit_conv_id = conversion?.unit_conv_id ?: 0L,
                                 unit_id = unitId,
-                                item_id = it.menu_item_id,
-                                conversion_no = conversionNo.toLongOrNull() ?: 0L,
+                                base_item_id = it.menu_item_id,
+                                consume_item_id = selectedConsumedItem!!.menu_item_id,
+                                conversion_no = conversionNo.toDoubleOrNull() ?: 0.0,
                                 is_active = isActive
                             )
                         )
                     }
                 },
-                enabled = selectedItem != null && conversionNo.isNotBlank(),
+                enabled = selectedBaseItem != null && conversionNo.isNotBlank() && selectedConsumedItem != null,
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
             ) {
                 Text("Save")

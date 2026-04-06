@@ -244,7 +244,7 @@ class BillRepository @Inject constructor(
                     val itemDetails = inventoryItems.map { item ->
                         val conv = apiService.getUnitConversionByItemId(item.menuItem.menu_item_id, tenant).body()
                         TblItemDetailsRequest(
-                            item_id = item.menuItem.menu_item_id,
+                            item_id = conv?.base_item?.menu_item_id?:item.menuItem.menu_item_id,
                             godown_id = 1, // Default godown
                             party_member = "${voucher?.voucher_id ?: 0L}",
                             party_id = "5",
@@ -260,7 +260,7 @@ class BillRepository @Inject constructor(
                             member_id = result.bill_no,
                             bag_per_amt = 0.0,
                             bag_in = 0.0,
-                            bag_out = ((conv?.conversion_no ?: 1) * item.qty).toDouble(),
+                            bag_out = ((conv?.conversion_no ?: 1.0) * item.qty.toDouble()),
                             weight_in = 0.0,
                             weight_out = 0.0,
                             amount_in = 0.0,
@@ -270,7 +270,8 @@ class BillRepository @Inject constructor(
                     apiService.createBulkItemDetails(itemDetails, tenant)
                     inventoryItems.forEach { item ->
                         val conv = apiService.getUnitConversionByItemId(item.menuItem.menu_item_id, tenant).body()
-                        apiService.updateStockMinus(item.menuItem.menu_item_id, ((conv?.conversion_no ?: 1) * item.qty).toDouble(), tenant)
+                        apiService.updateStockMinus(conv?.base_item?.menu_item_id?:item.menuItem.menu_item_id,
+                            ((conv?.conversion_no ?: 1.0) * item.qty), tenant)
                     }
                 }
             }

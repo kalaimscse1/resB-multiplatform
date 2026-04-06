@@ -25,6 +25,10 @@ class UnitConversionViewModel @Inject constructor(
     private val _menuItems = MutableStateFlow<List<TblMenuItemResponse>>(emptyList())
     val menuItems: StateFlow<List<TblMenuItemResponse>> = _menuItems.asStateFlow()
 
+    private val _consumeItems = MutableStateFlow<List<TblMenuItemResponse>>(emptyList())
+    val consumeItems: StateFlow<List<TblMenuItemResponse>> = _consumeItems.asStateFlow()
+
+
     private val _conversions = MutableStateFlow<List<TblUnitConversionResponse>>(emptyList())
     val conversions: StateFlow<List<TblUnitConversionResponse>> = _conversions.asStateFlow()
 
@@ -45,6 +49,9 @@ class UnitConversionViewModel @Inject constructor(
                 _units.value = repository.getAllUnits()
                 menuItemRepository.getMenuItemByIsInventory().collect { items ->
                     _menuItems.value = items
+                }
+                menuItemRepository.getAllMenuItems().collect { items ->
+                    _consumeItems.value = items
                 }
                 loadAllActiveConversions()
                 _uiState.value = UiState.Success

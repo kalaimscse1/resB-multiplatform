@@ -186,6 +186,13 @@ fun GeneralSettingDialog(
     var isAccounts by remember { mutableStateOf(setting?.is_accounts ?: false) }
     var isInventory by remember { mutableStateOf(setting?.is_inventory ?: false) }
     var isDraftBill by remember { mutableStateOf(setting?.is_draft_bill ?: false) }
+    var isOnline by remember { mutableStateOf(setting?.is_online ?: false) }
+    var isYearly by remember { mutableStateOf(setting?.is_yearly ?: false) }
+    var isOtp by remember { mutableStateOf(setting?.is_otp ?: false) }
+    var isSecretKey by remember { mutableStateOf(setting?.secret_key ?: "") }
+    var isAccountKey by remember { mutableStateOf(setting?.account_key ?: "") }
+    var recipientNo by remember { mutableStateOf(setting?.recipient_no ?: "") }
+
 
 
     Column {
@@ -489,6 +496,60 @@ fun GeneralSettingDialog(
             Spacer(modifier = Modifier.width(8.dp))
             Text("Draft Bill")
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Switch(
+                checked = isOnline,
+                onCheckedChange = { isOnline = it }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Online")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Switch(
+                checked = isYearly,
+                onCheckedChange = { isYearly = it }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Yearly")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Switch(
+                checked = isOtp,
+                onCheckedChange = { isOtp = it }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("OTP")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = isSecretKey,
+            onValueChange = { isSecretKey = it },
+            label = { Text("Secret Key") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = isAccountKey,
+            onValueChange = { isAccountKey = it },
+            label = { Text("Account Key") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = recipientNo,
+            onValueChange = { recipientNo = it },
+            label = { Text("Recipient No") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
         Button(
@@ -525,7 +586,14 @@ fun GeneralSettingDialog(
                     business_date = businessDate,
                     is_accounts = isAccounts,
                     is_inventory = isInventory,
-                    is_draft_bill = isDraftBill
+                    is_draft_bill = isDraftBill,
+                    is_online = isOnline,
+                    is_yearly = isYearly,
+                    is_otp = isOtp,
+                    secret_key = isSecretKey,
+                    account_key = isAccountKey,
+                    recipient_no = recipientNo
+
                 )
                 onSave(newSetting)
             }

@@ -32,5 +32,11 @@ data class GeneralSettings(
     var business_date: String,
     var is_accounts: Boolean,
     var is_inventory: Boolean,
-    var is_draft_bill: Boolean
+    var is_draft_bill: Boolean,
+    var is_online: Boolean,
+    var is_yearly:Boolean,
+    var is_otp:Boolean,
+    var secret_key:String,
+    var account_key: String,
+    var recipient_no:String
 )
