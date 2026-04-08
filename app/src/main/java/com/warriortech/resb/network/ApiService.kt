@@ -97,6 +97,8 @@ interface ApiService {
     @GET("dashboard/getWeeklySales")
     suspend fun getWeeklySales(@Header("X-Tenant-ID") tenantId: String): Response<List<WeeklySalesData>>
 
+    @GET("dashboard/getDinerWiseSales")
+    suspend fun getDinerWiseSales(@Header("X-Tenant-ID") tenantId: String): Response<List<DineTypeSummaryRow>>
 
     /**
      * Area Management
@@ -1452,5 +1454,5 @@ interface ApiService {
     suspend fun getUnitConversionByItemId(
         @Path("itemId") itemId: Long,
         @Header("X-Tenant-ID") tenantId: String
-    ): Response<TblUnitConversionResponse>
+    ): Response<TblUnitConversionResponse?>
 }

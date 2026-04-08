@@ -1,12 +1,6 @@
 package com.warriortech.resb.data.repository
 
-import com.warriortech.resb.model.ApiResponse
-import com.warriortech.resb.model.DashboardMetrics
-import com.warriortech.resb.model.RunningOrder
-import com.warriortech.resb.model.DashboardChartData
-import com.warriortech.resb.model.DayCloseResponse
-import com.warriortech.resb.model.PaymentModeData
-import com.warriortech.resb.model.WeeklySalesData
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import kotlinx.coroutines.Dispatchers
@@ -51,12 +45,26 @@ class DashboardRepository @Inject constructor(
 
     suspend fun getChartData(): DashboardChartData {
         return try {
-            // In a real app, these would be separate API calls
-            val paymentModeData =    getPaymentModeData()
+            val paymentModeData = getPaymentModeData()
             val weeklySalesData = getWeeklySalesData()
             DashboardChartData(paymentModeData, weeklySalesData)
         } catch (e: Exception) {
             getDefaultChartData()
+        }
+    }
+
+    suspend fun getDinerWiseSales(): List<DineTypeSummaryRow> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.getDinerWiseSales(sessionManager.getCompanyCode() ?: "")
+                if (response.isSuccessful) {
+                    response.body() ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 
@@ -86,14 +94,12 @@ class DashboardRepository @Inject constructor(
       }
     }
 
-   suspend fun getWeeklySalesData(): List<WeeklySalesData> {
-        // Mock data - replace with actual API call
-       val res = apiService.getWeeklySales(sessionManager.getCompanyCode()?:"")
+
+    suspend fun getWeeklySalesData(): List<WeeklySalesData> {
+        val res = apiService.getWeeklySales(sessionManager.getCompanyCode()?:"")
         return if(res.isSuccessful && res.body()!=null){
-            val responseData = res.body()!!
-            responseData
-        }
-       else {
+            res.body()!!
+        } else {
             listOf(
                 WeeklySalesData("Mon", 0.0),
                 WeeklySalesData("Tue", 0.0),

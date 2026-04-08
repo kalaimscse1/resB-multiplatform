@@ -961,7 +961,7 @@ fun DrawerContent(
                     }
                 }
 
-                if (role in listOf("RESBADMIN", "ADMIN", "WAITER", "CASHIER")) {
+                if (role in listOf("RESBADMIN", "WAITER", "CASHIER")) {
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("Orders") },
                         icon = { DrawerIcon(Icons.Default.Receipt, null, isCollapsed) },

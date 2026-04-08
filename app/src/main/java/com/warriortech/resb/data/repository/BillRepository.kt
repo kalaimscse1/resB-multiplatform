@@ -239,12 +239,18 @@ class BillRepository @Inject constructor(
                     else
                         null
                 } else null
-                val inventoryItems = order.filter { it.menuItem.stock_maintain == "YES" }
-                if (inventoryItems.isNotEmpty()) {
-                    val itemDetails = inventoryItems.map { item ->
-                        val conv = apiService.getUnitConversionByItemId(item.menuItem.menu_item_id, tenant).body()
+                order.forEach { it->
+                    val conv = apiService.getUnitConversionByItemId(it.menuItem.menu_item_id, tenant).body()
+                    if (conv!= null){
+                        apiService.updateStockMinus(conv.base_item.menu_item_id,
+                            ((conv.conversion_no ) * it.qty), tenant)
+                    }
+                }
+                val itemDetails = order.map { it->
+                    val conv = apiService.getUnitConversionByItemId(it.menuItem.menu_item_id, tenant).body()
+                    if (conv!= null){
                         TblItemDetailsRequest(
-                            item_id = conv?.base_item?.menu_item_id?:item.menuItem.menu_item_id,
+                            item_id = conv.base_item.menu_item_id,
                             godown_id = 1, // Default godown
                             party_member = "${voucher?.voucher_id ?: 0L}",
                             party_id = "5",
@@ -260,20 +266,39 @@ class BillRepository @Inject constructor(
                             member_id = result.bill_no,
                             bag_per_amt = 0.0,
                             bag_in = 0.0,
-                            bag_out = ((conv?.conversion_no ?: 1.0) * item.qty.toDouble()),
+                            bag_out = ((conv.conversion_no) * it.qty.toDouble()),
                             weight_in = 0.0,
                             weight_out = 0.0,
                             amount_in = 0.0,
-                            amount_out = item.total
+                            amount_out = it.total
+                        )
+                    }else{
+                        TblItemDetailsRequest(
+                            item_id = it.menuItem.menu_item_id,
+                            godown_id = 1, // Default godown
+                            party_member = "${voucher?.voucher_id ?: 0L}",
+                            party_id = "5",
+                            bill_no = result.bill_no,
+                            date = result.bill_date,
+                            member = when(paymentMethod.name){
+                                "CASH" -> "1"
+                                "CARD" -> "2"
+                                "UPI" -> "3"
+                                else -> "${ledger?.ledger_id?.toLong() ?: (ledgerDetail?.ledger_id?.toLong()
+                                    ?: 0)}"
+                            },
+                            member_id = result.bill_no,
+                            bag_per_amt = 0.0,
+                            bag_in = 0.0,
+                            bag_out = it.qty.toDouble(),
+                            weight_in = 0.0,
+                            weight_out = 0.0,
+                            amount_in = 0.0,
+                            amount_out = it.total
                         )
                     }
-                    apiService.createBulkItemDetails(itemDetails, tenant)
-                    inventoryItems.forEach { item ->
-                        val conv = apiService.getUnitConversionByItemId(item.menuItem.menu_item_id, tenant).body()
-                        apiService.updateStockMinus(conv?.base_item?.menu_item_id?:item.menuItem.menu_item_id,
-                            ((conv?.conversion_no ?: 1.0) * item.qty), tenant)
-                    }
                 }
+                apiService.createBulkItemDetails(itemDetails, tenant)
             }
 
             if (sessionManager.getGeneralSetting()?.is_accounts == true) {

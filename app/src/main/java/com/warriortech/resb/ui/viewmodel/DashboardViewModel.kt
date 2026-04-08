@@ -6,10 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.warriortech.resb.data.repository.DashboardRepository
 import com.warriortech.resb.data.repository.OrderRepository
-import com.warriortech.resb.model.DashboardMetrics
-import com.warriortech.resb.model.PaymentModeData
-import com.warriortech.resb.model.TblOrderDetailsResponse
-import com.warriortech.resb.model.WeeklySalesData
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.CurrencySettings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +32,8 @@ class DashboardViewModel @Inject constructor(
         data class Success(
             val metrics: DashboardMetrics,
             val piechart: List<PaymentModeData>,
-            val barchart: List<WeeklySalesData>
+            val barchart: List<WeeklySalesData>,
+            val dinerWiseSales: List<DineTypeSummaryRow>
         ) : UiState()
 
         data class Error(val message: String) : UiState()
@@ -57,11 +55,13 @@ class DashboardViewModel @Inject constructor(
                 val metrics = dashboardRepository.getDashboardMetrics()
                 val piechart = chartData.paymentModeData
                 val barchart = chartData.weeklySalesData
+                val dinerWiseSales = dashboardRepository.getDinerWiseSales()
 
                 _uiState.value = UiState.Success(
                     metrics = metrics,
                     piechart = piechart,
-                    barchart = barchart
+                    barchart = barchart,
+                    dinerWiseSales = dinerWiseSales
                 )
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Failed to load dashboard: ${e.message}")

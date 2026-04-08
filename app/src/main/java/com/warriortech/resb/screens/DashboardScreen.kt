@@ -41,6 +41,7 @@ import android.app.Activity
 import android.widget.Toast
 import android.content.Context.MODE_PRIVATE
 import androidx.core.content.edit
+import com.warriortech.resb.ui.components.DinerWiseSalesBarChart
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("DefaultLocale")
@@ -221,15 +222,17 @@ fun DashboardScreen(
                     /**
                      * Quick Actions Section
                      */
-                    item {
-                        QuickActionsSection(
-                            onNavigateToOrders = onNavigateToOrders,
-                            onNavigateToBilling = onNavigateToBilling,
-                            onDineInSelected = onDineInSelected,
-                            onTakeawaySelected = onTakeawaySelected,
-                            sessionManager,
-                            onQuickBill
-                        )
+                    if (sessionManager.getUser()?.role == "RESBADMIN" || sessionManager.getUser()?.role == "CASHIER") {
+                        item {
+                            QuickActionsSection(
+                                onNavigateToOrders = onNavigateToOrders,
+                                onNavigateToBilling = onNavigateToBilling,
+                                onDineInSelected = onDineInSelected,
+                                onTakeawaySelected = onTakeawaySelected,
+                                sessionManager,
+                                onQuickBill
+                            )
+                        }
                     }
 
                     /**
@@ -262,6 +265,17 @@ fun DashboardScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                    /**
+                     * Diner Chart Section
+                     */
+                    item {
+                        DinerWiseSalesBarChart(
+                            data = state.dinerWiseSales,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+
                 }
             }
 
@@ -303,230 +317,6 @@ fun DashboardScreen(
         }
     }
 }
-
-//@SuppressLint("DefaultLocale")
-//@Composable
-//fun MetricsSection(
-//    metrics: DashboardMetrics,
-//    onNavigateToOrders: () -> Unit,
-//    onNavigateToDue: () -> Unit
-//) {
-//    val deviceInfo = getDeviceInfo()
-//    val padding = 12.dp
-//    Column{
-//        Text(
-//            "Today's Overview",
-//            style = MaterialTheme.typography.titleLarge,
-//            fontWeight = FontWeight.Bold,
-//            modifier = Modifier.padding(bottom = 12.dp)
-//        )
-//
-//        Row(
-//            modifier = Modifier.fillMaxWidth()
-//                .padding(start = 5.dp, end = 5.dp),
-//            horizontalArrangement = Arrangement.spacedBy(padding)
-//        ) {
-//            MobileOptimizedCard(
-//                modifier = Modifier
-//                    .width(160.dp)
-//                    .height(130.dp),
-//                onClick = { onNavigateToOrders() }
-//            ) {
-//                Column(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .padding(5.dp),
-//                    verticalArrangement = Arrangement.Center,
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            "Running Orders",
-//                            style = MaterialTheme.typography.bodySmall,
-//                            fontWeight = FontWeight.Bold,
-//                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-//                            textAlign = TextAlign.Center,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            metrics.runningOrders.toString(),
-//                            style = MaterialTheme.typography.bodyMedium,
-//                            fontWeight = FontWeight.Bold,
-//                            color = MaterialTheme.colorScheme.primary,
-//                            textAlign = TextAlign.Center,
-//                            fontSize = 20.sp,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                }
-//            }
-//
-////            MetricCard(
-////                title = "Pending Bills",
-////                value = metrics.pendingBills.toString(),
-////                color = MaterialTheme.colorScheme.secondary,
-////                onClick = onNavigateToDue
-////            )
-//            MobileOptimizedCard(
-//                modifier = Modifier
-//                    .width(160.dp)
-//                    .height(130.dp),
-//                onClick = { onNavigateToDue() }
-//            ) {
-//                Column(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .padding(5.dp),
-//                    verticalArrangement = Arrangement.Center,
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            "Pending Bills",
-//                            style = MaterialTheme.typography.bodySmall,
-//                            fontWeight = FontWeight.Bold,
-//                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-//                            textAlign = TextAlign.Center,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            metrics.pendingBills.toString(),
-//                            style = MaterialTheme.typography.bodyMedium,
-//                            fontWeight = FontWeight.Bold,
-//                            color = MaterialTheme.colorScheme.secondary,
-//                            textAlign = TextAlign.Center,
-//                            fontSize = 20.sp,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//        Spacer(modifier = Modifier.height(8.dp))
-//        Row(
-//            modifier = Modifier.fillMaxWidth()
-//                .padding(start = 5.dp, end = 5.dp),
-//            horizontalArrangement = Arrangement.spacedBy(padding)
-//        ) {
-////            MetricCard(
-////                title = "Total Sales",
-////                value = CurrencySettings.format(metrics.totalSales),
-////                color = Color(0xFF4CAF50)
-////            )
-//            MobileOptimizedCard(
-//                modifier = Modifier
-//                    .width(160.dp)
-//                    .height(130.dp),
-//                onClick = {  }
-//            ) {
-//                Column(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .padding(5.dp),
-//                    verticalArrangement = Arrangement.Center,
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            "Total Sales",
-//                            style = MaterialTheme.typography.bodySmall,
-//                            fontWeight = FontWeight.Bold,
-//                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-//                            textAlign = TextAlign.Center,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            CurrencySettings.format(metrics.totalSales),
-//                            style = MaterialTheme.typography.bodyMedium,
-//                            fontWeight = FontWeight.Bold,
-//                            color = Color(0xFF4CAF50),
-//                            textAlign = TextAlign.Center,
-//                            fontSize = 20.sp,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                }
-//            }
-//
-////            MetricCard(
-////                title = "Pending Due",
-////                value = CurrencySettings.format(metrics.pendingDue),
-////                color = Color(0xFFF44336)
-////            )
-//            MobileOptimizedCard(
-//                modifier = Modifier
-//                    .width(160.dp)
-//                    .height(130.dp),
-//                onClick = { }
-//            ) {
-//                Column(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .padding(5.dp),
-//                    verticalArrangement = Arrangement.Center,
-//                    horizontalAlignment = Alignment.CenterHorizontally
-//                ) {
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            "Pending Due",
-//                            style = MaterialTheme.typography.bodySmall,
-//                            fontWeight = FontWeight.Bold,
-//                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-//                            textAlign = TextAlign.Center,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                    Spacer(modifier = Modifier.height(8.dp))
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Text(
-//                            CurrencySettings.format(metrics.pendingDue),
-//                            style = MaterialTheme.typography.bodyMedium,
-//                            fontWeight = FontWeight.Bold,
-//                            color =  Color(0xFFF44336),
-//                            textAlign = TextAlign.Center,
-//                            fontSize = 20.sp,
-//                            modifier = Modifier.fillMaxWidth()
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-
 
 @SuppressLint("DefaultLocale")
 @Composable

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.warriortech.resb.model.DineTypeSummaryRow
 import com.warriortech.resb.model.PaymentModeData
 import com.warriortech.resb.model.WeeklySalesData
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -72,7 +73,7 @@ fun PaymentModePieChart(
                             paymentMode = item.paymentMode,
                             amount = item.amount,
                             color = item.color,
-                            percentage = (item.amount / total * 100).toInt()
+                            percentage = if (total > 0) (item.amount / total * 100).toInt() else 0
                         )
                     }
                 }
@@ -121,7 +122,7 @@ fun DrawScope.drawPieChart(data: List<PaymentModeData>, total: Double) {
     var currentAngle = -90f
 
     data.forEach { item ->
-        val sweepAngle = (item.amount / total * 360).toFloat()
+        val sweepAngle = if (total > 0) (item.amount / total * 360).toFloat() else 0f
 
         drawArc(
             color = item.color,
@@ -182,15 +183,63 @@ fun WeeklySalesBarChart(
     }
 }
 
+@Composable
+fun DinerWiseSalesBarChart(
+    data: List<DineTypeSummaryRow>,
+    modifier: Modifier = Modifier
+) {
+    val maxAmount = data.maxOfOrNull { it.amount } ?: 1.0
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceLight)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Diner Wise Sales",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                data.forEach { item ->
+                    BarChartItem(
+                        label = item.dineType,
+                        amount = item.amount,
+                        maxAmount = maxAmount,
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            }
+        }
+    }
+}
+
 @SuppressLint("DefaultLocale")
 @Composable
 fun BarChartItem(
     label: String,
     amount: Double,
     maxAmount: Double,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
-    val barHeight = (amount / maxAmount * 160).dp
+    val barHeight = (if (maxAmount > 0) (amount / maxAmount * 160) else 0.0).dp
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -206,7 +255,7 @@ fun BarChartItem(
                 .width(24.dp)
                 .height(barHeight)
                 .background(
-                    MaterialTheme.colorScheme.primary,
+                    color,
                     RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                 )
         )
@@ -214,7 +263,8 @@ fun BarChartItem(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            fontSize = 10.sp
+            fontSize = 10.sp,
+            maxLines = 1
         )
     }
 }
