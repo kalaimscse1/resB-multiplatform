@@ -259,11 +259,13 @@ fun DashboardScreen(
                     /**
                      * Weekly Sales Chart Section
                      */
-                    item {
-                        WeeklySalesBarChart(
-                            data = state.barchart,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    if (sessionManager.getUser()?.role == "RESBADMIN" || sessionManager.getUser()?.role == "ADMIN"){
+                        item {
+                            WeeklySalesBarChart(
+                                data = state.barchart,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                     /**
                      * Diner Chart Section

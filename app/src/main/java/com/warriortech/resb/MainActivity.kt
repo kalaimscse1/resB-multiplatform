@@ -704,7 +704,7 @@ fun AppNavigation(
                 navController = navController
             )
         }
-        composable("paid_bills") { PaidBillsScreen(navController = navController) }
+        composable("paid_bills") { PaidBillsScreen(navController = navController,sessionManager = sessionManager) }
         composable("bill_edit/{bill_no}") { backStackEntry ->
             val billNo = backStackEntry.arguments?.getString("bill_no") ?: ""
             BillEditScreen(navController = navController, billNo = billNo)

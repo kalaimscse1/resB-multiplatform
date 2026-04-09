@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.Bill
 import com.warriortech.resb.model.TblBillingResponse
+import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.ui.components.ModernDivider
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
@@ -35,15 +38,17 @@ import com.warriortech.resb.ui.viewmodel.report.PaidBillsViewModel
 import com.warriortech.resb.util.CurrencySettings
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
 @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaidBillsScreen(
     navController: NavHostController,
+    sessionManager: SessionManager,
     viewModel: PaidBillsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedBill by viewModel.selectedBill.collectAsStateWithLifecycle()
+    val otpState by viewModel.otpState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -54,6 +59,11 @@ fun PaidBillsScreen(
     var toDate by remember { mutableStateOf(LocalDate.now()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var isFromDatePicker by remember { mutableStateOf(true) }
+
+    // OTP related local states
+    var showOtpDialog by remember { mutableStateOf(false) }
+    var enteredOtp by remember { mutableStateOf("") }
+    var billNoToEdit by remember { mutableStateOf("") }
 
     LaunchedEffect(fromDate, toDate) {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -69,6 +79,25 @@ fun PaidBillsScreen(
                 viewModel.clearError()
             }
 
+            else -> {}
+        }
+    }
+
+    // Handle OTP State changes
+    LaunchedEffect(otpState) {
+        when (val state = otpState) {
+            is PaidBillsViewModel.OtpState.Sent -> {
+                showOtpDialog = true
+            }
+            is PaidBillsViewModel.OtpState.Verified -> {
+                showOtpDialog = false
+                enteredOtp = ""
+                navController.navigate("bill_edit/$billNoToEdit")
+                viewModel.clearOtpState()
+            }
+            is PaidBillsViewModel.OtpState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+            }
             else -> {}
         }
     }
@@ -233,7 +262,12 @@ fun PaidBillsScreen(
                                 PaidBillItem(
                                     bill = bill,
                                     onEditClick = {
-                                        navController.navigate("bill_edit/${bill.bill_no}")
+                                        if(sessionManager.getUser()?.role == "CASHIER" && sessionManager.getGeneralSetting()?.is_otp==true){
+                                            billNoToEdit = bill.bill_no
+                                            viewModel.requestOtpForEdit(bill.bill_no)
+                                        }else{
+                                            navController.navigate("bill_edit/${bill.bill_no}")
+                                        }
                                     },
                                     onDeleteClick = {
                                         billToDelete = bill
@@ -337,6 +371,52 @@ fun PaidBillsScreen(
                     TextButton(onClick = {
                         showDeleteDialog = false
                         billToDelete = null
+                    }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // OTP Dialog
+        if (showOtpDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showOtpDialog = false
+                    enteredOtp = ""
+                    viewModel.clearOtpState()
+                },
+                title = { Text("Verification Required") },
+                text = {
+                    Column {
+                        Text("An OTP has been sent to the owner's Number. Please enter it to edit this bill.")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = enteredOtp,
+                            onValueChange = { if (it.length <= 6) enteredOtp = it },
+                            label = { Text("Enter OTP") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (otpState is PaidBillsViewModel.OtpState.Sending) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally))
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.verifyOtp(enteredOtp) },
+                        enabled = enteredOtp.length == 6 && otpState !is PaidBillsViewModel.OtpState.Sending
+                    ) {
+                        Text("Verify")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { 
+                        showOtpDialog = false
+                        enteredOtp = ""
+                        viewModel.clearOtpState()
                     }) {
                         Text("Cancel")
                     }

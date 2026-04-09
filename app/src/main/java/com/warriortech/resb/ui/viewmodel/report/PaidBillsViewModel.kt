@@ -10,14 +10,18 @@ import com.warriortech.resb.data.repository.BillRepository
 import com.warriortech.resb.data.repository.OrderRepository
 import com.warriortech.resb.data.repository.LedgerDetailsRepository
 import com.warriortech.resb.model.*
+import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
+import com.warriortech.resb.network.WhatsAppApi
 import com.warriortech.resb.util.ReportExport
 import com.warriortech.resb.util.getCurrentDateModern
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.random.Random
 
 sealed class PaidBillsUiState {
     object Loading : PaidBillsUiState()
@@ -31,7 +35,9 @@ class PaidBillsViewModel @Inject constructor(
     private val billRepository: BillRepository,
     private val sessionManager: SessionManager,
     private val orderRepository: OrderRepository,
-    private val ledgerDetailsRepository: LedgerDetailsRepository
+    private val ledgerDetailsRepository: LedgerDetailsRepository,
+    private val apiService: ApiService,
+    private val whatsappApi: WhatsAppApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PaidBillsUiState>(PaidBillsUiState.Idle)
@@ -73,6 +79,78 @@ class PaidBillsViewModel @Inject constructor(
 
     private val _discount = MutableStateFlow(0.0)
     val discount: StateFlow<Double> = _discount.asStateFlow()
+
+    // OTP States
+    private val _generatedOtp = MutableStateFlow<String?>(null)
+    private val _otpExpiryTime = MutableStateFlow<Long>(0)
+    
+    private val _otpState = MutableStateFlow<OtpState>(OtpState.Idle)
+    val otpState: StateFlow<OtpState> = _otpState.asStateFlow()
+
+    sealed class OtpState {
+        object Idle : OtpState()
+        object Sending : OtpState()
+        object Sent : OtpState()
+        object Verified : OtpState()
+        data class Error(val message: String) : OtpState()
+    }
+
+    fun requestOtpForEdit(billNo: String) {
+        viewModelScope.launch {
+            try {
+                _otpState.value = OtpState.Sending
+                val otp = (100000..999999).random().toString()
+
+                val ownerEmail = sessionManager.getGeneralSetting()?.recipient_no
+                
+                if (ownerEmail.isNullOrBlank()) {
+                    _otpState.value = OtpState.Error("Owner Contact no not configured in profile")
+                    return@launch
+                }
+
+                val response = whatsappApi.sendWhatsApp(
+                    secret = sessionManager.getGeneralSetting()?.secret_key?.toRequestBody()?:"66a02ca4cbae00a9b996ba9d1f62a51c56cbccd1".toRequestBody(),
+                    account = sessionManager.getGeneralSetting()?.account_key?.toRequestBody()?:"1768990496a87ff679a2f3e71d9181a67b7542122c6970a7204c38d".toRequestBody(),
+                    recipient = sessionManager.getGeneralSetting()?.recipient_no?.toRequestBody()?:"".toRequestBody(),           // +919876543210
+                    type = "text".toRequestBody(),
+                    message = ("Your OTP is $otp\n" +
+                            "For ${billNo}\n"
+                            +"OTP Expiry in 3 mins").toRequestBody()
+                )
+                if (response.isSuccessful) {
+                    _generatedOtp.value = otp
+                    _otpExpiryTime.value = System.currentTimeMillis() + (3 * 60 * 1000)
+                    _otpState.value = OtpState.Sent
+                } else {
+                    _otpState.value = OtpState.Error("Failed to send OTP: ${response.message()}")
+                }
+            } catch (e: Exception) {
+                _otpState.value = OtpState.Error("Error: ${e.message}")
+            }
+        }
+    }
+
+    fun verifyOtp(enteredOtp: String): Boolean {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime > _otpExpiryTime.value) {
+            _otpState.value = OtpState.Error("OTP expired. Please request a new one.")
+            return false
+        }
+        
+        if (enteredOtp == _generatedOtp.value) {
+            _otpState.value = OtpState.Verified
+            return true
+        } else {
+            _otpState.value = OtpState.Error("Invalid OTP")
+            return false
+        }
+    }
+
+    fun clearOtpState() {
+        _otpState.value = OtpState.Idle
+        _generatedOtp.value = null
+        _otpExpiryTime.value = 0
+    }
 
     fun loadPaidBills(fromDate: String, toDate: String) {
         viewModelScope.launch {

@@ -260,9 +260,15 @@ class MenuViewModel @Inject constructor(
         viewModelScope.launch {
             val currentItems = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
             val currentQty = currentItems[CartItemKey(menuItem)] ?: 0
-            if (performStockCheck(menuItem, currentQty + 1)) {
+            if (sessionManager.getGeneralSetting()?.is_inventory == true){
+                if (performStockCheck(menuItem, currentQty + 1)) {
+                    doAddItem(menuItem)
+                }
+            }else
+            {
                 doAddItem(menuItem)
             }
+
         }
     }
 
