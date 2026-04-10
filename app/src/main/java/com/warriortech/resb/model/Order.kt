@@ -59,6 +59,10 @@ data class OrderMaster(
     var note : String,
     var delivery_time: String,
     var delivery_boy_id: Long,
+    var is_online:Boolean = false,
+    var online_ref_no:String = "",
+    var online_order_id:Int = 1,
+    var is_online_paid:Boolean = false,
     var is_active: Long
 )
 
@@ -117,6 +121,10 @@ data class TblOrderResponse(
     var delivery_time: String,
     var delivery_boy_id: Long,
     var delivery_boy_name:String,
+    var is_online:Boolean,
+    var online_ref_no:String,
+    var online_order:TblOnline,
+    var is_online_paid:Boolean,
     var is_active:Long,
     var kot_number:Int?=null
 )
@@ -150,4 +158,10 @@ data class TblOrderDetailsResponse(
     var merge_order_tables:String,
     var merge_pax:Int,
     var is_active:Long
+)
+
+data class TblOnline(
+    var online_order_id: Long=0,
+    var online_order_name:String,
+    var is_active:Boolean= true
 )

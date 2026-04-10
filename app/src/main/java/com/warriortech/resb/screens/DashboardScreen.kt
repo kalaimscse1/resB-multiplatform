@@ -53,6 +53,7 @@ fun DashboardScreen(
     onNavigateToDue: () -> Unit,
     onDineInSelected: () -> Unit,
     onTakeawaySelected: () -> Unit,
+    onOnlineOrderSelected: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
     sessionManager: SessionManager,
     onQuickBill: () -> Unit,
@@ -229,8 +230,9 @@ fun DashboardScreen(
                                 onNavigateToBilling = onNavigateToBilling,
                                 onDineInSelected = onDineInSelected,
                                 onTakeawaySelected = onTakeawaySelected,
-                                sessionManager,
-                                onQuickBill
+                                sessionManager = sessionManager,
+                                onQuickBill = onQuickBill,
+                                onOnlineOrderSelected = onOnlineOrderSelected
                             )
                         }
                     }
@@ -520,6 +522,7 @@ fun QuickActionsSection(
     onNavigateToBilling: () -> Unit,
     onDineInSelected: () -> Unit,
     onTakeawaySelected: () -> Unit,
+    onOnlineOrderSelected: () -> Unit,
     sessionManager: SessionManager,
     onQuickBill: () -> Unit
 ) {
@@ -577,25 +580,40 @@ fun QuickActionsSection(
             title = { Text("Order Type") },
             text = { Text("Please choose order type:") },
             confirmButton = {
-                MobileOptimizedButton(
-                    onClick = {
-                        showOrderTypeDialog = false
-                        onDineInSelected()
-                    },
-                    text = "Dine-In",
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-            },
-            dismissButton = {
-                MobileOptimizedButton(
-                    onClick = {
-                        showOrderTypeDialog = false
-                        onTakeawaySelected()
-                    },
-                    text = "Takeaway",
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MobileOptimizedButton(
+                        onClick = {
+                            showOrderTypeDialog = false
+                            onDineInSelected()
+                        },
+                        text = "Dine-In",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    MobileOptimizedButton(
+                        onClick = {
+                            showOrderTypeDialog = false
+                            onTakeawaySelected()
+                        },
+                        text = "Takeaway",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    MobileOptimizedButton(
+                        onClick = {
+                            showOrderTypeDialog = false
+                            onOnlineOrderSelected()
+                        },
+                        text = "Online Order",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    MobileOptimizedButton(
+                        onClick = {
+                            showOrderTypeDialog = false
+                            onTakeawaySelected()
+                        },
+                        text = "Cancel",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         )
     }

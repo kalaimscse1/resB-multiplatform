@@ -534,7 +534,8 @@ fun AppNavigation(
                 sessionManager = sessionManager,
                 onQuickBill = { navController.navigate("quick_bills") },
                 onNavigateToDue = { navController.navigate("due") },
-                navController = navController
+                navController = navController,
+                onOnlineOrderSelected = { navController.navigate("online_order") }
             )
         }
         composable("reports") {
@@ -748,6 +749,12 @@ fun AppNavigation(
         }
         composable("auditing_report"){
             AuditingScreen(drawerState = drawerState)
+        }
+        composable("online_order") {
+            OnlineOrderScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
         }
     }
 }
@@ -965,7 +972,7 @@ fun DrawerContent(
                     NavigationDrawerItem(
                         label = { if (!isCollapsed) Text("Orders") },
                         icon = { DrawerIcon(Icons.Default.Receipt, null, isCollapsed) },
-                        selected = currentDestination?.route in listOf("selects", "takeaway_menu"),
+                        selected = currentDestination?.route in listOf("selects", "takeaway_menu", "online_order"),
                         onClick = { setExpandedMenu(if (expandedMenu == ExpandedMenu.ORDERS) ExpandedMenu.NONE else ExpandedMenu.ORDERS) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                         colors = drawerItemColors
@@ -1007,6 +1014,20 @@ fun DrawerContent(
                                 },
                                 selected = currentDestination?.route == "delivery_menu",
                                 onClick = { onDestinationClicked("delivery_menu") },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                colors = subMenuColors
+                            )
+                            NavigationDrawerItem(
+                                label = { if (!isCollapsed) Text("Online Order") },
+                                icon = {
+                                    DrawerIcon(
+                                        Icons.Default.Language,
+                                        null,
+                                        isCollapsed
+                                    )
+                                },
+                                selected = currentDestination?.route == "online_order",
+                                onClick = { onDestinationClicked("online_order") },
                                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                 colors = subMenuColors
                             )

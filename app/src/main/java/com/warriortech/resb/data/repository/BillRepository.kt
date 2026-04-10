@@ -164,7 +164,7 @@ class BillRepository @Inject constructor(
                 delivery_amt = otherCharges,
                 round_off = roundOff,
                 rounded_amt = total,
-                others = 0.0,
+                others = if (paymentMethod.name == "OTHERS") total else 0.0,
                 change = if (isTendered && tenderedAmt > 0) tenderedAmt - receivedAmt else 0.0,
                 tendered_amt = tenderedAmt
             )

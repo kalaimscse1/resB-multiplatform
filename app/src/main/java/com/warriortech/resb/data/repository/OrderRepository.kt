@@ -44,6 +44,9 @@ class OrderRepository @Inject constructor(
         tableStatus: String,
         existingOpenOrderMasterId: String? = null,
         deliveryBoyId: Long? = null,// Allow passing it if already known
+        isOnline: Boolean = false,
+        onlineRefNo: String = "",
+        onlineOrderId: Int = 1
     ): Flow<Result<TblOrderResponse>> = flow {
         if (itemsToPlace.isEmpty()) {
             emit(Result.failure(IllegalArgumentException("Cannot place an order with no items.")))
@@ -55,7 +58,7 @@ class OrderRepository @Inject constructor(
             var orderMasterResponse: TblOrderResponse?
 
             // 1. Check for/Determine existing open OrderMaster ID for the table
-            if (currentOrderMasterId == null && tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY") {
+            if (currentOrderMasterId == null && tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY" && !isOnline) {
                 // Try to find an open order for this table
                 val openOrderResponse = apiService.getOpenOrderMasterForTable(
                     tableId,
@@ -69,7 +72,9 @@ class OrderRepository @Inject constructor(
                 }
             } else {
                 orderMasterResponse = null
-                apiService.updateTableOpenStatus(tableId,false,sessionManager.getCompanyCode() ?: "")
+                if (!isOnline) {
+                    apiService.updateTableOpenStatus(tableId, false, sessionManager.getCompanyCode() ?: "")
+                }
             }
 
             val tableInfo = apiService.getTablesByStatus(
@@ -89,9 +94,9 @@ class OrderRepository @Inject constructor(
                     order_create_time = getCurrentTimeModern(),
                     order_completed_time = "", 
                     staff_id = sessionManager.getUser()?.staff_id ?: 1,
-                    is_dine_in = tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY",
+                    is_dine_in = tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY" && !isOnline,
                     is_take_away = tableStatus == "TAKEAWAY",
-                    is_delivery = tableStatus == "DELIVERY",
+                    is_delivery = tableStatus == "DELIVERY" || isOnline,
                     table_id = tableId,
                     no_of_person = tableInfo.seating_capacity,
                     waiter_request_status = true,
@@ -100,11 +105,15 @@ class OrderRepository @Inject constructor(
                     is_merge = false,
                     is_active = 1,
                     order_master_id = newOrderMasterApiId["order_master_id"]
-                        ?: "", 
+                        ?: "",
                     is_delivered = false,
-                    note = "",
+                    note = if (isOnline) "Online Order" else "",
                     delivery_time = "",
-                    delivery_boy_id = deliveryBoyId ?: 5
+                    delivery_boy_id = deliveryBoyId ?: 5,
+                    is_online = isOnline,
+                    online_ref_no = onlineRefNo,
+                    online_order_id = onlineOrderId,
+                    is_online_paid = isOnline,
                 )
                 val response = apiService.createOrder(
                     orderRequest,

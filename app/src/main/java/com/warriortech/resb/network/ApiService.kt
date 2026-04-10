@@ -1455,4 +1455,13 @@ interface ApiService {
         @Path("itemId") itemId: Long,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<TblUnitConversionResponse?>
+
+    /**
+     * Online Order Management
+     */
+
+    @GET("online/getAll")
+    suspend fun getAllOnlineOrders(
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblOnline>>
 }
