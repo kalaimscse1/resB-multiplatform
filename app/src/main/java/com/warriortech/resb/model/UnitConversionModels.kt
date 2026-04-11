@@ -17,3 +17,20 @@ data class TblUnitConversionResponse(
     var conversion_no: Double,
     var is_active: Boolean
 )
+
+
+data class TblTmpItemMasterRequest(
+    var tmp_item_master_id: Long=0,
+    var order_id:String,
+    var item_id:Long,
+    var tmp_qty:Double,
+    var is_active:Long=1
+)
+
+data class TblTmpItemMasterResponse(
+    var tmp_item_master_id: Long=0,
+    var order_id:String,
+    var item:TblMenuItemResponse,
+    var tmp_qty:Double,
+    var is_active:Long=1
+)

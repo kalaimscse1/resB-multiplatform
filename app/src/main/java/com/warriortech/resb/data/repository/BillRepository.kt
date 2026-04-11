@@ -299,6 +299,7 @@ class BillRepository @Inject constructor(
                     }
                 }
                 apiService.createBulkItemDetails(itemDetails, tenant)
+                apiService.deleteByOrderId(orderMasterId,sessionManager.getCompanyCode() ?: "")
             }
 
             if (sessionManager.getGeneralSetting()?.is_accounts == true) {

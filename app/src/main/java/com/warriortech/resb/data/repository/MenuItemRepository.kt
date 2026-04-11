@@ -84,7 +84,7 @@ class MenuItemRepository @Inject constructor(
                     emit(Result.success(filteredItems))
                 } else if (menuItems != null){
                     val filteredItems =
-                        menuItems.filter { it.is_favourite == true }
+                        menuItems.filter { it.is_favourite }
                     emit(Result.success(filteredItems))
                 }
                 else

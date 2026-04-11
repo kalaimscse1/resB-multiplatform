@@ -48,6 +48,9 @@ class OnlineOrderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<OnlineOrderUiState>(OnlineOrderUiState.Idle)
     val uiState: StateFlow<OnlineOrderUiState> = _uiState.asStateFlow()
 
+    private val _showAlert = MutableStateFlow<String?>(null)
+    val showAlert: StateFlow<String?> = _showAlert.asStateFlow()
+
     sealed class OnlineOrderUiState {
         object Idle : OnlineOrderUiState()
         object Loading : OnlineOrderUiState()
@@ -65,7 +68,7 @@ class OnlineOrderViewModel @Inject constructor(
             try {
                 val response = apiService.getAllOnlineOrders(sessionManager.getCompanyCode() ?: "")
                 if (response.isSuccessful) {
-                    _onlinePlatforms.value = response.body() ?: emptyList()
+                    _onlinePlatforms.value = response.body()?.filter { it.online_order_name!="--" } ?: emptyList()
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load online platforms")
@@ -103,9 +106,14 @@ class OnlineOrderViewModel @Inject constructor(
     }
 
     fun addToCart(item: TblMenuItemResponse) {
-        val current = _cartItems.value.toMutableMap()
-        current[item] = (current[item] ?: 0) + 1
-        _cartItems.value = current
+        viewModelScope.launch {
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                if (!performStockCheck(item, (_cartItems.value[item] ?: 0) + 1)) return@launch
+            }
+            val current = _cartItems.value.toMutableMap()
+            current[item] = (current[item] ?: 0) + 1
+            _cartItems.value = current
+        }
     }
 
     fun removeFromCart(item: TblMenuItemResponse) {
@@ -114,6 +122,32 @@ class OnlineOrderViewModel @Inject constructor(
         if (qty > 1) current[item] = qty - 1 else current.remove(item)
         _cartItems.value = current
     }
+
+    private suspend fun performStockCheck(menuItem: TblMenuItemResponse, targetQty: Int): Boolean {
+        try {
+            val response = menuRepository.getItemMasterById(menuItem.menu_item_id)
+            if (response.isSuccessful) {
+                val tmpStockResponse = apiService.sumQty(menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
+                val itemMaster = response.body()
+                if (itemMaster != null) {
+                    val stockQty = itemMaster.qty - (tmpStockResponse["tmp_qty"] ?: 0.0)
+                    if (stockQty <= 0.00) {
+                        _showAlert.value = "${menuItem.menu_item_name} is Out of Stock."
+                        return false
+                    }
+                    if (stockQty < targetQty.toDouble()) {
+                        _showAlert.value = "Only $stockQty Stock remaining for ${menuItem.menu_item_name}."
+                        return false
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error checking stock")
+        }
+        return true
+    }
+
+    fun dismissAlert() { _showAlert.value = null }
 
     fun clearCart() {
         _cartItems.value = emptyMap()
@@ -135,36 +169,27 @@ class OnlineOrderViewModel @Inject constructor(
             try {
                 val tenantId = sessionManager.getCompanyCode() ?: ""
                 
-                // 1. Prepare Order Items
                 val orderItems = items.map { (menuItem, quantity) ->
                     OrderItem(quantity = quantity, menuItem = menuItem)
                 }
 
-                // 2. Place Order
                 orderRepository.placeOrUpdateOrder(
-                    tableId = 1, // Generic ID for online orders
+                    tableId = 1,
                     itemsToPlace = orderItems,
-                    tableStatus = "DELIVERY", 
-                    deliveryBoyId = 5 
+                    tableStatus = "DELIVERY",
+                    deliveryBoyId = 5,
+                    isOnline = true,
+                    onlineRefNo = _refNo.value,
+                    onlineOrderId = platform.online_order_id.toInt()
                 ).collect { orderResult ->
                     orderResult.fold(
                         onSuccess = { orderResponse ->
-                            // Update order with online details
-                            val orderMaster = apiService.getOrderMasterById(orderResponse.order_master_id, tenantId).body()
-                            if (orderMaster != null) {
-                                // We need to set is_online and other fields. 
-                                // Assuming the backend supports updating these or we send them during creation.
-                                // The current placeOrUpdateOrder doesn't take online details, so we might need a direct API call if supported.
-                                // For now, we proceed to billing.
-                            }
-                            
-                            // 3. Bill the order immediately using OTHERS
                             val totalAmount = items.entries.sumOf { it.key.rate * it.value }
                             billRepository.bill(
                                 orderMasterId = orderResponse.order_master_id,
                                 paymentMethod = PaymentMethod("others", "OTHERS"),
                                 receivedAmt = totalAmount,
-                                customer = TblCustomer(1L, "ONLINE CUSTOMER", "", "", "", "", false, 0L),
+                                customer = TblCustomer(1L, "ONLINE CUSTOMER", "", "", "", "", false, 1L),
                                 billNo = "--",
                                 voucherType = "BILL",
                                 total = totalAmount

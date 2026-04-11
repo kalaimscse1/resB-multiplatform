@@ -8,6 +8,7 @@ import com.warriortech.resb.data.repository.ModifierRepository
 import com.warriortech.resb.data.repository.OrderRepository
 import com.warriortech.resb.data.repository.TableRepository
 import com.warriortech.resb.model.*
+import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.getCurrentTimeAsFloat
@@ -28,7 +29,8 @@ class MenuViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     private val tableRepository: TableRepository,
     private val modifierRepository: ModifierRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val apiService: ApiService
 ) : ViewModel() {
 
     sealed class MenuUiState {
@@ -60,12 +62,15 @@ class MenuViewModel @Inject constructor(
 
     // Aggregated quantities for display on MenuItemCards
     val selectedItems: StateFlow<Map<TblMenuItemResponse, Int>> = _selectedCartItems.map { map ->
-        map.entries.groupBy { it.key.menuItem }.mapValues { entry -> entry.value.sumOf { it.value } }
+        map.entries.groupBy { it.key.menuItem }
+            .mapValues { entry -> entry.value.sumOf { it.value } }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
-    val newselectedItems: StateFlow<Map<TblMenuItemResponse, Int>> = _newSelectedCartItems.map { map ->
-        map.entries.groupBy { it.key.menuItem }.mapValues { entry -> entry.value.sumOf { it.value } }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val newselectedItems: StateFlow<Map<TblMenuItemResponse, Int>> =
+        _newSelectedCartItems.map { map ->
+            map.entries.groupBy { it.key.menuItem }
+                .mapValues { entry -> entry.value.sumOf { it.value } }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     // Granular quantities for UI (With and Without Modifiers)
     val selectedWithoutModifiers: StateFlow<Map<Long, Int>> = _selectedCartItems.map { map ->
@@ -86,9 +91,10 @@ class MenuViewModel @Inject constructor(
             .mapValues { it.value.sumOf { entry -> entry.value } }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
-    val selectedModifiers: StateFlow<Map<Long, List<Modifiers>>> = combine(_selectedCartItems, _newSelectedCartItems) { selected, new ->
-        (selected + new).keys.associate { it.menuItem.menu_item_id to it.modifiers }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val selectedModifiers: StateFlow<Map<Long, List<Modifiers>>> =
+        combine(_selectedCartItems, _newSelectedCartItems) { selected, new ->
+            (selected + new).keys.associate { it.menuItem.menu_item_id to it.modifiers }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     // Tracks the last interacted variation for the keypad to affect
     private val _activeCartItem = MutableStateFlow<CartItemKey?>(null)
@@ -98,14 +104,15 @@ class MenuViewModel @Inject constructor(
     val selectedCategory = MutableStateFlow<String?>(null)
     val tableStatus = MutableStateFlow<String?>(null)
     val existingOrderId = MutableStateFlow<String?>(null)
-
+    val newOrderId = MutableStateFlow<String?>(null)
     private val _isExistingOrderLoaded = MutableStateFlow(false)
     val isExistingOrderLoaded: StateFlow<Boolean> = _isExistingOrderLoaded.asStateFlow()
 
     val orderDetailsResponse = MutableStateFlow<List<TblOrderDetailsResponse>>(emptyList())
 
     private val _selectedMenuItemForModifier = MutableStateFlow<TblMenuItemResponse?>(null)
-    val selectedMenuItemForModifier: StateFlow<TblMenuItemResponse?> = _selectedMenuItemForModifier.asStateFlow()
+    val selectedMenuItemForModifier: StateFlow<TblMenuItemResponse?> =
+        _selectedMenuItemForModifier.asStateFlow()
 
     private val _showModifierDialog = MutableStateFlow<Boolean>(false)
     val showModifierDialog: StateFlow<Boolean> = _showModifierDialog.asStateFlow()
@@ -118,13 +125,22 @@ class MenuViewModel @Inject constructor(
             symbol = sessionManager.getRestaurantProfile()?.currency ?: "",
             decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
         )
+        viewModelScope.launch {
+            val new = apiService.getOrderNo(
+                sessionManager.getCompanyCode() ?: "",
+                sessionManager.getUser()?.counter_id ?: 0,
+                "ORDER"
+            )
+            newOrderId.value = new["order_master_id"]
+        }
     }
 
     fun initializeScreen(isTableOrder: Boolean, currentTableId: Long) {
         viewModelScope.launch {
             loadMenuItems()
             if (isTableOrder) {
-                val existingItemsForTable = orderRepository.getOpenOrderItemsForTable(currentTableId)
+                val existingItemsForTable =
+                    orderRepository.getOpenOrderItemsForTable(currentTableId)
                 if (existingItemsForTable.isNotEmpty()) {
                     orderDetailsResponse.value = existingItemsForTable
                     val items = existingItemsForTable.associate {
@@ -188,7 +204,8 @@ class MenuViewModel @Inject constructor(
                 menuRepository.getMenuItems(category).collect { result ->
                     result.fold(
                         onSuccess = { menuItems ->
-                            val showMenu = sessionManager.getGeneralSetting()?.menu_show_in_time ?: false
+                            val showMenu =
+                                sessionManager.getGeneralSetting()?.menu_show_in_time ?: false
                             val itemsToShow = if (showMenu) {
                                 val currentTime = getCurrentTimeAsFloat()
                                 menuItems.filter { menuItem ->
@@ -210,7 +227,8 @@ class MenuViewModel @Inject constructor(
                             selectedCategory.value = categories.value.firstOrNull()
                         },
                         onFailure = { error ->
-                            _menuState.value = MenuUiState.Error(error.message ?: "Failed to load items")
+                            _menuState.value =
+                                MenuUiState.Error(error.message ?: "Failed to load items")
                         }
                     )
                 }
@@ -220,32 +238,44 @@ class MenuViewModel @Inject constructor(
         }
     }
 
-    fun setTableId(tableId: Long?) { _selectedTableId.value = tableId }
+    fun setTableId(tableId: Long?) {
+        _selectedTableId.value = tableId
+    }
 
     private val _showAlert = MutableStateFlow<String?>(null)
     val showAlert: StateFlow<String?> = _showAlert.asStateFlow()
-    fun dismissAlert() { _showAlert.value = null }
+    fun dismissAlert() {
+        _showAlert.value = null
+    }
 
-    private suspend fun performStockCheck(menuItem: TblMenuItemResponse, targetQty: Int = 1): Boolean {
+    private suspend fun performStockCheck(
+        menuItem: TblMenuItemResponse,
+        targetQty: Int = 1
+    ): Boolean {
         try {
             val response = menuRepository.getItemMasterById(menuItem.menu_item_id)
+
             if (response.isSuccessful) {
+                val tmpStockResponse =
+                    apiService.sumQty(menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
                 val itemMaster = response.body()
                 if (itemMaster != null) {
-                    val stockQty = itemMaster.qty
-                    
+                    val stockQty = itemMaster.qty - (tmpStockResponse["tmp_qty"] ?: 0.0)
+
                     if (stockQty <= 0.00) {
                         _showAlert.value = "${menuItem.menu_item_name} is Out of Stock."
                         return false
                     }
-                    
+
                     if (stockQty < targetQty.toDouble()) {
-                        _showAlert.value = "Only $stockQty Stock remaining for ${menuItem.menu_item_name}."
+                        _showAlert.value =
+                            "Only $stockQty Stock remaining for ${menuItem.menu_item_name}."
                     }
-                    
+
                     if (menuItem.stock_maintain.equals("YES", ignoreCase = true)) {
                         if (stockQty <= menuItem.min_stock.toDouble()) {
-                            _showAlert.value = "${menuItem.menu_item_name} is at Minimum Stock Level ($stockQty remaining)"
+                            _showAlert.value =
+                                "${menuItem.menu_item_name} is at Minimum Stock Level ($stockQty remaining)"
                         }
                     }
                 }
@@ -258,14 +288,24 @@ class MenuViewModel @Inject constructor(
 
     fun addItemToOrder(menuItem: TblMenuItemResponse) {
         viewModelScope.launch {
-            val currentItems = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
+            val currentItems =
+                if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
             val currentQty = currentItems[CartItemKey(menuItem)] ?: 0
-            if (sessionManager.getGeneralSetting()?.is_inventory == true){
-                if (performStockCheck(menuItem, currentQty + 1)) {
+            val newQty = currentQty + 1
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                if (performStockCheck(menuItem, newQty)) {
+                    apiService.createTmpItemMaster(
+                        TblTmpItemMasterRequest(
+                            order_id = existingOrderId.value ?: newOrderId.value ?: "",
+                            item_id = menuItem.menu_item_id,
+                            tmp_qty = newQty.toDouble(),
+                            is_active = 1L
+                        ),
+                        sessionManager.getCompanyCode() ?: ""
+                    )
                     doAddItem(menuItem)
                 }
-            }else
-            {
+            } else {
                 doAddItem(menuItem)
             }
 
@@ -295,8 +335,10 @@ class MenuViewModel @Inject constructor(
     }
 
     fun setActiveItemWithModifiers(menuItem: TblMenuItemResponse) {
-        val cart = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
-        val keyWithModifiers = cart.keys.find { it.menuItem.menu_item_id == menuItem.menu_item_id && it.modifiers.isNotEmpty() }
+        val cart =
+            if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
+        val keyWithModifiers =
+            cart.keys.find { it.menuItem.menu_item_id == menuItem.menu_item_id && it.modifiers.isNotEmpty() }
         if (keyWithModifiers != null) {
             _activeCartItem.value = keyWithModifiers
         }
@@ -304,13 +346,23 @@ class MenuViewModel @Inject constructor(
 
     fun updateItemQuantity(cartItemKey: CartItemKey, newQty: Int) {
         viewModelScope.launch {
+            val currentQty = (if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value)[cartItemKey] ?: 0
+            
             if (newQty > 0) {
-                val currentQty = (if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value)[cartItemKey] ?: 0
                 if (newQty > currentQty) {
                     if (!performStockCheck(cartItemKey.menuItem, newQty)) return@launch
                 }
             }
-            
+
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
+                if (newQty <= 0) {
+                    apiService.deleteByOrderIdAndItemId(orderIdStr, cartItemKey.menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
+                } else {
+                    apiService.updateQty(orderIdStr, cartItemKey.menuItem.menu_item_id, newQty.toDouble(), sessionManager.getCompanyCode() ?: "")
+                }
+            }
+
             if (_isExistingOrderLoaded.value) {
                 val current = _newSelectedCartItems.value.toMutableMap()
                 if (newQty <= 0) current.remove(cartItemKey) else current[cartItemKey] = newQty
@@ -331,20 +383,36 @@ class MenuViewModel @Inject constructor(
     }
 
     fun removeItemFromOrder(cartItemKey: CartItemKey) {
-        // No stock check needed when reducing quantity
-        if (_isExistingOrderLoaded.value) {
-            val current = _newSelectedCartItems.value.toMutableMap()
-            val qty = current[cartItemKey] ?: 0
-            if (qty > 1) current[cartItemKey] = qty - 1 else current.remove(cartItemKey)
-            _newSelectedCartItems.value = current
-        } else {
-            val current = _selectedCartItems.value.toMutableMap()
-            val qty = current[cartItemKey] ?: 0
-            if (qty > 1) current[cartItemKey] = qty - 1 else current.remove(cartItemKey)
-            _selectedCartItems.value = current
-        }
-        if ((!_newSelectedCartItems.value.containsKey(cartItemKey) && !_selectedCartItems.value.containsKey(cartItemKey)) && _activeCartItem.value == cartItemKey) {
-            _activeCartItem.value = null
+        viewModelScope.launch {
+            val currentMap = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
+            val qty = currentMap[cartItemKey] ?: 0
+            val newQty = qty - 1
+
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
+                if (newQty <= 0) {
+                    apiService.deleteByOrderIdAndItemId(orderIdStr, cartItemKey.menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
+                } else {
+                    apiService.updateQty(orderIdStr, cartItemKey.menuItem.menu_item_id, newQty.toDouble(), sessionManager.getCompanyCode() ?: "")
+                }
+            }
+
+            if (_isExistingOrderLoaded.value) {
+                val current = _newSelectedCartItems.value.toMutableMap()
+                if (qty > 1) current[cartItemKey] = newQty else current.remove(cartItemKey)
+                _newSelectedCartItems.value = current
+            } else {
+                val current = _selectedCartItems.value.toMutableMap()
+                if (qty > 1) current[cartItemKey] = newQty else current.remove(cartItemKey)
+                _selectedCartItems.value = current
+            }
+            
+            if ((!_newSelectedCartItems.value.containsKey(cartItemKey) && !_selectedCartItems.value.containsKey(
+                    cartItemKey
+                )) && _activeCartItem.value == cartItemKey
+            ) {
+                _activeCartItem.value = null
+            }
         }
     }
 
@@ -353,17 +421,24 @@ class MenuViewModel @Inject constructor(
     }
 
     fun clearOrder() {
-        _newSelectedCartItems.value = emptyMap()
-        _selectedCartItems.value = emptyMap()
-        _activeCartItem.value = null
-        _isExistingOrderLoaded.value = false
-        _orderState.value = OrderUiState.Idle
+        viewModelScope.launch {
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
+                apiService.deleteByOrderId(orderIdStr, sessionManager.getCompanyCode() ?: "")
+            }
+            _newSelectedCartItems.value = emptyMap()
+            _selectedCartItems.value = emptyMap()
+            _activeCartItem.value = null
+            _isExistingOrderLoaded.value = false
+            _orderState.value = OrderUiState.Idle
+        }
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
     fun placeOrder(tableId: Long, tableStatus1: String?, deliveryBoyId: Long?) {
         viewModelScope.launch {
-            val currentItems = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
+            val currentItems =
+                if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
             if (currentItems.isEmpty()) {
                 _orderState.value = OrderUiState.Error("No items selected")
                 return@launch
@@ -379,12 +454,15 @@ class MenuViewModel @Inject constructor(
             }
 
             orderRepository.placeOrUpdateOrder(
-                tableId, orderItems, tableStatus1.toString(), 
+                tableId, orderItems, tableStatus1.toString(),
                 if (_isExistingOrderLoaded.value) existingOrderId.value else null,
                 deliveryBoyId = deliveryBoyId
             ).collect { result ->
                 result.fold(
                     onSuccess = { order ->
+                        if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                            apiService.deleteByOrderId(existingOrderId.value ?: newOrderId.value ?: "", sessionManager.getCompanyCode() ?: "")
+                        }
                         val kotItems = currentItems.map { (key, quantity) ->
                             KOTItem(
                                 name = key.menuItem.menu_item_name,
@@ -406,7 +484,8 @@ class MenuViewModel @Inject constructor(
                         printKOT(kotRequest)
                     },
                     onFailure = { error ->
-                        _orderState.value = OrderUiState.Error(error.message ?: "Failed to place order")
+                        _orderState.value =
+                            OrderUiState.Error(error.message ?: "Failed to place order")
                     }
                 )
             }
@@ -425,19 +504,38 @@ class MenuViewModel @Inject constructor(
                     orderRepository.printKOT(kotForCategory, ip).collect { result ->
                         result.fold(
                             onSuccess = {
-                                _orderState.value = OrderUiState.Success(Order(id = 1, tableId = 0, items = emptyList(), totalAmount = 0.0, status = "PENDING", isPrinted = true))
+                                _orderState.value = OrderUiState.Success(
+                                    Order(
+                                        id = 1,
+                                        tableId = 0,
+                                        items = emptyList(),
+                                        totalAmount = 0.0,
+                                        status = "PENDING",
+                                        isPrinted = true
+                                    )
+                                )
                                 _selectedCartItems.value = emptyMap()
                                 _newSelectedCartItems.value = emptyMap()
                                 _activeCartItem.value = null
                             },
                             onFailure = { error ->
-                                _orderState.value = OrderUiState.Error(error.message ?: "Failed to print KOT")
+                                _orderState.value =
+                                    OrderUiState.Error(error.message ?: "Failed to print KOT")
                             }
                         )
                     }
                 }
             } else {
-                _orderState.value = OrderUiState.Success(Order(id = 1, tableId = 0, items = emptyList(), totalAmount = 0.0, status = "PENDING", isPrinted = true))
+                _orderState.value = OrderUiState.Success(
+                    Order(
+                        id = 1,
+                        tableId = 0,
+                        items = emptyList(),
+                        totalAmount = 0.0,
+                        status = "PENDING",
+                        isPrinted = true
+                    )
+                )
                 _selectedCartItems.value = emptyMap()
                 _newSelectedCartItems.value = emptyMap()
                 _activeCartItem.value = null
@@ -447,9 +545,9 @@ class MenuViewModel @Inject constructor(
 
     fun getOrderTotal(tableStatus: String): Double {
         return _selectedCartItems.value.entries.sumOf { (key, quantity) ->
-            val baseRate = if (tableStatus == "AC") key.menuItem.ac_rate 
-                           else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY") key.menuItem.parcel_rate 
-                           else key.menuItem.rate
+            val baseRate = if (tableStatus == "AC") key.menuItem.ac_rate
+            else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY") key.menuItem.parcel_rate
+            else key.menuItem.rate
             val modifiersRate = key.modifiers.sumOf { it.add_on_price }
             (baseRate + modifiersRate) * quantity
         }
@@ -457,9 +555,9 @@ class MenuViewModel @Inject constructor(
 
     fun getOrderNewTotal(tableStatus: String): Double {
         return _newSelectedCartItems.value.entries.sumOf { (key, quantity) ->
-            val baseRate = if (tableStatus == "AC") key.menuItem.ac_rate 
-                           else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY") key.menuItem.parcel_rate 
-                           else key.menuItem.rate
+            val baseRate = if (tableStatus == "AC") key.menuItem.ac_rate
+            else if (tableStatus == "TAKEAWAY" || tableStatus == "DELIVERY") key.menuItem.parcel_rate
+            else key.menuItem.rate
             val modifiersRate = key.modifiers.sumOf { it.add_on_price }
             (baseRate + modifiersRate) * quantity
         }
@@ -467,19 +565,21 @@ class MenuViewModel @Inject constructor(
 
     fun showModifierDialog(menuItem: TblMenuItemResponse) {
         viewModelScope.launch {
-            modifierRepository.getModifierGroupsForMenuItem(menuItem.item_cat_id).collect { result ->
-                result.fold(
-                    onSuccess = { modifiers ->
-                        if (modifiers.isEmpty()) _showAlert.value = "No modifiers for ${menuItem.menu_item_name}"
-                        else {
-                            _selectedMenuItemForModifier.value = menuItem
-                            _showModifierDialog.value = true
-                            _modifierGroups.value = modifiers
-                        }
-                    },
-                    onFailure = { _showAlert.value = "Error loading modifiers" }
-                )
-            }
+            modifierRepository.getModifierGroupsForMenuItem(menuItem.item_cat_id)
+                .collect { result ->
+                    result.fold(
+                        onSuccess = { modifiers ->
+                            if (modifiers.isEmpty()) _showAlert.value =
+                                "No modifiers for ${menuItem.menu_item_name}"
+                            else {
+                                _selectedMenuItemForModifier.value = menuItem
+                                _showModifierDialog.value = true
+                                _modifierGroups.value = modifiers
+                            }
+                        },
+                        onFailure = { _showAlert.value = "Error loading modifiers" }
+                    )
+                }
         }
     }
 
@@ -490,10 +590,28 @@ class MenuViewModel @Inject constructor(
 
     fun addMenuItemWithModifiers(menuItem: TblMenuItemResponse, modifiers: List<Modifiers>) {
         viewModelScope.launch {
-            val currentItems = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
+            val currentItems =
+                if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
             val currentQty = currentItems[CartItemKey(menuItem, modifiers)] ?: 0
-            if (performStockCheck(menuItem, currentQty + 1)) {
+            val newQty = currentQty + 1
+            if (performStockCheck(menuItem, newQty)) {
                 doAddItem(menuItem, modifiers)
+                
+                if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                    apiService.createTmpItemMaster(
+                        TblTmpItemMasterRequest(
+                            order_id = existingOrderId.value ?: newOrderId.value ?: "",
+                            item_id = menuItem.menu_item_id,
+                            tmp_qty = newQty.toDouble(),
+                            is_active = 1L
+                        ),
+                        sessionManager.getCompanyCode() ?: ""
+                    )
+                }
+
+
+
+
                 hideModifierDialog()
             }
         }

@@ -1464,4 +1464,68 @@ interface ApiService {
     suspend fun getAllOnlineOrders(
         @Header("X-Tenant-ID") tenantId: String
     ): Response<List<TblOnline>>
+
+    /**
+     * TmpItemMaster Management
+     */
+
+    @POST("tmp-item-master/create")
+    suspend fun createTmpItemMaster(
+        @Body request: TblTmpItemMasterRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): TblTmpItemMasterResponse
+
+    @GET("tmp-item-master/getTmpItemMastersByOrderId/order/{orderId}")
+    suspend fun getTmpItemsByOrderId(
+        @Path("orderId") orderId: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): List<TblTmpItemMasterResponse>
+
+    @GET("tmp-item-master/getTmpItemMasterByOrderIdAndItemId/order/{orderId}/item/{itemId}")
+    suspend fun getTmpItemByOrderAndItem(
+        @Path("orderId") orderId: String,
+        @Path("itemId") itemId: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): TblTmpItemMasterResponse
+
+    @PUT("tmp-item-master/updateTmpItemMaster/{tmpItemMasterId}")
+    suspend fun updateTmpItemMaster(
+        @Path("tmpItemMasterId") id: Long,
+        @Body request: TblTmpItemMasterRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): TblTmpItemMasterResponse
+
+    @DELETE("tmp-item-master/deleteByOrderId/order/{orderId}")
+    suspend fun deleteByOrderId(
+        @Path("orderId") orderId: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Int
+
+    @DELETE("tmp-item-master/deleteByOrderIdAndItemId/order/{orderId}/item/{itemId}")
+    suspend fun deleteByOrderIdAndItemId(
+        @Path("orderId") orderId: String,
+        @Path("itemId") itemId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Int
+
+    @PUT("tmp-item-master/updateTmpItemMasterQty/order/{orderId}/item/{itemId}/qty")
+    suspend fun updateQty(
+        @Path("orderId") orderId: String,
+        @Path("itemId") itemId: Long,
+        @Query("qty") qty: Double,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Int
+
+    @GET("tmp-item-master/checkOrderIdAndItemId/order/{orderId}/item/{itemId}")
+    suspend fun checkExists(
+        @Path("orderId") orderId: String,
+        @Path("itemId") itemId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): ApiResponse<Boolean>
+
+    @GET("tmp-item-master/sumTmpQtyByItemId/item/{itemId}")
+    suspend fun sumQty(
+        @Path("itemId") itemId: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Map<String, Double>
 }
