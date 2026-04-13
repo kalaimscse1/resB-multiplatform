@@ -3,6 +3,7 @@ package com.warriortech.resb.screens
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +13,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -32,6 +35,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -64,6 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.model.TblMenuItemResponse
+import com.warriortech.resb.model.TblUpiType
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.screens.settings.CustomerDialog
 import com.warriortech.resb.ui.components.PaymentMethodCard
@@ -103,6 +108,7 @@ fun PaymentScreen(
     val scope = rememberCoroutineScope()
 
     var showTenderDialog by remember { mutableStateOf(false) }
+    var showUpiDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadCustomers()
@@ -114,20 +120,23 @@ fun PaymentScreen(
             viewModel.updateBillNo(billNo)
         }
     }
-    LaunchedEffect(key1=orderDetailsResponse) {
+    LaunchedEffect(key1 = orderDetailsResponse) {
         Log.d("PaymentScreen", "$orderDetailsResponse")
         orderDetailsResponse?.let {
             val value = viewModel.recalcTotals(it)
-           viewModel.updateBillState( uiState.copy(
-                billedItems = value.billedItems,
-                subtotal = value.subtotal,
-                taxAmount = value.taxAmount,
-                cessAmount = value.cessAmount,
-                cessSpecific = value.cessSpecific,
-                totalAmount = value.totalAmount,
-                amountToPay = value.totalAmount,
-                roundOff = value.roundOff
-            )) }
+            viewModel.updateBillState(
+                uiState.copy(
+                    billedItems = value.billedItems,
+                    subtotal = value.subtotal,
+                    taxAmount = value.taxAmount,
+                    cessAmount = value.cessAmount,
+                    cessSpecific = value.cessSpecific,
+                    totalAmount = value.totalAmount,
+                    amountToPay = value.totalAmount,
+                    roundOff = value.roundOff
+                )
+            )
+        }
     }
 
     LaunchedEffect(key1 = amountToPayFromRoute, key2 = orderMasterId) {
@@ -204,9 +213,12 @@ fun PaymentScreen(
                 onConfirmPayment = {
                     val isTenderEnabled = sessionManager.getGeneralSetting()?.is_tendered == true
                     val isCash = uiState.selectedPaymentMethod?.name == "CASH"
-                    
+                    val isUpi = uiState.selectedPaymentMethod?.name == "UPI"
+
                     if (isCash && isTenderEnabled) {
                         showTenderDialog = true
+                    } else if (isUpi && uiState.selectedUpiTypeId == 0L && uiState.upiTypes.isNotEmpty()) {
+                        showUpiDialog = true
                     } else {
                         viewModel.updateAmountToPay(uiState.totalAmount)
                         viewModel.processPayment(voucherType = voucherType ?: "BILL")
@@ -327,7 +339,12 @@ fun PaymentScreen(
                     item {
                         PaymentMethodCard(
                             uiState = uiState,
-                            onPaymentMethodChange = { viewModel.updatePaymentMethod(it) },
+                            onPaymentMethodChange = { method ->
+                                viewModel.updatePaymentMethod(method)
+                                if (method == "UPI" && uiState.upiTypes.isNotEmpty()) {
+                                    showUpiDialog = true
+                                }
+                            },
                             viewModel = viewModel,
                             onCustomer = {
                                 customer = it
@@ -341,6 +358,17 @@ fun PaymentScreen(
                 }
             }
         }
+    }
+
+    if (showUpiDialog) {
+        UpiTypeSelectionDialog(
+            upiTypes = uiState.upiTypes,
+            onSelect = { id ->
+                viewModel.selectUpiType(id)
+                showUpiDialog = false
+            },
+            onDismiss = { showUpiDialog = false }
+        )
     }
 
     if (showTenderDialog) {
@@ -368,6 +396,34 @@ fun PaymentScreen(
             }
         )
     }
+}
+
+@Composable
+fun UpiTypeSelectionDialog(
+    upiTypes: List<TblUpiType>,
+    onSelect: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select UPI Type") },
+        text = {
+            Box(modifier = Modifier.heightIn(max = 300.dp)) {
+                LazyColumn {
+                    items(upiTypes) { type ->
+                        ListItem(
+                            headlineContent = { Text(type.upi_type_name) },
+                            modifier = Modifier.clickable { onSelect(type.upi_type_id) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
@@ -443,7 +499,7 @@ fun PaymentBottomBar(
         "DUE" -> true
         else -> false
     }
-    
+
     val paidAmount = when (method) {
         "CASH" -> {
             if (isTendered) {
@@ -452,12 +508,13 @@ fun PaymentBottomBar(
                 if (uiState.cashAmount == 0.0) totalAmount else uiState.cashAmount
             }
         }
+
         "CARD" -> if (uiState.cardAmount == 0.0) totalAmount else uiState.cardAmount
         "UPI" -> if (uiState.upiAmount == 0.0) totalAmount else uiState.upiAmount
         "OTHERS" -> uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
         else -> totalAmount
     }
-    
+
     val scope = rememberCoroutineScope()
     val isIdle = uiState.paymentProcessingState == PaymentProcessingState.Idle
     val hasCustomer = customer?.customer_id != null

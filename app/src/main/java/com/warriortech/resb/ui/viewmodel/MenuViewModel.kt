@@ -126,13 +126,24 @@ class MenuViewModel @Inject constructor(
             decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
         )
         viewModelScope.launch {
-            val new = apiService.getOrderNo(
-                sessionManager.getCompanyCode() ?: "",
-                sessionManager.getUser()?.counter_id ?: 0,
-                "ORDER"
-            )
-            newOrderId.value = new["order_master_id"]
+            try {
+                val new = apiService.getOrderNo(
+                    sessionManager.getCompanyCode() ?: "",
+                    sessionManager.getUser()?.counter_id ?: 0,
+                    "ORDER"
+                )
+                newOrderId.value = new["order_master_id"]
+            } catch (e: Exception) {
+                Timber.e(e, "Error fetching new order ID")
+            }
         }
+    }
+
+    private fun getTotalItemQtyInCart(menuItem: TblMenuItemResponse): Int {
+        val cart = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
+        return cart.entries
+            .filter { it.key.menuItem.menu_item_id == menuItem.menu_item_id }
+            .sumOf { it.value }
     }
 
     fun initializeScreen(isTableOrder: Boolean, currentTableId: Long) {
@@ -250,32 +261,41 @@ class MenuViewModel @Inject constructor(
 
     private suspend fun performStockCheck(
         menuItem: TblMenuItemResponse,
-        targetQty: Int = 1
+        targetTotalQty: Int
     ): Boolean {
+        if (sessionManager.getGeneralSetting()?.is_inventory != true) return true
+        
         try {
+            val tenantId = sessionManager.getCompanyCode() ?: ""
             val response = menuRepository.getItemMasterById(menuItem.menu_item_id)
 
             if (response.isSuccessful) {
-                val tmpStockResponse =
-                    apiService.sumQty(menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
                 val itemMaster = response.body()
                 if (itemMaster != null) {
-                    val stockQty = itemMaster.qty - (tmpStockResponse["tmp_qty"] ?: 0.0)
+                    val totalStock = itemMaster.qty
+                    
+                    val tmpStockResponse = apiService.sumQty(menuItem.menu_item_id, tenantId)
+                    val totalTempHoldsByAll = tmpStockResponse["tmp_qty"] ?: 0.0
+                    
+                    val totalInCartBefore = getTotalItemQtyInCart(menuItem)
+                    
+                    // Available Stock = Master - (HoldsByOthers)
+                    // HoldsByOthers = totalTempHoldsByAll - totalInCartBefore
+                    val availableStock = totalStock - (totalTempHoldsByAll - totalInCartBefore.toDouble())
 
-                    if (stockQty <= 0.00) {
-                        _showAlert.value = "${menuItem.menu_item_name} is Out of Stock."
+                    if (availableStock <= 0.00) {
+                        _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is Out of Stock."
                         return false
                     }
 
-                    if (stockQty < targetQty.toDouble()) {
-                        _showAlert.value =
-                            "Only $stockQty Stock remaining for ${menuItem.menu_item_name}."
+                    if (availableStock < targetTotalQty.toDouble()) {
+                        _showAlert.value = "Stock Alert: Only $availableStock remaining for ${menuItem.menu_item_name}."
+                        return false
                     }
 
                     if (menuItem.stock_maintain.equals("YES", ignoreCase = true)) {
-                        if (stockQty <= menuItem.min_stock.toDouble()) {
-                            _showAlert.value =
-                                "${menuItem.menu_item_name} is at Minimum Stock Level ($stockQty remaining)"
+                        if (availableStock <= menuItem.min_stock.toDouble()) {
+                            _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is at Minimum Stock Level ($availableStock remaining)"
                         }
                     }
                 }
@@ -286,29 +306,44 @@ class MenuViewModel @Inject constructor(
         return true
     }
 
-    fun addItemToOrder(menuItem: TblMenuItemResponse) {
-        viewModelScope.launch {
-            val currentItems =
-                if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
-            val currentQty = currentItems[CartItemKey(menuItem)] ?: 0
-            val newQty = currentQty + 1
-            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                if (performStockCheck(menuItem, newQty)) {
+    private suspend fun syncTmpStock(menuItem: TblMenuItemResponse, newTotalQty: Int) {
+        if (sessionManager.getGeneralSetting()?.is_inventory != true) return
+        val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
+        val tenantId = sessionManager.getCompanyCode() ?: ""
+
+        try {
+            if (newTotalQty <= 0) {
+                apiService.deleteByOrderIdAndItemId(orderIdStr, menuItem.menu_item_id, tenantId)
+            } else {
+                val response = apiService.checkExists(orderIdStr, menuItem.menu_item_id, tenantId)
+                if (response.data == true) {
+                    apiService.updateQty(orderIdStr, menuItem.menu_item_id, newTotalQty.toDouble(), tenantId)
+                } else {
                     apiService.createTmpItemMaster(
                         TblTmpItemMasterRequest(
-                            order_id = existingOrderId.value ?: newOrderId.value ?: "",
+                            order_id = orderIdStr,
                             item_id = menuItem.menu_item_id,
-                            tmp_qty = newQty.toDouble(),
+                            tmp_qty = newTotalQty.toDouble(),
                             is_active = 1L
                         ),
-                        sessionManager.getCompanyCode() ?: ""
+                        tenantId
                     )
-                    doAddItem(menuItem)
                 }
-            } else {
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error syncing temporary stock")
+        }
+    }
+
+    fun addItemToOrder(menuItem: TblMenuItemResponse) {
+        viewModelScope.launch {
+            val totalInCart = getTotalItemQtyInCart(menuItem)
+            val newTotal = totalInCart + 1
+            
+            if (performStockCheck(menuItem, newTotal)) {
+                syncTmpStock(menuItem, newTotal)
                 doAddItem(menuItem)
             }
-
         }
     }
 
@@ -344,35 +379,28 @@ class MenuViewModel @Inject constructor(
         }
     }
 
-    fun updateItemQuantity(cartItemKey: CartItemKey, newQty: Int) {
+    fun updateItemQuantity(cartItemKey: CartItemKey, newQtyForVariation: Int) {
         viewModelScope.launch {
-            val currentQty = (if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value)[cartItemKey] ?: 0
+            val totalInCartBefore = getTotalItemQtyInCart(cartItemKey.menuItem)
+            val currentQtyForVariation = (if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value)[cartItemKey] ?: 0
+            val newTotalForItem = (totalInCartBefore - currentQtyForVariation) + newQtyForVariation
             
-            if (newQty > 0) {
-                if (newQty > currentQty) {
-                    if (!performStockCheck(cartItemKey.menuItem, newQty)) return@launch
-                }
+            if (newQtyForVariation > currentQtyForVariation) {
+                if (!performStockCheck(cartItemKey.menuItem, newTotalForItem)) return@launch
             }
 
-            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
-                if (newQty <= 0) {
-                    apiService.deleteByOrderIdAndItemId(orderIdStr, cartItemKey.menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
-                } else {
-                    apiService.updateQty(orderIdStr, cartItemKey.menuItem.menu_item_id, newQty.toDouble(), sessionManager.getCompanyCode() ?: "")
-                }
-            }
+            syncTmpStock(cartItemKey.menuItem, newTotalForItem)
 
             if (_isExistingOrderLoaded.value) {
                 val current = _newSelectedCartItems.value.toMutableMap()
-                if (newQty <= 0) current.remove(cartItemKey) else current[cartItemKey] = newQty
+                if (newQtyForVariation <= 0) current.remove(cartItemKey) else current[cartItemKey] = newQtyForVariation
                 _newSelectedCartItems.value = current
             } else {
                 val current = _selectedCartItems.value.toMutableMap()
-                if (newQty <= 0) current.remove(cartItemKey) else current[cartItemKey] = newQty
+                if (newQtyForVariation <= 0) current.remove(cartItemKey) else current[cartItemKey] = newQtyForVariation
                 _selectedCartItems.value = current
             }
-            if (newQty <= 0 && _activeCartItem.value == cartItemKey) {
+            if (newQtyForVariation <= 0 && _activeCartItem.value == cartItemKey) {
                 _activeCartItem.value = null
             }
         }
@@ -384,26 +412,20 @@ class MenuViewModel @Inject constructor(
 
     fun removeItemFromOrder(cartItemKey: CartItemKey) {
         viewModelScope.launch {
+            val totalInCartBefore = getTotalItemQtyInCart(cartItemKey.menuItem)
             val currentMap = if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
-            val qty = currentMap[cartItemKey] ?: 0
-            val newQty = qty - 1
+            val currentQtyForVariation = currentMap[cartItemKey] ?: 0
+            val newTotalForItem = totalInCartBefore - 1
 
-            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
-                if (newQty <= 0) {
-                    apiService.deleteByOrderIdAndItemId(orderIdStr, cartItemKey.menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
-                } else {
-                    apiService.updateQty(orderIdStr, cartItemKey.menuItem.menu_item_id, newQty.toDouble(), sessionManager.getCompanyCode() ?: "")
-                }
-            }
+            syncTmpStock(cartItemKey.menuItem, newTotalForItem)
 
             if (_isExistingOrderLoaded.value) {
                 val current = _newSelectedCartItems.value.toMutableMap()
-                if (qty > 1) current[cartItemKey] = newQty else current.remove(cartItemKey)
+                if (currentQtyForVariation > 1) current[cartItemKey] = currentQtyForVariation - 1 else current.remove(cartItemKey)
                 _newSelectedCartItems.value = current
             } else {
                 val current = _selectedCartItems.value.toMutableMap()
-                if (qty > 1) current[cartItemKey] = newQty else current.remove(cartItemKey)
+                if (currentQtyForVariation > 1) current[cartItemKey] = currentQtyForVariation - 1 else current.remove(cartItemKey)
                 _selectedCartItems.value = current
             }
             
@@ -424,7 +446,11 @@ class MenuViewModel @Inject constructor(
         viewModelScope.launch {
             if (sessionManager.getGeneralSetting()?.is_inventory == true) {
                 val orderIdStr = existingOrderId.value ?: newOrderId.value ?: ""
-                apiService.deleteByOrderId(orderIdStr, sessionManager.getCompanyCode() ?: "")
+                try {
+                    apiService.deleteByOrderId(orderIdStr, sessionManager.getCompanyCode() ?: "")
+                } catch (e: Exception) {
+                    Timber.e(e, "Error clearing temporary stock")
+                }
             }
             _newSelectedCartItems.value = emptyMap()
             _selectedCartItems.value = emptyMap()
@@ -460,9 +486,13 @@ class MenuViewModel @Inject constructor(
             ).collect { result ->
                 result.fold(
                     onSuccess = { order ->
-                        if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                            apiService.deleteByOrderId(existingOrderId.value ?: newOrderId.value ?: "", sessionManager.getCompanyCode() ?: "")
-                        }
+//                        if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+//                            try {
+//                                apiService.deleteByOrderId(existingOrderId.value ?: newOrderId.value ?: "", sessionManager.getCompanyCode() ?: "")
+//                            } catch (e: Exception) {
+//                                Timber.e(e, "Error clearing temporary stock after order")
+//                            }
+//                        }
                         val kotItems = currentItems.map { (key, quantity) ->
                             KOTItem(
                                 name = key.menuItem.menu_item_name,
@@ -590,28 +620,14 @@ class MenuViewModel @Inject constructor(
 
     fun addMenuItemWithModifiers(menuItem: TblMenuItemResponse, modifiers: List<Modifiers>) {
         viewModelScope.launch {
-            val currentItems =
-                if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
-            val currentQty = currentItems[CartItemKey(menuItem, modifiers)] ?: 0
-            val newQty = currentQty + 1
-            if (performStockCheck(menuItem, newQty)) {
+            val totalInCartBefore = getTotalItemQtyInCart(menuItem)
+            val cartItemKey = CartItemKey(menuItem, modifiers)
+            val currentQtyForVariation = (if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value)[cartItemKey] ?: 0
+            val newTotalForItem = totalInCartBefore + 1
+            
+            if (performStockCheck(menuItem, newTotalForItem)) {
+                syncTmpStock(menuItem, newTotalForItem)
                 doAddItem(menuItem, modifiers)
-                
-                if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                    apiService.createTmpItemMaster(
-                        TblTmpItemMasterRequest(
-                            order_id = existingOrderId.value ?: newOrderId.value ?: "",
-                            item_id = menuItem.menu_item_id,
-                            tmp_qty = newQty.toDouble(),
-                            is_active = 1L
-                        ),
-                        sessionManager.getCompanyCode() ?: ""
-                    )
-                }
-
-
-
-
                 hideModifierDialog()
             }
         }

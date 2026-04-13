@@ -92,7 +92,8 @@ class BillRepository @Inject constructor(
         tenderedAmt: Double = 0.0,
         discount: Double = 0.0,
         otherCharges: Double = 0.0,
-        roundOff: Double=0.0
+        roundOff: Double=0.0,
+        upiTypeId: Long = 0L
     ): Flow<Result<TblBillingResponse>> = flow {
         try {
             val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
@@ -166,7 +167,8 @@ class BillRepository @Inject constructor(
                 rounded_amt = total,
                 others = if (paymentMethod.name == "OTHERS") total else 0.0,
                 change = if (isTendered && tenderedAmt > 0) tenderedAmt - receivedAmt else 0.0,
-                tendered_amt = tenderedAmt
+                tendered_amt = tenderedAmt,
+                upi_type_id = upiTypeId
             )
 
 
@@ -519,7 +521,8 @@ class BillRepository @Inject constructor(
             change = 0.0,
             note = "",
             is_active = 1L,
-            tendered_amt = bill.tendered_amt
+            tendered_amt = bill.tendered_amt,
+            upi_type_id = bill.upi_type.upi_type_id
         )
         if (sessionManager.getGeneralSetting()?.is_accounts == true) {
             val ledgerDetails = apiService.getLedgerDetailsByEntryNo(

@@ -1528,4 +1528,44 @@ interface ApiService {
         @Path("itemId") itemId: Long,
         @Header("X-Tenant-ID") tenantId: String
     ): Map<String, Double>
+
+    /**
+     * UPI Type Management
+     */
+
+    @POST("upiType/create")
+    suspend fun createUpiType(
+        @Body upiType: TblUpiType,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblUpiType>
+
+    @GET("upiType/active")
+    suspend fun getAllActiveUpiTypes(
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblUpiType>>
+
+    @GET("upiType/getById/{id}")
+    suspend fun getUpiTypeById(
+        @Path("id") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblUpiType>
+
+    @PUT("upiType/update/{id}")
+    suspend fun updateUpiType(
+        @Path("id") id: Long,
+        @Body upiType: TblUpiType,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Int>
+
+    @DELETE("upiType/delete/{id}")
+    suspend fun deleteUpiType(
+        @Path("id") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Int>
+
+    @GET("upiType/checkExistsByUpiTypeName/{upi_type_name}")
+    suspend fun checkUpiTypeExists(
+        @Path("upi_type_name") name: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<ApiResponse<Boolean>>
 }

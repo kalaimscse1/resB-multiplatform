@@ -331,7 +331,8 @@ class PaidBillsViewModel @Inject constructor(
                                 others = 0.0,
                                 change = 0.0,
                                 note = "" ,
-                                tendered_amt = 0.0
+                                tendered_amt = 0.0,
+                                upi_type_id = 1L
                             )
                             billRepository.updateBill(billNo, it.first().order_master_id, request)
                             _uiState.value = PaidBillsUiState.Success(emptyList()) // Trigger success

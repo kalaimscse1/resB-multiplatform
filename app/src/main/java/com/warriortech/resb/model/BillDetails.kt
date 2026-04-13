@@ -29,7 +29,8 @@ data class TblBillingRequest(
     var change: Double,
     var note: String,
     var is_active: Long,
-    var tendered_amt:Double
+    var tendered_amt:Double,
+    var upi_type_id:Long,
 )
 
 data class TblBillingResponse(
@@ -61,7 +62,8 @@ data class TblBillingResponse(
     var change: Double,
     var note: String,
     var is_active: Long,
-    var tendered_amt:Double
+    var tendered_amt:Double,
+    var upi_type: TblUpiType
 )
 
 data class BillItem(

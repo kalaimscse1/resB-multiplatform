@@ -14,13 +14,9 @@ import com.warriortech.resb.data.local.entity.PrintTemplateSectionEntity
 import com.warriortech.resb.data.repository.BillRepository
 import com.warriortech.resb.data.repository.CustomerRepository
 import com.warriortech.resb.data.repository.OrderRepository
+import com.warriortech.resb.data.repository.UpiTypeRepository
 import com.warriortech.resb.data.repository.calculateGst
-import com.warriortech.resb.model.Bill
-import com.warriortech.resb.model.BillItem
-import com.warriortech.resb.model.OrderItem
-import com.warriortech.resb.model.TblCustomer
-import com.warriortech.resb.model.TblMenuItemResponse
-import com.warriortech.resb.model.TblOrderDetailsResponse
+import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.getCurrentDateModern
@@ -29,6 +25,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
@@ -74,7 +71,9 @@ data class BillingPaymentUiState(
     val cardAmount: Double = 0.0,
     val upiAmount: Double = 0.0,
     val customer: TblCustomer? = null,
-    val roundOff:Double=0.0
+    val roundOff: Double = 0.0,
+    val upiTypes: List<TblUpiType> = emptyList(),
+    val selectedUpiTypeId: Long = 0L
 )
 
 data class TemplatePreviewLine(
@@ -100,6 +99,7 @@ class BillingViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     private val sessionManager: SessionManager,
     private val customerRepository: CustomerRepository,
+    private val upiTypeRepository: UpiTypeRepository,
     private val printTemplateDao: PrintTemplateDao
 ) : ViewModel() {
 
@@ -143,6 +143,7 @@ class BillingViewModel @Inject constructor(
             val customerList = customerRepository.getAllCustomers()
             _customers.value = customerList
             loadAvailablePaymentMethods()
+            loadUpiTypes()
             CurrencySettings.update(
                 symbol = sessionManager.getRestaurantProfile()?.currency ?: "",
                 decimals = sessionManager.getRestaurantProfile()?.decimal_point?.toInt() ?: 2
@@ -150,13 +151,29 @@ class BillingViewModel @Inject constructor(
         }
     }
 
+    private fun loadUpiTypes() {
+        viewModelScope.launch {
+            try {
+                val types = upiTypeRepository.getAllActive().filter { it.upi_type_name !="--" }
+                _uiState.update { it.copy(upiTypes = types) }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load UPI types")
+            }
+        }
+    }
+
+    fun selectUpiType(id: Long) {
+        _uiState.update { it.copy(selectedUpiTypeId = id) }
+    }
+
     fun updateCustomerId(id: Long) {
         _customerId.value = id
     }
 
-    fun updateBillState(bill:BillingPaymentUiState){
+    fun updateBillState(bill: BillingPaymentUiState) {
         _uiState.update { bill }
     }
+
     fun addCustomer(customer: TblCustomer) {
         viewModelScope.launch {
             try {
@@ -199,14 +216,15 @@ class BillingViewModel @Inject constructor(
             else -> BigDecimal.valueOf(this).setScale(4, RoundingMode.HALF_UP).toDouble()
         }
     }
-     fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
+
+    fun recalcTotals(items: Map<TblMenuItemResponse, Int>): BillingPaymentUiState {
         val settings = sessionManager.getGeneralSetting()
         val isRoundOffEnabled = settings?.is_round_off == true
         val isTaxEnabled = settings?.is_tax ?: false
         val isTaxIncluded = settings?.is_tax_included ?: false
 
         val subtotal = items.entries.sumOf { (menuItem, qty) -> menuItem.rate * qty }
-        
+
         val taxAmount = if (isTaxEnabled) {
             items.entries.sumOf { (menuItem, qty) ->
                 val gst = calculateGst(
@@ -374,7 +392,7 @@ class BillingViewModel @Inject constructor(
                         _selectedItems.value =
                             emptyMap() // Clear selected items after placing order
                     },
-                    onFailure = { 
+                    onFailure = {
 
                     }
                 )
@@ -514,6 +532,7 @@ class BillingViewModel @Inject constructor(
                     if (currentState.cashAmount == 0.0) currentState.amountToPay else currentState.cashAmount
                 }
             }
+
             "CARD" -> if (currentState.cardAmount == 0.0) currentState.amountToPay else currentState.cardAmount
             "UPI" -> if (currentState.upiAmount == 0.0) currentState.amountToPay else currentState.upiAmount
             "OTHERS" -> currentState.cashAmount + currentState.cardAmount + currentState.upiAmount
@@ -560,7 +579,8 @@ class BillingViewModel @Inject constructor(
                 tenderedAmt = currentState.amountReceived,
                 discount = currentState.discountFlat,
                 otherCharges = currentState.otherChrages,
-                roundOff = currentState.roundOff
+                roundOff = currentState.roundOff,
+                upiTypeId = currentState.selectedUpiTypeId
             ).collect { result ->
                 result.fold(
                     onSuccess = { response ->
@@ -667,11 +687,11 @@ class BillingViewModel @Inject constructor(
             val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
             if (isReceipt) {
                 val ip = orderRepository.getIpAddress("COUNTER")
-                
+
                 // First try printing with local template
                 billRepository.printBillWithLocalTemplate(bill, ip).collect { result ->
                     result.fold(
-                        onSuccess = { 
+                        onSuccess = {
                             handlePrintSuccess(currentState, amount, paymentMethod)
                         },
                         onFailure = { localError ->
@@ -680,7 +700,7 @@ class BillingViewModel @Inject constructor(
                             val printResponse = billRepository.printBill(bill, ip)
                             printResponse.collect { serverResult ->
                                 serverResult.fold(
-                                    onSuccess = { 
+                                    onSuccess = {
                                         handlePrintSuccess(currentState, amount, paymentMethod)
                                     },
                                     onFailure = { error ->
@@ -793,7 +813,7 @@ class BillingViewModel @Inject constructor(
                         taxAmount = detail.tax_amount
                     )
                 }
-                
+
                 val currentBill = Bill(
                     company_code = sessionManager.getCompanyCode() ?: "",
                     billNo = "PREVIEW",
@@ -808,7 +828,7 @@ class BillingViewModel @Inject constructor(
                     custGstin = uiState.value.customer?.gst_no ?: "",
                     items = billItems,
                     subtotal = uiState.value.subtotal,
-                    deliveryCharge = uiState.value.otherChrages, 
+                    deliveryCharge = uiState.value.otherChrages,
                     discount = uiState.value.discountFlat,
                     roundOff = uiState.value.roundOff,
                     total = uiState.value.totalAmount,
@@ -821,7 +841,7 @@ class BillingViewModel @Inject constructor(
                 val template = printTemplateDao.getDefaultTemplate("BILL")
                 if (template != null) {
                     val sections = printTemplateDao.getSectionsForTemplateSync(template.template_id)
-                    
+
                     // NEW logic: Fetch lines and columns hierarchy for each section
                     val fullSectionsHierarchy = sections.map { section ->
                         val lines = printTemplateDao.getLinesForSectionSync(section.section_id)
@@ -831,7 +851,7 @@ class BillingViewModel @Inject constructor(
                         }
                         TemplatePreviewSection(section, fullLines)
                     }
-                    
+
                     _templatePreview.value = TemplatePreviewData(template, fullSectionsHierarchy, currentBill)
                 } else {
                     // Fallback to API preview if no local template exists
@@ -844,7 +864,7 @@ class BillingViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun clearPreview() {
         _preview.value = null
         _templatePreview.value = null

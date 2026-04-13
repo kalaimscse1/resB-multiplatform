@@ -51,6 +51,8 @@ class OnlineOrderViewModel @Inject constructor(
     private val _showAlert = MutableStateFlow<String?>(null)
     val showAlert: StateFlow<String?> = _showAlert.asStateFlow()
 
+    val newOrderId = MutableStateFlow<String?>(null)
+
     sealed class OnlineOrderUiState {
         object Idle : OnlineOrderUiState()
         object Loading : OnlineOrderUiState()
@@ -61,6 +63,18 @@ class OnlineOrderViewModel @Inject constructor(
     init {
         loadPlatforms()
         loadMenu()
+        viewModelScope.launch {
+            try {
+                val new = apiService.getOrderNo(
+                    sessionManager.getCompanyCode() ?: "",
+                    sessionManager.getUser()?.counter_id ?: 0,
+                    "ORDER"
+                )
+                newOrderId.value = new["order_master_id"]
+            } catch (e: Exception) {
+                Timber.e(e, "Error fetching new order ID")
+            }
+        }
     }
 
     private fun loadPlatforms() {
@@ -68,7 +82,7 @@ class OnlineOrderViewModel @Inject constructor(
             try {
                 val response = apiService.getAllOnlineOrders(sessionManager.getCompanyCode() ?: "")
                 if (response.isSuccessful) {
-                    _onlinePlatforms.value = response.body()?.filter { it.online_order_name!="--" } ?: emptyList()
+                    _onlinePlatforms.value = response.body()?.filter { it.online_order_name != "--" } ?: emptyList()
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load online platforms")
@@ -85,8 +99,8 @@ class OnlineOrderViewModel @Inject constructor(
                         _menuState.value = MenuViewModel.MenuUiState.Success(items)
                         _categories.value = listOf("ALL") + items.map { it.item_cat_name }.distinct()
                     },
-                    onFailure = { 
-                        _menuState.value = MenuViewModel.MenuUiState.Error(it.message ?: "Error") 
+                    onFailure = {
+                        _menuState.value = MenuViewModel.MenuUiState.Error(it.message ?: "Error")
                     }
                 )
             }
@@ -105,39 +119,98 @@ class OnlineOrderViewModel @Inject constructor(
         _refNo.value = ref
     }
 
+    private fun getTotalItemQtyInCart(menuItem: TblMenuItemResponse): Int {
+        return _cartItems.value[menuItem] ?: 0
+    }
+
+    private suspend fun syncTmpStock(menuItem: TblMenuItemResponse, newQty: Int) {
+        if (sessionManager.getGeneralSetting()?.is_inventory != true) return
+        val orderIdStr = newOrderId.value ?: ""
+        val tenantId = sessionManager.getCompanyCode() ?: ""
+
+        try {
+            if (newQty <= 0) {
+                apiService.deleteByOrderIdAndItemId(orderIdStr, menuItem.menu_item_id, tenantId)
+                return
+            }
+
+            val response = apiService.checkExists(orderIdStr, menuItem.menu_item_id, tenantId)
+            if (response.data == true) {
+                apiService.updateQty(orderIdStr, menuItem.menu_item_id, newQty.toDouble(), tenantId)
+            } else {
+                apiService.createTmpItemMaster(
+                    TblTmpItemMasterRequest(
+                        order_id = orderIdStr,
+                        item_id = menuItem.menu_item_id,
+                        tmp_qty = newQty.toDouble(),
+                        is_active = 1L
+                    ),
+                    tenantId
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error syncing temporary stock")
+        }
+    }
+
     fun addToCart(item: TblMenuItemResponse) {
         viewModelScope.launch {
+            val currentQty = getTotalItemQtyInCart(item)
+            val newQty = currentQty + 1
             if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                if (!performStockCheck(item, (_cartItems.value[item] ?: 0) + 1)) return@launch
+                if (!performStockCheck(item, newQty)) return@launch
+                syncTmpStock(item, newQty)
             }
             val current = _cartItems.value.toMutableMap()
-            current[item] = (current[item] ?: 0) + 1
+            current[item] = newQty
             _cartItems.value = current
         }
     }
 
     fun removeFromCart(item: TblMenuItemResponse) {
-        val current = _cartItems.value.toMutableMap()
-        val qty = current[item] ?: 0
-        if (qty > 1) current[item] = qty - 1 else current.remove(item)
-        _cartItems.value = current
+        viewModelScope.launch {
+            val currentQty = getTotalItemQtyInCart(item)
+            if (currentQty <= 0) return@launch
+            val newQty = currentQty - 1
+            
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                syncTmpStock(item, newQty)
+            }
+            
+            val current = _cartItems.value.toMutableMap()
+            if (newQty > 0) current[item] = newQty else current.remove(item)
+            _cartItems.value = current
+        }
     }
 
     private suspend fun performStockCheck(menuItem: TblMenuItemResponse, targetQty: Int): Boolean {
         try {
+            val tenantId = sessionManager.getCompanyCode() ?: ""
             val response = menuRepository.getItemMasterById(menuItem.menu_item_id)
             if (response.isSuccessful) {
-                val tmpStockResponse = apiService.sumQty(menuItem.menu_item_id, sessionManager.getCompanyCode() ?: "")
                 val itemMaster = response.body()
                 if (itemMaster != null) {
-                    val stockQty = itemMaster.qty - (tmpStockResponse["tmp_qty"] ?: 0.0)
-                    if (stockQty <= 0.00) {
+                    val tmpStockResponse = apiService.sumQty(menuItem.menu_item_id, tenantId)
+                    val totalTempHoldsByAll = tmpStockResponse["tmp_qty"] ?: 0.0
+                    val myCurrentQty = getTotalItemQtyInCart(menuItem)
+                    
+                    val availableStock = itemMaster.qty - (totalTempHoldsByAll - myCurrentQty.toDouble())
+
+                    if (availableStock <= 0.00) {
                         _showAlert.value = "${menuItem.menu_item_name} is Out of Stock."
                         return false
                     }
-                    if (stockQty < targetQty.toDouble()) {
-                        _showAlert.value = "Only $stockQty Stock remaining for ${menuItem.menu_item_name}."
-                        return false
+                    if (availableStock < (targetQty - myCurrentQty).toDouble() + myCurrentQty) { // targetQty is the absolute total wanted
+                         if (availableStock < targetQty.toDouble()) {
+                            _showAlert.value = "Only $availableStock Stock remaining for ${menuItem.menu_item_name}."
+                            return false
+                        }
+                    }
+                    
+                    if (menuItem.stock_maintain.equals("YES", ignoreCase = true)) {
+                        if (availableStock <= menuItem.min_stock.toDouble()) {
+                            _showAlert.value = "Stock Alert: ${menuItem.menu_item_name} is at Minimum Stock Level ($availableStock remaining)"
+                        }
                     }
                 }
             }
@@ -150,10 +223,20 @@ class OnlineOrderViewModel @Inject constructor(
     fun dismissAlert() { _showAlert.value = null }
 
     fun clearCart() {
-        _cartItems.value = emptyMap()
-        _refNo.value = ""
-        _selectedPlatform.value = null
-        _selectedCategory.value = "ALL"
+        viewModelScope.launch {
+            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                val orderIdStr = newOrderId.value ?: ""
+                try {
+                    apiService.deleteByOrderId(orderIdStr, sessionManager.getCompanyCode() ?: "")
+                } catch (e: Exception) {
+                    Timber.e(e, "Error clearing temporary stock")
+                }
+            }
+            _cartItems.value = emptyMap()
+            _refNo.value = ""
+            _selectedPlatform.value = null
+            _selectedCategory.value = "ALL"
+        }
     }
 
     fun placeAndBillOrder() {
@@ -180,10 +263,19 @@ class OnlineOrderViewModel @Inject constructor(
                     deliveryBoyId = 5,
                     isOnline = true,
                     onlineRefNo = _refNo.value,
-                    onlineOrderId = platform.online_order_id.toInt()
+                    onlineOrderId = platform.online_order_id.toInt(),
+                    existingOpenOrderMasterId = newOrderId.value
                 ).collect { orderResult ->
                     orderResult.fold(
                         onSuccess = { orderResponse ->
+                            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
+                                try {
+                                    apiService.deleteByOrderId(newOrderId.value ?: "", tenantId)
+                                } catch (e: Exception) {
+                                    Timber.e(e, "Error clearing temporary stock after order")
+                                }
+                            }
+                            
                             val totalAmount = items.entries.sumOf { it.key.rate * it.value }
                             billRepository.bill(
                                 orderMasterId = orderResponse.order_master_id,
@@ -198,6 +290,9 @@ class OnlineOrderViewModel @Inject constructor(
                                     onSuccess = { billingResponse ->
                                         _uiState.value = OnlineOrderUiState.Success(billingResponse.bill_no)
                                         clearCart()
+                                        // Refresh new order ID for next order
+                                        val next = apiService.getOrderNo(tenantId, sessionManager.getUser()?.counter_id ?: 0, "ORDER")
+                                        newOrderId.value = next["order_master_id"]
                                     },
                                     onFailure = { throw it }
                                 )

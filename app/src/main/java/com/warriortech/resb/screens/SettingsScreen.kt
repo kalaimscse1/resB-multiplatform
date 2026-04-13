@@ -113,6 +113,7 @@ fun SettingsMainScreen(
                 SettingsModule.TaxSplit,
                 SettingsModule.Unit,
                 SettingsModule.UnitConversion,
+                SettingsModule.UpiType,
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.RestaurantProfile,
@@ -147,6 +148,7 @@ fun SettingsMainScreen(
                 SettingsModule.Customer,
                 SettingsModule.Unit,
                 SettingsModule.UnitConversion,
+                SettingsModule.UpiType,
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.Language,
@@ -318,6 +320,10 @@ fun SettingsModuleScreen(
 
         is SettingsModule.UnitConversion -> {
             navController.navigate("unit_conversion_setting")
+        }
+
+        is SettingsModule.UpiType -> {
+            navController.navigate("upi_type_setting")
         }
 
         is SettingsModule.KitchenCategory -> {
@@ -535,6 +541,14 @@ sealed class SettingsModule(
         "Manage unit conversion rules",
         Icons.Default.Transform,
         listOf("unit_id", "item_id", "conversion_no")
+    )
+
+    object UpiType : SettingsModule(
+        "upi_type",
+        "UPI Type",
+        "Manage UPI payment types",
+        Icons.Default.QrCode,
+        listOf("name", "is_active")
     )
 
     object KitchenCategory : SettingsModule(
