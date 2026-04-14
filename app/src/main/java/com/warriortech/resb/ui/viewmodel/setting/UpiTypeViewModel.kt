@@ -37,7 +37,7 @@ class UpiTypeViewModel @Inject constructor(
             _uiState.value = UiState.Loading
             try {
                 val types = repository.getAllActive()
-                _upiTypes.value = types
+                _upiTypes.value = types.filter { it.upi_type_name != "--" }
                 _uiState.value = UiState.Success
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to load UPI types")

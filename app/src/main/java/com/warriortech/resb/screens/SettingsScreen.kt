@@ -114,6 +114,7 @@ fun SettingsMainScreen(
                 SettingsModule.Unit,
                 SettingsModule.UnitConversion,
                 SettingsModule.UpiType,
+                SettingsModule.OnlineOrder,
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.RestaurantProfile,
@@ -149,6 +150,7 @@ fun SettingsMainScreen(
                 SettingsModule.Unit,
                 SettingsModule.UnitConversion,
                 SettingsModule.UpiType,
+                SettingsModule.OnlineOrder,
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.Language,
@@ -324,6 +326,10 @@ fun SettingsModuleScreen(
 
         is SettingsModule.UpiType -> {
             navController.navigate("upi_type_setting")
+        }
+
+        is SettingsModule.OnlineOrder -> {
+            navController.navigate("online_type_setting")
         }
 
         is SettingsModule.KitchenCategory -> {
@@ -548,6 +554,14 @@ sealed class SettingsModule(
         "UPI Type",
         "Manage UPI payment types",
         Icons.Default.QrCode,
+        listOf("name", "is_active")
+    )
+
+    object OnlineOrder : SettingsModule(
+        "online_order",
+        "Online Order",
+        "Manage online ordering platforms",
+        Icons.Default.Cloud,
         listOf("name", "is_active")
     )
 

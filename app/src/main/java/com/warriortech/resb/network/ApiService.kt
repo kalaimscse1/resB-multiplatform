@@ -1465,6 +1465,31 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<List<TblOnline>>
 
+    @GET("online/checkExistsByOnlineName/{online_order_name}")
+    suspend fun checkExistsByOnlineName(
+        @Path("online_order_name") name: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): ApiResponse<Boolean>
+
+    @POST("online/create")
+    suspend fun createOnline(
+        @Body online: TblOnline,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblOnline>
+
+    @PUT("online/update/{id}")
+    suspend fun updateOnline(
+        @Path("id") id: Long,
+        @Body online: TblOnline,
+        @Header("X-Tenant-ID") tenantId: String
+    ):Response<Int>
+
+    @DELETE("online/delete/{id}")
+    suspend fun deleteOnlineById(
+        @Path("id") id: Long,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<ResponseBody>
+
     /**
      * TmpItemMaster Management
      */

@@ -756,6 +756,12 @@ fun AppNavigation(
                 navController = navController
             )
         }
+        composable("online_type_setting") {
+            OnlineTypeSettingScreen(
+                onBackPressed = { navController.popBackStack() },
+                navController = navController
+            )
+        }
         composable("upi_type_setting") {
             UpiTypeSettingScreen(
                 onBackPressed = { navController.popBackStack() },
