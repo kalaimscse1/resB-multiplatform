@@ -4,11 +4,13 @@ import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import com.warriortech.resb.data.repository.BillRepository
 import com.warriortech.resb.data.repository.DashboardRepository
 import com.warriortech.resb.data.repository.OrderRepository
 import com.warriortech.resb.model.*
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.util.CurrencySettings
+import com.warriortech.resb.util.getCurrentDateModern
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +22,8 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val dashboardRepository: DashboardRepository,
     private val orderRepository: OrderRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val billRepository: BillRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -88,6 +91,20 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             dashboardRepository.addDayClose(sessionManager.getUser()?.staff_id?:1)
             navController.navigate("login")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun printEOD(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val today = getCurrentDateModern()
+            val paperWidth = sessionManager.getPaperWidth()
+            billRepository.printEOD(today, today, paperWidth).collect { result ->
+                result.fold(
+                    onSuccess = { onResult(it) },
+                    onFailure = { onResult("Error: ${it.message}") }
+                )
+            }
         }
     }
 }

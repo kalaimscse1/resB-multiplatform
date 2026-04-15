@@ -264,22 +264,15 @@ class OnlineOrderViewModel @Inject constructor(
                     isOnline = true,
                     onlineRefNo = _refNo.value,
                     onlineOrderId = platform.online_order_id.toInt(),
-                    existingOpenOrderMasterId = newOrderId.value
                 ).collect { orderResult ->
                     orderResult.fold(
                         onSuccess = { orderResponse ->
-                            if (sessionManager.getGeneralSetting()?.is_inventory == true) {
-                                try {
-                                    apiService.deleteByOrderId(newOrderId.value ?: "", tenantId)
-                                } catch (e: Exception) {
-                                    Timber.e(e, "Error clearing temporary stock after order")
-                                }
-                            }
+
                             
                             val totalAmount = items.entries.sumOf { it.key.rate * it.value }
                             billRepository.bill(
                                 orderMasterId = orderResponse.order_master_id,
-                                paymentMethod = PaymentMethod("others", "OTHERS"),
+                                paymentMethod = PaymentMethod("online", "ONLINE"),
                                 receivedAmt = totalAmount,
                                 customer = TblCustomer(1L, "ONLINE CUSTOMER", "", "", "", "", false, 1L),
                                 billNo = "--",

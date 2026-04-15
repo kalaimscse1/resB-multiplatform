@@ -58,5 +58,6 @@ data class KotResponse(
     val order_type: String,
     val staff_name: String,
     val order_date: String,
-    val order_create_time: String
+    val order_create_time: String,
+    val note:String
 )

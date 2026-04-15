@@ -376,10 +376,11 @@ interface ApiService {
         @Header("X-Tenant-ID") tenantId: String
     ): Response<ResponseBody>
 
-    @POST("print/eod/{paperWidth}")
+    @GET("print/eod/{paperWidth}")
     suspend fun printEOD(
-        @Path("paperWidth") paperWidth:Int,
-        @Body bill: EodReportRequest,
+        @Path("paperWidth") paperWidth: Int,
+        @Query("fromDate") fromDate: String,
+        @Query("toDate") toDate: String,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<ResponseBody>
 

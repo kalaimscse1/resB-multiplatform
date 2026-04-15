@@ -41,6 +41,7 @@ import android.app.Activity
 import android.widget.Toast
 import android.content.Context.MODE_PRIVATE
 import androidx.core.content.edit
+import com.warriortech.resb.MainActivity
 import com.warriortech.resb.ui.components.DinerWiseSalesBarChart
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +65,19 @@ fun DashboardScreen(
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDayCloseDialog by remember { mutableStateOf(false) }
+
+    // Volume Up Button EOD Print logic
+    DisposableEffect(context) {
+        val activity = context as? MainActivity
+        activity?.onVolumeUpPressed = {
+            viewModel.printEOD { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+        onDispose {
+            activity?.onVolumeUpPressed = null
+        }
+    }
 
     BackHandler {
         showLogoutDialog = true

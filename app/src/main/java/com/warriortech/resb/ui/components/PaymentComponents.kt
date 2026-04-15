@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.screens.BillingSummaryRow
 import com.warriortech.resb.screens.EditableBillingRow
+import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.viewmodel.payment.BillingViewModel
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.CustomerDropdown
@@ -47,7 +48,7 @@ fun PaymentSummaryCard(uiState: BillingPaymentUiState, viewModel: BillingViewMod
                 Icon(
                     Icons.Default.Receipt,
                     contentDescription = "Payment Summary",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = PrimaryGreen,
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -153,7 +154,7 @@ fun PaymentMethodCard(
     voucherType: String? = null,
     isTendered: Boolean
 ) {
-    val paidAmount = uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
+    val paidAmount = uiState.cashAmount + uiState.cardAmount + uiState.upiAmount + uiState.onlineAmount
     val totalAmount = uiState.totalAmount
 
     val showCustomerDropdown =
@@ -166,15 +167,17 @@ fun PaymentMethodCard(
                 "CASH" to Icons.Default.Money,
                 "CARD" to Icons.Default.CreditCard,
                 "UPI" to Icons.Default.QrCode,
-                "OTHERS" to Icons.Default.MoreHoriz
+                "CASH/CARD" to Icons.Default.MoneyOff,
+                "ONLINE" to Icons.Default.MoreHoriz
             )
         } else {
             listOf(
                 "CASH" to Icons.Default.Money,
                 "CARD" to Icons.Default.CreditCard,
                 "UPI" to Icons.Default.QrCode,
+                "CASH/CARD" to Icons.Default.MoneyOff,
                 "DUE" to Icons.Default.AccountBalanceWallet,
-                "OTHERS" to Icons.Default.MoreHoriz
+                "ONLINE" to Icons.Default.MoreHoriz
             )
         }
     }
@@ -201,7 +204,11 @@ fun PaymentMethodCard(
                 if (uiState.upiAmount == 0.0) viewModel.updateUpiAmount(totalAmount)
                 focusRequester.requestFocus()
             }
-            "OTHERS" -> {
+            "CASH/CARD"->{
+                focusRequester.requestFocus()
+            }
+            "ONLINE" -> {
+                if (uiState.onlineAmount == 0.0) viewModel.updateOnlineAmount(totalAmount)
                 focusRequester.requestFocus()
             }
         }
@@ -216,7 +223,7 @@ fun PaymentMethodCard(
                 Icon(
                     Icons.Default.Payment,
                     contentDescription = "Payment Method",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = PrimaryGreen,
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -310,6 +317,7 @@ fun PaymentMethodCard(
                     }
                     viewModel.updateCardAmount(0.0)
                     viewModel.updateUpiAmount(0.0)
+                    viewModel.updateOnlineAmount(0.0)
                 }
 
                 "CARD" -> {
@@ -342,6 +350,7 @@ fun PaymentMethodCard(
                     )
                     viewModel.updateCashAmount(0.0)
                     viewModel.updateUpiAmount(0.0)
+                    viewModel.updateOnlineAmount(0.0)
                 }
 
                 "UPI" -> {
@@ -374,9 +383,43 @@ fun PaymentMethodCard(
                     )
                     viewModel.updateCashAmount(0.0)
                     viewModel.updateCardAmount(0.0)
+                    viewModel.updateOnlineAmount(0.0)
                 }
 
-                "OTHERS" -> {
+                "ONLINE"->{
+                    Spacer(modifier = Modifier.height(16.dp))
+                    var onlineAmountText by remember {
+                        mutableStateOf(TextFieldValue(if (uiState.onlineAmount == 0.0) "" else uiState.onlineAmount.toString()))
+                    }
+                    LaunchedEffect(uiState.onlineAmount) {
+                        if (onlineAmountText.text != uiState.onlineAmount.toString() && !(uiState.onlineAmount == 0.0 && onlineAmountText.text == "")) {
+                            onlineAmountText = onlineAmountText.copy(text = if (uiState.onlineAmount == 0.0) "" else uiState.onlineAmount.toString())
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = onlineAmountText,
+                        onValueChange = {
+                            onlineAmountText = it
+                            viewModel.updateOnlineAmount(it.text.toDoubleOrNull() ?: 0.0)
+                        },
+                        label = { Text("ONLINE Amount") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                            .onFocusChanged {
+                                if (it.isFocused) {
+                                    onlineAmountText = onlineAmountText.copy(selection = TextRange(0, onlineAmountText.text.length))
+                                }
+                            }
+                    )
+                    viewModel.updateCashAmount(0.0)
+                    viewModel.updateCardAmount(0.0)
+                    viewModel.updateUpiAmount(0.0)
+                }
+
+                "CASH/CARD" -> {
                     var cashAmountText by remember { 
                         mutableStateOf(TextFieldValue(if (uiState.cashAmount == 0.0) "" else uiState.cashAmount.toString())) 
                     }
@@ -493,7 +536,7 @@ private fun PaymentMethodOption(
                 MaterialTheme.colorScheme.surface
         ),
         border = if (isSelected)
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            BorderStroke(2.dp, PrimaryGreen)
         else
             BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
@@ -506,7 +549,7 @@ private fun PaymentMethodOption(
             Icon(
                 icon,
                 contentDescription = method,
-                tint = if (isSelected) MaterialTheme.colorScheme.primary
+                tint = if (isSelected) PrimaryGreen
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.size(24.dp)
             )
@@ -523,7 +566,7 @@ private fun PaymentMethodOption(
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = PrimaryGreen,
                     modifier = Modifier.size(20.dp)
                 )
             }

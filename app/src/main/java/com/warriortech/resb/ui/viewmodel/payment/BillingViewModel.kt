@@ -70,10 +70,11 @@ data class BillingPaymentUiState(
     val cashAmount: Double = 0.0,
     val cardAmount: Double = 0.0,
     val upiAmount: Double = 0.0,
+    val onlineAmount: Double= 0.0,
     val customer: TblCustomer? = null,
     val roundOff: Double = 0.0,
     val upiTypes: List<TblUpiType> = emptyList(),
-    val selectedUpiTypeId: Long = 0L
+    val selectedUpiTypeId: Long = 1L
 )
 
 data class TemplatePreviewLine(
@@ -484,7 +485,9 @@ class BillingViewModel @Inject constructor(
                     PaymentMethod("card", "CARD"),
                     PaymentMethod("upi", "UPI"),
                     PaymentMethod("due", "DUE"),
-                    PaymentMethod("others", "OTHERS")
+                    PaymentMethod("others", "OTHERS"),
+                    PaymentMethod("online", "ONLINE"),
+                    PaymentMethod("cash_card", "CASH/CARD")
                 )
             )
         }
@@ -502,6 +505,13 @@ class BillingViewModel @Inject constructor(
         val currentState = _uiState.value
         if (currentState.cashAmount != amount) {
             _uiState.update { it.copy(cashAmount = amount) }
+        }
+    }
+
+    fun updateOnlineAmount(amount: Double) {
+        val currentState = _uiState.value
+        if (currentState.onlineAmount != amount) {
+            _uiState.update { it.copy(onlineAmount  = amount) }
         }
     }
 
@@ -536,6 +546,8 @@ class BillingViewModel @Inject constructor(
             "CARD" -> if (currentState.cardAmount == 0.0) currentState.amountToPay else currentState.cardAmount
             "UPI" -> if (currentState.upiAmount == 0.0) currentState.amountToPay else currentState.upiAmount
             "OTHERS" -> currentState.cashAmount + currentState.cardAmount + currentState.upiAmount
+            "CASH/CARD" -> currentState.cashAmount + currentState.cardAmount + currentState.upiAmount
+            "ONLINE" -> if (currentState.onlineAmount == 0.0) currentState.amountToPay else currentState.onlineAmount
             else -> currentState.amountToPay
         }
         if (paymentMethod == null) {

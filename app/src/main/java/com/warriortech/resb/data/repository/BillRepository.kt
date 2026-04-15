@@ -93,7 +93,7 @@ class BillRepository @Inject constructor(
         discount: Double = 0.0,
         otherCharges: Double = 0.0,
         roundOff: Double=0.0,
-        upiTypeId: Long = 0L
+        upiTypeId: Long = 1L
     ): Flow<Result<TblBillingResponse>> = flow {
         try {
             val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
@@ -165,7 +165,7 @@ class BillRepository @Inject constructor(
                 delivery_amt = otherCharges,
                 round_off = roundOff,
                 rounded_amt = total,
-                others = if (paymentMethod.name == "OTHERS") total else 0.0,
+                others = if (paymentMethod.name == "ONLINE") total else 0.0,
                 change = if (isTendered && tenderedAmt > 0) tenderedAmt - receivedAmt else 0.0,
                 tendered_amt = tenderedAmt,
                 upi_type_id = upiTypeId
@@ -206,41 +206,7 @@ class BillRepository @Inject constructor(
             )
 
             if (isInventory) {
-                val ledgerDetail = apiService.findByContactNo(
-                    bill?.customer?.contact_no ?: customer.contact_no,
-                    tenant
-                ).body()
-                val ledger: TblLedgerDetails? = if (paymentMethod.name == "DUE") {
-                    val req = TblLedgerRequest(
-                        ledger_name = customer.customer_name,
-                        ledger_fullname = customer.customer_name,
-                        group_id = 17,
-                        address = customer.address,
-                        contact_no = customer.contact_no,
-                        email = customer.email_address,
-                        gst_no = customer.gst_no,
-                        igst_status = if (customer.igst_status) "YES" else "NO",
-                        due_date = getCurrentDateModern(),
-                        order_by = 0,
-                        address1 = "",
-                        place = "",
-                        pincode = 0,
-                        country = "",
-                        pan_no = "",
-                        state_code = "",
-                        state_name = "",
-                        sac_code = "",
-                        opening_balance = "",
-                        bank_details = "NO",
-                        tamil_text = "",
-                        distance = 0.0,
-                        is_default = false
-                    )
-                    if (ledgerDetail?.contact_no != customer.contact_no)
-                        apiService.createLedger(req, tenant).body()
-                    else
-                        null
-                } else null
+                val led = apiService.getLedgerByName("ONLINE",sessionManager.getCompanyCode()?:"").body()
                 order.forEach { it->
                     val conv = apiService.getUnitConversionByItemId(it.menuItem.menu_item_id, tenant).body()
                     if (conv!= null){
@@ -262,8 +228,8 @@ class BillRepository @Inject constructor(
                                 "CASH" -> "1"
                                 "CARD" -> "2"
                                 "UPI" -> "3"
-                                else -> "${ledger?.ledger_id?.toLong() ?: (ledgerDetail?.ledger_id?.toLong()
-                                    ?: 0)}"
+                                "OTHERS" -> "${led?.ledger_id?.toLong() ?: 28}"
+                                else -> ""
                             },
                             member_id = result.bill_no,
                             bag_per_amt = 0.0,
@@ -286,8 +252,8 @@ class BillRepository @Inject constructor(
                                 "CASH" -> "1"
                                 "CARD" -> "2"
                                 "UPI" -> "3"
-                                else -> "${ledger?.ledger_id?.toLong() ?: (ledgerDetail?.ledger_id?.toLong()
-                                    ?: 0)}"
+                                "OTHERS" -> "${led?.ledger_id?.toLong() ?: 28}"
+                                else -> ""
                             },
                             member_id = result.bill_no,
                             bag_per_amt = 0.0,
@@ -309,6 +275,7 @@ class BillRepository @Inject constructor(
                     bill?.customer?.contact_no ?: customer.contact_no,
                     tenant
                 ).body()
+                val onlineLedger = apiService.getLedgerByName("ONLINE",tenant).body()
                 val ledger: TblLedgerDetails? = if (paymentMethod.name == "DUE") {
                     val req = TblLedgerRequest(
                         ledger_name = customer.customer_name,
@@ -346,9 +313,10 @@ class BillRepository @Inject constructor(
                     voucher,
                     ledgerDetail,
                     ledger,
-                    billNo,
+                    if (billNo!="--") billNo else result.bill_no,
                     receivedAmt,
-                    totals
+                    totals,
+                    onlineLedger
                 )
                 apiService.insertSingleLedgerDetails(ledgerEntries, tenant)
             }
@@ -447,6 +415,34 @@ class BillRepository @Inject constructor(
         }
     }
 
+    @SuppressLint("SupportAnnotationUsage", "SuspiciousIndentation")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    fun printEOD(fromDate: String,toDate: String,paperWidth: Int): Flow<Result<String>> = flow{
+        try{
+            val response = apiService.printEOD(paperWidth,fromDate,toDate, sessionManager.getCompanyCode() ?: "")
+            if(!response.isSuccessful) return@flow emit(Result.failure(Exception("Print failed")))
+            val bytes = response.body()?.bytes()
+                ?: return@flow emit(Result.failure(Exception("Empty print data")))
+            var msg = ""
+            val printerType = sessionManager.getPrinterType()
+            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null) {
+                printerHelper.printViaBluetoothMac(
+                    data = bytes,
+                    macAddress = sessionManager.getBluetoothPrinter().toString()
+                ) { _, m -> msg = m }
+            }
+            else if (printerType == "TCP") {
+              val res =  apiService.getIpAddresss("COUNTER",sessionManager.getCompanyCode() ?: "").body()
+                printerHelper.printViaTcp(res?.printerIpAddress?:"", data = bytes) { _, m -> msg = m }
+            }
+            else
+                emit(Result.failure(Exception("Printer not configured")))
+            emit(Result.success(msg))
+        }catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun printBillWithLocalTemplate(bill: Bill, ipAddress: String): Flow<Result<String>> = flow {
         try {
@@ -514,12 +510,12 @@ class BillRepository @Inject constructor(
             card = if (bill.card > 0.0) order.sumOf { it.grand_total } else 0.0,
             upi = if (bill.upi > 0.0) order.sumOf { it.grand_total } else 0.0,
             due = if (bill.due > 0.0) order.sumOf { it.grand_total } else 0.0,
-            others = 0.0,
+            others = bill.others,
             received_amt = if (bill.due > 0.0) 0.0 else order.sumOf { it.grand_total },
             pending_amt = if (bill.due > 0.0) order.sumOf { it.grand_total } else 0.0,
 //          change = if (paymentMethod.name == "CASH") receivedAmt - orderMaster.sumOf { it.grand_total } else 0.0,
-            change = 0.0,
-            note = "",
+            change = bill.change,
+            note = bill.note,
             is_active = 1L,
             tendered_amt = bill.tendered_amt,
             upi_type_id = bill.upi_type.upi_type_id
@@ -630,7 +626,8 @@ object LedgerEntryBuilder {
         ledger: TblLedgerDetails?,
         billNo: String,
         receivedAmt: Double,
-        totals: Triple<Double, Double, Double>
+        totals: Triple<Double, Double, Double>,
+        onlineLedger: TblLedgerDetails?
     ): List<TblLedgerDetailIdRequest> {
         val (cash, card, upi) = totals
         val base = TblLedgerDetailIdRequest(
@@ -702,7 +699,7 @@ object LedgerEntryBuilder {
                 )
             )
 
-            "OTHERS" ->
+            "CASH/CARD" ->
                 if (voucherType == "DUE") {
                     listOfNotNull(
                         base.copy(
@@ -763,6 +760,19 @@ object LedgerEntryBuilder {
                             ) else null
                     )
                 }
+            "ONLINE"->listOf(
+                base.copy(
+                    party_id = onlineLedger?.ledger_id?.toLong() ?: 0,
+                    purpose = "SALES BY ONLINE",
+                    amount_in = receivedAmt
+                ),
+                base.copy(
+                    id = onlineLedger?.ledger_id?.toLong()?:0,
+                    party_id = 5,
+                    purpose = "SALES BY ONLINE",
+                    amount_out = receivedAmt
+                )
+            )
 
             else -> listOf(
                 base.copy(

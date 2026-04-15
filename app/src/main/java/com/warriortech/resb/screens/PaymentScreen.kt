@@ -495,8 +495,9 @@ fun PaymentBottomBar(
         "CASH" -> if (isTendered) true else uiState.cashAmount > 0.0 // True because tender dialog will handle it
         "CARD" -> uiState.cardAmount > 0.0
         "UPI" -> uiState.upiAmount > 0.0
-        "OTHERS" -> (uiState.cashAmount + uiState.cardAmount + uiState.upiAmount) > 0.0
+        "CASH/CARD" -> (uiState.cashAmount + uiState.cardAmount + uiState.upiAmount) > 0.0
         "DUE" -> true
+        "ONLINE"->uiState.onlineAmount>0.0
         else -> false
     }
 
@@ -511,7 +512,8 @@ fun PaymentBottomBar(
 
         "CARD" -> if (uiState.cardAmount == 0.0) totalAmount else uiState.cardAmount
         "UPI" -> if (uiState.upiAmount == 0.0) totalAmount else uiState.upiAmount
-        "OTHERS" -> uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
+        "CASH/CARD" -> uiState.cashAmount + uiState.cardAmount + uiState.upiAmount
+        "ONLINE"->if (uiState.onlineAmount == 0.0) totalAmount else uiState.onlineAmount
         else -> totalAmount
     }
 

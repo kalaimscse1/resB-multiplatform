@@ -96,7 +96,7 @@ class OrderRepository @Inject constructor(
                     staff_id = sessionManager.getUser()?.staff_id ?: 1,
                     is_dine_in = tableStatus != "TAKEAWAY" && tableStatus != "DELIVERY" && !isOnline,
                     is_take_away = tableStatus == "TAKEAWAY",
-                    is_delivery = tableStatus == "DELIVERY" || isOnline,
+                    is_delivery = tableStatus == "DELIVERY" ,
                     table_id = tableId,
                     no_of_person = tableInfo.seating_capacity,
                     waiter_request_status = true,
