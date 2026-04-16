@@ -211,7 +211,7 @@ fun OnlineMenuContent(
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(item.menu_item_name, style = MaterialTheme.typography.bodyMedium)
-                                    Text(CurrencySettings.format(item.rate), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                    Text(CurrencySettings.format(item.parcel_rate), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(onClick = { onRemoveItem(item) }, modifier = Modifier.size(24.dp)) {
@@ -226,7 +226,7 @@ fun OnlineMenuContent(
                         }
                     }
 
-                    val total = cartItems.entries.sumOf { it.key.rate * it.value }
+                    val total = cartItems.entries.sumOf { it.key.parcel_rate * it.value }
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total", fontWeight = FontWeight.Bold)
@@ -257,7 +257,7 @@ fun OnlineMenuItemRow(item: TblMenuItemResponse, onAdd: (TblMenuItemResponse) ->
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.menu_item_name, fontWeight = FontWeight.Medium)
-                Text(CurrencySettings.format(item.rate), style = MaterialTheme.typography.bodySmall)
+                Text(CurrencySettings.format(item.parcel_rate), style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.Default.AddCircle, contentDescription = "Add", tint = PrimaryGreen)
         }

@@ -259,7 +259,7 @@ class OnlineOrderViewModel @Inject constructor(
                 orderRepository.placeOrUpdateOrder(
                     tableId = 1,
                     itemsToPlace = orderItems,
-                    tableStatus = "DELIVERY",
+                    tableStatus = "ONLINE",
                     deliveryBoyId = 5,
                     isOnline = true,
                     onlineRefNo = _refNo.value,
@@ -267,17 +267,16 @@ class OnlineOrderViewModel @Inject constructor(
                 ).collect { orderResult ->
                     orderResult.fold(
                         onSuccess = { orderResponse ->
-
-                            
+                            val total = orderItems.sumOf{ it.menuItem.parcel_rate * it.quantity }
                             val totalAmount = items.entries.sumOf { it.key.rate * it.value }
                             billRepository.bill(
                                 orderMasterId = orderResponse.order_master_id,
                                 paymentMethod = PaymentMethod("online", "ONLINE"),
-                                receivedAmt = totalAmount,
+                                receivedAmt = total,
                                 customer = TblCustomer(1L, "ONLINE CUSTOMER", "", "", "", "", false, 1L),
                                 billNo = "--",
                                 voucherType = "BILL",
-                                total = totalAmount
+                                total = total
                             ).collect { billResult ->
                                 billResult.fold(
                                     onSuccess = { billingResponse ->
