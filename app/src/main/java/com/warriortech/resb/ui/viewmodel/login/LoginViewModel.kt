@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.model.LoginRequest
+import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.RetrofitClient
 import com.warriortech.resb.network.SessionManager
 import com.warriortech.resb.network.WhatsAppApi
@@ -39,7 +40,8 @@ data class LoginUiState(
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val sessionManager: SessionManager,
-    private val whatsappApi: WhatsAppApi
+    private val whatsappApi: WhatsAppApi,
+    private val apiService: ApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -100,15 +102,8 @@ class LoginViewModel @Inject constructor(
             try {
                 val otp = Random.nextInt(1000, 9999).toString()
                 val msgOtp = uiState.value.companyCode + " - " + otp
-                val response = whatsappApi.sendWhatsApp(
-                    secret = "66a02ca4cbae00a9b996ba9d1f62a51c56cbccd1".toRequestBody(),
-                    account = "1768990496a87ff679a2f3e71d9181a67b7542122c6970a7204c38d".toRequestBody(),
-                    recipient = "120363042991809443@g.us".toRequestBody(),           // +919876543210
-                    type = "text".toRequestBody(),
-                    message = "Your OTP For $msgOtp".toRequestBody()
-                )
-
-                if (response.isSuccessful) {
+                val emailResponse = apiService.sendMailOtp("resbbilling@gmail.com", msgOtp, "KTS-COMPANY_MASTER")
+                if (emailResponse.isSuccessful) {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -116,14 +111,34 @@ class LoginViewModel @Inject constructor(
                             generatedOtp = otp
                         )
                     }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            loginError = "Failed to send verification OTP. Please check your Email Id."
-                        )
+                }else{
+                    val response = whatsappApi.sendWhatsApp(
+                        secret = "66a02ca4cbae00a9b996ba9d1f62a51c56cbccd1".toRequestBody(),
+                        account = "1768990496a87ff679a2f3e71d9181a67b7542122c6970a7204c38d".toRequestBody(),
+                        recipient = "120363042991809443@g.us".toRequestBody(),           // +919876543210
+                        type = "text".toRequestBody(),
+                        message = "Your OTP For $msgOtp".toRequestBody()
+                    )
+                    if (response.isSuccessful) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                showOtpDialog = true,
+                                generatedOtp = otp
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                loginError = "Failed to send verification OTP. Please check your Email Id."
+                            )
+                        }
                     }
                 }
+
+
+
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
