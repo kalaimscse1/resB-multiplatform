@@ -294,19 +294,18 @@ class RegistrationViewModel @Inject constructor(
     private fun createCompany(response: Registration) {
         viewModelScope.launch {
             try {
-                val res = response
                 val profile = RestaurantProfile(
-                    company_code = res.company_master_code,
-                    company_name = res.company_name,
-                    owner_name = res.owner_name,
-                    address1 = res.address1,
-                    address2 = res.address2,
-                    place = res.place,
-                    pincode = res.pincode,
-                    contact_no = res.contact_no,
-                    mail_id = res.mail_id,
-                    country = res.country,
-                    state = res.state,
+                    company_code = response.company_master_code,
+                    company_name = response.company_name,
+                    owner_name = response.owner_name,
+                    address1 = response.address1,
+                    address2 = response.address2,
+                    place = response.place,
+                    pincode = response.pincode,
+                    contact_no = response.contact_no,
+                    mail_id = response.mail_id,
+                    country = response.country,
+                    state = response.state,
                     currency = "Rs.",
                     tax_no = "",
                     decimal_point = 2L,
