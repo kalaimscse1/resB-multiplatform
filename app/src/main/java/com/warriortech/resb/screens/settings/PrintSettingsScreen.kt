@@ -4,6 +4,9 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -33,6 +36,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.ui.text.font.FontWeight
+import com.warriortech.resb.util.getDeviceInfo
 
 @Composable
 fun PrintPreview(
@@ -138,6 +143,10 @@ fun PrintSettingsScreen(
     val sections by viewModel.sections.collectAsState()
     
     var showAddTemplateDialog by remember { mutableStateOf(false) }
+    
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
 
     Scaffold(
         topBar = {
@@ -172,7 +181,21 @@ fun PrintSettingsScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             if (selectedTemplate == null) {
-                TemplateList(templates, onTemplateClick = { viewModel.selectTemplate(it) })
+                if (showAdaptiveGrid) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 300.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(templates) { template ->
+                            TemplateCard(template, onTemplateClick = { viewModel.selectTemplate(it) })
+                        }
+                    }
+                } else {
+                    TemplateList(templates, onTemplateClick = { viewModel.selectTemplate(it) })
+                }
             } else {
                 val platformOverrides by viewModel.getPlatformOverrides(selectedTemplate!!.template_id).collectAsState(initial = emptyList())
                 val kotSettings by viewModel.getKotSettings(selectedTemplate!!.template_id).collectAsState(initial = null)
@@ -206,25 +229,30 @@ fun TemplateList(templates: List<PrintTemplateEntity>, onTemplateClick: (PrintTe
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(templates) { template ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onTemplateClick(template) }
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = template.template_name, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = "${template.document_type} • ${template.paper_width_mm}mm • ${template.platform}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
+            TemplateCard(template, onTemplateClick)
+        }
+    }
+}
+
+@Composable
+fun TemplateCard(template: PrintTemplateEntity, onTemplateClick: (PrintTemplateEntity) -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTemplateClick(template) }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = template.template_name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "${template.document_type} • ${template.paper_width_mm}mm • ${template.platform}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
+            Icon(Icons.Default.ChevronRight, contentDescription = null)
         }
     }
 }
@@ -413,8 +441,8 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(text = section.section_type, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { showDeleteConfirm = true }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Section", tint = MaterialTheme.colorScheme.error)
+                IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Section", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))
                 }
             }
             
@@ -429,11 +457,11 @@ fun SectionItem(section: PrintTemplateSectionEntity, viewModel: PrintSettingsVie
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { viewModel.addLogo(section.section_id, lines.size) }) {
-                    Icon(Icons.Default.Image, contentDescription = "Add Logo", modifier = Modifier.size(20.dp))
+                IconButton(onClick = { viewModel.addLogo(section.section_id, lines.size) }, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Image, contentDescription = "Add Logo", modifier = Modifier.size(24.dp))
                 }
-                IconButton(onClick = { viewModel.addQrCode(section.section_id, lines.size) }) {
-                    Icon(Icons.Default.QrCode, contentDescription = "Add QR Code", modifier = Modifier.size(20.dp))
+                IconButton(onClick = { viewModel.addQrCode(section.section_id, lines.size) }, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.QrCode, contentDescription = "Add QR Code", modifier = Modifier.size(24.dp))
                 }
                 TextButton(
                     onClick = { showAddLineDialog = true }
@@ -498,15 +526,14 @@ fun LineItem(line: PrintTemplateLineEntity, viewModel: PrintSettingsViewModel) {
             Text(
                 text = line.field_key, 
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.clickable { showEditLineDialog = true }
+                modifier = Modifier.clickable { showEditLineDialog = true }.weight(1f)
             )
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(44.dp)) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete Line", modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.error)
             }
             if (line.field_key != "LOGO" && line.field_key != "QRCODE") {
-                IconButton(onClick = { showAddColumnDialog = true }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Add Column", modifier = Modifier.size(16.dp))
+                IconButton(onClick = { showAddColumnDialog = true }, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Add Column", modifier = Modifier.size(24.dp))
                 }
             }
         }

@@ -6,6 +6,10 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -86,6 +91,10 @@ fun MenuItemSettingsScreen(
     var failed by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
+    
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
 
     LaunchedEffect(Unit) {
         viewModel.getOrderBy()
@@ -218,43 +227,88 @@ fun MenuItemSettingsScreen(
                         Text("No menu items found", style = MaterialTheme.typography.bodyLarge)
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (searchMode) {
-                            item {
-                                OutlinedTextField(
-                                    value = searchQuery,
-                                    onValueChange = {
-                                        searchQuery = it
-                                        viewModel.searchMenuItems(it)
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(focusRequester),
-                                    placeholder = { Text("Search Menu Items") },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Search,
-                                            contentDescription = "Search Icon"
-                                        )
-                                    },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                    if (showAdaptiveGrid) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 250.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (searchMode) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    OutlinedTextField(
+                                        value = searchQuery,
+                                        onValueChange = {
+                                            searchQuery = it
+                                            viewModel.searchMenuItems(it)
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .focusRequester(focusRequester),
+                                        placeholder = { Text("Search Menu Items") },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = "Search Icon"
+                                            )
+                                        },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                                    )
+                                }
+                            }
+
+                            items(menuItems) { menuItem ->
+                                MenuItemCard(
+                                    menuItem = menuItem,
+                                    onEdit = { editingMenuItem = menuItem },
+                                    onDelete = { menuItemToDelete = menuItem },
+                                    isGrid = true
                                 )
                             }
                         }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (searchMode) {
+                                item {
+                                    OutlinedTextField(
+                                        value = searchQuery,
+                                        onValueChange = {
+                                            searchQuery = it
+                                            viewModel.searchMenuItems(it)
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .focusRequester(focusRequester),
+                                        placeholder = { Text("Search Menu Items") },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = "Search Icon"
+                                            )
+                                        },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                                    )
+                                }
+                            }
 
-                        items(menuItems) { menuItem ->
-                            MenuItemCard(
-                                menuItem = menuItem,
-                                onEdit = { editingMenuItem = menuItem },
-                                onDelete = { menuItemToDelete = menuItem }
-                            )
+                            items(menuItems) { menuItem ->
+                                MenuItemCard(
+                                    menuItem = menuItem,
+                                    onEdit = { editingMenuItem = menuItem },
+                                    onDelete = { menuItemToDelete = menuItem }
+                                )
+                            }
                         }
                     }
                 }
@@ -360,50 +414,99 @@ fun MenuItemSettingsScreen(
 fun MenuItemCard(
     menuItem: TblMenuItemResponse,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isGrid: Boolean = false
 ) {
     MobileOptimizedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = if (isGrid) Modifier.height(130.dp) else Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = menuItem.menu_item_name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = CurrencySettings.format(menuItem.rate),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                if (menuItem.menu_item_name_tamil.isNotEmpty()) {
+        if (isGrid) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
                     Text(
-                        text = menuItem.menu_item_name_tamil,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = menuItem.menu_item_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = CurrencySettings.format(menuItem.rate),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
-
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = BluePrimary)
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = menuItem.menu_item_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
                     )
+                    Text(
+                        text = CurrencySettings.format(menuItem.rate),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (menuItem.menu_item_name_tamil.isNotEmpty()) {
+                        Text(
+                            text = menuItem.menu_item_name_tamil,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -585,8 +688,8 @@ fun MenuItemDialog(
                 label = "Rate *",
                 focusRequester = focusRequesters["rate"]!!,
                 nextFocusRequester = focusRequesters["acRate"],
-                isError = rateError != null,
-                errorMessage = rateError,
+                isError = nameError != null,
+                errorMessage = nameError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                 scrollState = scrollState,
                 scope = scope
@@ -609,8 +712,8 @@ fun MenuItemDialog(
                 label = "Parcel Rate *",
                 focusRequester = focusRequesters["parcelRate"]!!,
                 nextFocusRequester = focusRequesters["preparationTime"],
-                isError = parcelRateError != null,
-                errorMessage = parcelRateError,
+                isError = nameError != null,
+                errorMessage = nameError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                 scrollState = scrollState,
                 scope = scope

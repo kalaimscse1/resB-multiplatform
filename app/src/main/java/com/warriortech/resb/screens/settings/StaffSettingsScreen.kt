@@ -3,6 +3,9 @@ package com.warriortech.resb.screens.settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +39,7 @@ import com.warriortech.resb.ui.viewmodel.StaffViewModel
 import com.warriortech.resb.util.AreaDropdown
 import com.warriortech.resb.util.CounterDropdown
 import com.warriortech.resb.util.RoleDropdown
+import com.warriortech.resb.util.getDeviceInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +57,10 @@ fun StaffSettingsScreen(
     val counters by viewModel.counters.collectAsStateWithLifecycle()
     val roles by viewModel.roles.collectAsStateWithLifecycle()
     
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
+
     // Handle messages
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let {
@@ -105,19 +114,40 @@ fun StaffSettingsScreen(
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(uiState.staff) { staff ->
-                    StaffCard(
-                        staff = staff,
-                        onEdit = { editingStaff = staff },
-                        onDelete = { staffToDelete = staff }
-                    )
+            if (showAdaptiveGrid) {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 250.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.staff) { staff ->
+                        StaffCard(
+                            staff = staff,
+                            onEdit = { editingStaff = staff },
+                            onDelete = { staffToDelete = staff },
+                            isGrid = true
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.staff) { staff ->
+                        StaffCard(
+                            staff = staff,
+                            onEdit = { editingStaff = staff },
+                            onDelete = { staffToDelete = staff }
+                        )
+                    }
                 }
             }
         }
@@ -179,49 +209,96 @@ fun StaffSettingsScreen(
 fun StaffCard(
     staff: TblStaff,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isGrid: Boolean = false
 ) {
     MobileOptimizedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = if (isGrid) Modifier.height(130.dp) else Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = staff.staff_name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = staff.role,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = staff.address,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = staff.contact_no,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Row{
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = BluePrimary)
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
+        if (isGrid) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = staff.staff_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = staff.role,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = staff.staff_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = staff.role,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = staff.contact_no,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row{
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -256,11 +333,10 @@ fun AddStaffDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Staff") },
         text = {
-            // ✅ Make dialog scrollable
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp) // set max height so dialog doesn’t grow infinitely
+                    .heightIn(max = 400.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -270,8 +346,7 @@ fun AddStaffDialog(
                     label = { Text("Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { /* dropdown focus is tricky */ })
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
                 RoleDropdown(
                     modifier = Modifier.fillMaxWidth(),
@@ -432,11 +507,10 @@ fun EditStaffDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Staff") },
         text = {
-            // ✅ Make contents scrollable
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp) // limit dialog height
+                    .heightIn(max = 400.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -546,7 +620,7 @@ fun EditStaffDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = { onDismiss() }) {
                 Text("Cancel")
             }
         }

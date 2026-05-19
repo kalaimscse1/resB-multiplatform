@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,8 +37,11 @@ import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.setting.VoucherSettingsViewModel
 import com.warriortech.resb.util.CounterDropdown
 import com.warriortech.resb.util.VoucherTypeDropdown
+import com.warriortech.resb.util.getDeviceInfo
 import com.warriortech.resb.util.stringResource
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +56,10 @@ fun VoucherSettingsScreen(
     var voucherToDelete by remember { mutableStateOf<TblVoucherResponse?>(null) }
     val counters by viewModel.counters.collectAsStateWithLifecycle()
     val voucherTypes by viewModel.voucherTypes.collectAsStateWithLifecycle()
+
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
 
     LaunchedEffect(Unit) {
         viewModel.loadVouchers()
@@ -100,24 +111,49 @@ fun VoucherSettingsScreen(
                         Text(stringResource(R.string.no_vouchers_found))
                     }
                 } else {
-                    // Display list of vouchers
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(state.vouchers) { voucher ->
-                            VoucherCard(
-                                voucher = voucher,
-                                onEdit = {
-                                    editingVoucher = voucher
-                                },
-                                onDelete = {
-                                    voucherToDelete = voucher
-                                }
-                            )
+                    if (showAdaptiveGrid) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 250.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(state.vouchers) { voucher ->
+                                VoucherCard(
+                                    voucher = voucher,
+                                    onEdit = {
+                                        editingVoucher = voucher
+                                    },
+                                    onDelete = {
+                                        voucherToDelete = voucher
+                                    },
+                                    isGrid = true
+                                )
+                            }
+                        }
+                    } else {
+                        // Display list of vouchers
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(state.vouchers) { voucher ->
+                                VoucherCard(
+                                    voucher = voucher,
+                                    onEdit = {
+                                        editingVoucher = voucher
+                                    },
+                                    onDelete = {
+                                        voucherToDelete = voucher
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -191,54 +227,102 @@ fun VoucherSettingsScreen(
 fun VoucherCard(
     voucher: TblVoucherResponse,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isGrid: Boolean = false
 ) {
     MobileOptimizedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = if (isGrid) Modifier.height(130.dp) else Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = voucher.voucher_name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Voucher Type:" + voucher.voucherType.voucher_type_name,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = "Prefix:" + voucher.voucher_prefix,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Suffix:" + voucher.voucher_suffix,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Starting:" + voucher.starting_no,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = BluePrimary
+        if (isGrid) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = voucher.voucher_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = voucher.voucherType.voucher_type_name,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = voucher.voucher_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = "Voucher Type:" + voucher.voucherType.voucher_type_name,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Prefix:" + voucher.voucher_prefix,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Suffix:" + voucher.voucher_suffix,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Starting:" + voucher.starting_no,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -298,7 +382,8 @@ fun VoucherBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Title

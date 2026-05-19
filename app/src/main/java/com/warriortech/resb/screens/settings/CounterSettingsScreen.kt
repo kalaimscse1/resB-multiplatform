@@ -17,19 +17,25 @@ import com.warriortech.resb.R
 import com.warriortech.resb.model.TblCounter
 import com.warriortech.resb.ui.viewmodel.setting.CounterSettingsViewModel
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavHostController
 import com.warriortech.resb.ui.components.MobileOptimizedCard
 import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.util.ReusableBottomSheet
+import com.warriortech.resb.util.getDeviceInfo
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,6 +55,10 @@ fun CounterSettingsScreen(
     var counterToDelete by remember { mutableStateOf<TblCounter?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
 
     LaunchedEffect(Unit) {
         viewModel.loadCounters()
@@ -73,7 +83,7 @@ fun CounterSettingsScreen(
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(
-                            Icons.Default.Edit,
+                            Icons.Default.Add,
                             contentDescription = stringResource(R.string.add_counter),
                             tint = SurfaceLight
                         )
@@ -106,24 +116,50 @@ fun CounterSettingsScreen(
                         )
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(state.counters) { counter ->
-                            CounterItem(
-                                counter = counter,
-                                onEdit = {
-                                    editingCounter = counter
-                                    showAddDialog = true
-                                },
-                                onDelete = {
-                                    counterToDelete = counter
-                                }
-                            )
+                    if (showAdaptiveGrid) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 250.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(state.counters) { counter ->
+                                CounterItem(
+                                    counter = counter,
+                                    onEdit = {
+                                        editingCounter = counter
+                                        showAddDialog = true
+                                    },
+                                    onDelete = {
+                                        counterToDelete = counter
+                                    },
+                                    isGrid = true
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(paddingValues),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(state.counters) { counter ->
+                                CounterItem(
+                                    counter = counter,
+                                    onEdit = {
+                                        editingCounter = counter
+                                        showAddDialog = true
+                                    },
+                                    onDelete = {
+                                        counterToDelete = counter
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -283,43 +319,94 @@ fun AddEditCounterDialog(
 fun CounterItem(
     counter: TblCounter,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isGrid: Boolean = false
 ) {
     MobileOptimizedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = if (isGrid) Modifier.height(110.dp) else Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = counter.counter_name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = counter.ip_address,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = BluePrimary)
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
+        if (isGrid) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = counter.counter_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = counter.ip_address,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = counter.counter_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = counter.ip_address,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }

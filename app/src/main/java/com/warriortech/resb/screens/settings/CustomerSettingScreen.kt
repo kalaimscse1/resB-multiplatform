@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -25,16 +28,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.warriortech.resb.model.TblCustomer
 import com.warriortech.resb.model.TblCustomerInfoRequest
 import com.warriortech.resb.ui.components.ModernDivider
+import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.setting.CustomerSettingsViewModel
 import com.warriortech.resb.util.ReusableBottomSheet
+import com.warriortech.resb.util.getDeviceInfo
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,13 +51,17 @@ fun CustomerSettingsScreen(
     onBackPressed: () -> Unit,
     navController: NavHostController
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val customers by viewModel.customers.collectAsState()
-    val additionalInfos by viewModel.additionalInfos.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val customers by viewModel.customers.collectAsStateWithLifecycle()
+    val additionalInfos by viewModel.additionalInfos.collectAsStateWithLifecycle()
     
     var showDialog by remember { mutableStateOf(false) }
     var selectedCustomer by remember { mutableStateOf<TblCustomer?>(null) }
     
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
+
     // Form States
     var name by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
@@ -114,21 +125,44 @@ fun CustomerSettingsScreen(
             if (uiState is CustomerSettingsViewModel.UiState.Loading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = PrimaryGreen)
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(customers) { customer ->
-                        CustomerItem(
-                            customer = customer,
-                            onClick = {
-                                viewModel.selectCustomer(customer)
-                                selectedCustomer = customer
-                                showDialog = true
-                            },
-                            onDelete = { viewModel.deleteCustomer(customer.customer_id) }
-                        )
+                if (showAdaptiveGrid) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 250.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(customers) { customer ->
+                            CustomerItem(
+                                customer = customer,
+                                onClick = {
+                                    viewModel.selectCustomer(customer)
+                                    selectedCustomer = customer
+                                    showDialog = true
+                                },
+                                onDelete = { viewModel.deleteCustomer(customer.customer_id) },
+                                isGrid = true
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(customers) { customer ->
+                            CustomerItem(
+                                customer = customer,
+                                onClick = {
+                                    viewModel.selectCustomer(customer)
+                                    selectedCustomer = customer
+                                    showDialog = true
+                                },
+                                onDelete = { viewModel.deleteCustomer(customer.customer_id) }
+                            )
+                        }
                     }
                 }
             }
@@ -228,24 +262,76 @@ fun CustomerSettingsScreen(
 fun CustomerItem(
     customer: TblCustomer,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isGrid: Boolean = false
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = (if (isGrid) Modifier.height(110.dp) else Modifier.fillMaxWidth()).clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = customer.customer_name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = customer.contact_no, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        if (isGrid) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = customer.customer_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = customer.contact_no,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = Color.Red,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+        } else {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = customer.customer_name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = customer.contact_no, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                }
+                Row {
+                    IconButton(onClick = onClick) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = BluePrimary)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                    }
+                }
             }
         }
     }

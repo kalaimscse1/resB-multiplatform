@@ -4,8 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -16,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,6 +30,7 @@ import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.setting.UnitConversionViewModel
+import com.warriortech.resb.util.getDeviceInfo
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +52,10 @@ fun UnitConversionSettingsScreen(
     
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val deviceInfo = getDeviceInfo()
+    val isTabletLandscape = deviceInfo.isTablet && deviceInfo.isLandscape
+    val showAdaptiveGrid = isTabletLandscape || deviceInfo.isLargeTablet
 
     LaunchedEffect(selectedUnit) {
         if (selectedUnit != null) {
@@ -109,24 +119,50 @@ fun UnitConversionSettingsScreen(
                             )
                         }
                     } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(conversions) { conversion ->
-                                ConversionCard(
-                                    conversion = conversion,
-                                    showUnitName = selectedUnit == null,
-                                    onEdit = {
-                                        editingConversion = conversion
-                                        showDialog = true
-                                    },
-                                    onDelete = {
-                                        viewModel.deleteConversion(conversion.unit_conv_id, selectedUnit?.unit_id ?: 0L)
-                                        scope.launch { snackbarHostState.showSnackbar("Deleted successfully") }
-                                    }
-                                )
+                        if (showAdaptiveGrid) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 250.dp),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(conversions) { conversion ->
+                                    ConversionCard(
+                                        conversion = conversion,
+                                        showUnitName = selectedUnit == null,
+                                        onEdit = {
+                                            editingConversion = conversion
+                                            showDialog = true
+                                        },
+                                        onDelete = {
+                                            viewModel.deleteConversion(conversion.unit_conv_id, selectedUnit?.unit_id ?: 0L)
+                                            scope.launch { snackbarHostState.showSnackbar("Deleted successfully") }
+                                        },
+                                        isGrid = true
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(conversions) { conversion ->
+                                    ConversionCard(
+                                        conversion = conversion,
+                                        showUnitName = selectedUnit == null,
+                                        onEdit = {
+                                            editingConversion = conversion
+                                            showDialog = true
+                                        },
+                                        onDelete = {
+                                            viewModel.deleteConversion(conversion.unit_conv_id, selectedUnit?.unit_id ?: 0L)
+                                            scope.launch { snackbarHostState.showSnackbar("Deleted successfully") }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -211,48 +247,104 @@ fun ConversionCard(
     conversion: TblUnitConversionResponse,
     showUnitName: Boolean,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isGrid: Boolean = false
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = if (isGrid) Modifier.height(130.dp) else Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = conversion.base_item.menu_item_name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = conversion.consume_item.menu_item_name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                if (showUnitName) {
+        if (isGrid) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
                     Text(
-                        text = "Unit: ${conversion.unit.unit_name}",
+                        text = "${conversion.base_item.menu_item_name} -> ${conversion.consume_item.menu_item_name}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (showUnitName) {
+                        Text(
+                            text = "Unit: ${conversion.unit.unit_name}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PrimaryGreen,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        text = "Conv: ${conversion.conversion_no}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = PrimaryGreen
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text(
-                    text = "Conversion: ${conversion.conversion_no}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
-            }
-            Row {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", tint = BluePrimary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+            }
+        } else {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = conversion.base_item.menu_item_name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = conversion.consume_item.menu_item_name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                    if (showUnitName) {
+                        Text(
+                            text = "Unit: ${conversion.unit.unit_name}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PrimaryGreen
+                        )
+                    }
+                    Text(
+                        text = "Conversion: ${conversion.conversion_no}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = BluePrimary)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                    }
                 }
             }
         }
@@ -357,7 +449,7 @@ fun UnitConversionDialog(
 
                 OutlinedTextField(
                     value = conversionNo,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) conversionNo = it },
+                    onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) conversionNo = it },
                     label = { Text("Conversion Number") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
