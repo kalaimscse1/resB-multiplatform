@@ -96,6 +96,7 @@ fun YearlySummaryReportScreen(
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         years.forEach { year ->
                             DropdownMenuItem(
+
                                 text = { Text(year) },
                                 onClick = {
                                     selectedYear = year
