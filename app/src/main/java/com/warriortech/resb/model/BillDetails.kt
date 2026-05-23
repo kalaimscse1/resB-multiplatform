@@ -33,7 +33,8 @@ data class TblBillingRequest(
     var upi_type_id:Long,
 )
 
-data class TblBillingResponse(
+data class
+TblBillingResponse(
     var bill_no: String,
     var bill_date: String,
     var bill_create_time: String,

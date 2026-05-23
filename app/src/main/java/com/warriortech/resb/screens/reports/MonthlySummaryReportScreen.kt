@@ -162,7 +162,7 @@ fun MonthlySummaryReportScreen(
                             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(scrollState).background(Color.White).padding(8.dp)) {
                                 Text(bill.bill_no, modifier = Modifier.width(100.dp))
                                 Text(bill.bill_date, modifier = Modifier.width(100.dp))
-                                Text(bill.customer.customer_name, modifier = Modifier.width(150.dp))
+                                Text(bill.customer?.customer_name ?: "Walking Customer", modifier = Modifier.width(150.dp))
                                 Text(String.format("%.2f", bill.order_amt), modifier = Modifier.width(100.dp))
                                 Text(String.format("%.2f", bill.tax_amt), modifier = Modifier.width(100.dp))
                                 Text(String.format("%.2f", bill.disc_amt), modifier = Modifier.width(100.dp))

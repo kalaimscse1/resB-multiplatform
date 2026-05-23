@@ -93,7 +93,7 @@ object ReportExport {
                 table.addCell(bill.order_master.order_master_id.toString())
                 table.addCell(bill.bill_no.toString())
                 table.addCell(formattedDate)
-                table.addCell(bill.customer.customer_name)
+                table.addCell(bill.customer?.customer_name ?: "Walking Customer")
                 table.addCell(payMode)
 
                 val billAmtCell = PdfPCell(Phrase("₹${String.format("%.2f", bill.rounded_amt)}"))
@@ -184,7 +184,7 @@ object ReportExport {
                 row.createCell(0).setCellValue(bill.order_master.order_master_id)
                 row.createCell(1).setCellValue(bill.bill_no)
                 row.createCell(2).setCellValue(bill.bill_date)
-                row.createCell(3).setCellValue(bill.customer.customer_name)
+                row.createCell(3).setCellValue(bill.customer?.customer_name ?: "Walking Customer")
                 row.createCell(4).setCellValue(payMode)
                 row.createCell(5).setCellValue(bill.rounded_amt)
                 row.createCell(6).setCellValue(bill.disc_amt)

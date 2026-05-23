@@ -1,93 +1,72 @@
 package com.warriortech.resb.screens.reports.gst
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.Icon
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.warriortech.resb.model.KotResponse
 import com.warriortech.resb.ui.theme.PrimaryGreen
 import com.warriortech.resb.ui.theme.SurfaceLight
 import com.warriortech.resb.ui.viewmodel.report.gst.HsnReportViewModel
+import com.warriortech.resb.util.getDeviceInfo
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
+import java.util.Locale
 
 @SuppressLint("DefaultLocale")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HsnReportScreen(
     viewModel: HsnReportViewModel = hiltViewModel(),
-    drawerState: DrawerState,
-//    onEditClick: (KotResponse) -> Unit
+    drawerState: DrawerState
 ) {
-    val hsnReports = viewModel.hsnReports.collectAsState()
+    val hsnReportsState by viewModel.hsnReports.collectAsState()
     val scope = rememberCoroutineScope()
-    // one shared horizontal scroll state for header + rows
-    val scrollState = rememberScrollState()
-    var fromDate by remember { mutableStateOf(LocalDate.now().minusDays(30)) }
-    var toDate by remember { mutableStateOf(LocalDate.now()) }
+    val context = LocalContext.current
+    
+    val today = LocalDate.now()
+    val apiFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val uiFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+
+    var fromDate by remember { mutableStateOf(today.minusDays(30)) }
+    var toDate by remember { mutableStateOf(today) }
     var showDatePicker by remember { mutableStateOf(false) }
     var isFromDatePicker by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(fromDate, toDate) {
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        viewModel.fetchHsnReports(fromDate.format(formatter), toDate.format(formatter))
+        viewModel.fetchHsnReports(fromDate.format(apiFormatter), toDate.format(apiFormatter))
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    androidx.compose.material.Text(
+                    Text(
                         "Hsn Reports",
                         style = MaterialTheme.typography.titleLarge,
                         color = SurfaceLight
@@ -114,291 +93,320 @@ fun HsnReportScreen(
                 .padding(paddingValues)
                 .background(SurfaceLight)
         ) {
-            // Date Range Selection
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Date Range",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+            val deviceInfo = getDeviceInfo()
+            val isWideScreen = deviceInfo.isTablet || deviceInfo.isLargeTablet || deviceInfo.isLandscape
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    isFromDatePicker = true
-                                    showDatePicker = true
-                                },
-                            colors = CardDefaults.outlinedCardColors(
-                                containerColor = Color.White
+            if (isWideScreen) {
+                // Wide Screen Header Design matching attached image
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // From Date Box
+                    DateBox(date = fromDate.format(uiFormatter), onClick = { isFromDatePicker = true; showDatePicker = true })
+                    
+                    Text("To :", style = MaterialTheme.typography.bodyMedium)
+                    
+                    // To Date Box
+                    DateBox(date = toDate.format(uiFormatter), onClick = { isFromDatePicker = false; showDatePicker = true })
+
+                    // Search Field
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        placeholder = { Text("SEARCH", fontSize = 12.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp)
+                    )
+
+                    // Total Amount Calculation based on filtered results
+                    val filteredData = if (hsnReportsState is HsnReportViewModel.HsnUiState.Success) {
+                        (hsnReportsState as HsnReportViewModel.HsnUiState.Success).data.filter { report ->
+                            report.hsn_code.contains(searchQuery, ignoreCase = true) ||
+                                    report.item_cat_name.contains(searchQuery, ignoreCase = true)
+                        }
+                    } else emptyList()
+                    val totalAmount = filteredData.sumOf { it.total }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Rs. ", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            String.format(Locale.US, "%.2f", totalAmount),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = Color(0xFF1A237E),
+                                fontWeight = FontWeight.Bold
                             )
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null,
-                                    tint = PrimaryGreen,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = "From",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
-                                    )
-                                    Text(
-                                        text = fromDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                        )
+                    }
+
+                    // Refresh Button
+                    Button(
+                        onClick = { viewModel.fetchHsnReports(fromDate.format(apiFormatter), toDate.format(apiFormatter)) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(48.dp)
+                    ) {
+                        Text("Refresh", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                // Mobile Portrait Header - Date Range Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Date Range", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedCard(modifier = Modifier.weight(1f).clickable { isFromDatePicker = true; showDatePicker = true }) {
+                                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.DateRange, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text("From", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                        Text(fromDate.format(uiFormatter), fontWeight = FontWeight.Medium)
+                                    }
                                 }
                             }
-                        }
-
-                        OutlinedCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    isFromDatePicker = false
-                                    showDatePicker = true
-                                },
-                            colors = CardDefaults.outlinedCardColors(
-                                containerColor = Color.White
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                androidx.compose.material3.Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null,
-                                    tint = PrimaryGreen,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = "To",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
-                                    )
-                                    Text(
-                                        text = toDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                            OutlinedCard(modifier = Modifier.weight(1f).clickable { isFromDatePicker = false; showDatePicker = true }) {
+                                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.DateRange, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text("To", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                        Text(toDate.format(uiFormatter), fontWeight = FontWeight.Medium)
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            when (val state = hsnReports.value) {
+
+            // Content Area
+            when (val state = hsnReportsState) {
                 is HsnReportViewModel.HsnUiState.Loading -> {
-                    // Show loading indicator
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        androidx.compose.material.CircularProgressIndicator()
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PrimaryGreen)
                     }
                 }
 
                 is HsnReportViewModel.HsnUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                    ) {
+                    val filteredData = state.data.filter { report ->
+                        report.hsn_code.contains(searchQuery, ignoreCase = true) ||
+                                report.item_cat_name.contains(searchQuery, ignoreCase = true)
+                    }
 
-                        // Sticky Header
-                        stickyHeader {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(scrollState)
-                                    .background(PrimaryGreen) // keeps header visible
-                                    .padding(8.dp)
-                            ) {
-                                Text(
-                                    "HSN",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    "Description",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(200.dp)
-                                )
-                                Text(
-                                    "UQC",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(80.dp)
-                                )
-                                Text(
-                                    "Total Qty",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    "Total Value",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(120.dp)
-                                )
-                                Text(
-                                    "Taxable Value",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(120.dp)
-                                )
-                                Text(
-                                    "IGST",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    "CGST",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    "SGST",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.width(100.dp)
-                                )
-                            }
+                    if (filteredData.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No HSN reports found", color = Color.Gray)
                         }
-                        items(state.data) { report ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(scrollState)
-                                    .background(if (state.data.indexOf(report) % 2 == 0) Color(0xFFF9F9F9) else Color.White)
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    report.hsn_code,
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    report.item_cat_name,
-                                    modifier = Modifier.width(200.dp)
-                                )
-                                Text(
-                                    report.unit_name,
-                                    modifier = Modifier.width(80.dp)
-                                )
-                                Text(
-                                    report.qty.toString(),
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    String.format("%.2f", report.total),
-                                    modifier = Modifier.width(120.dp)
-                                )
-                                Text(
-                                    String.format("%.2f", report.taxable_value),
-                                    modifier = Modifier.width(120.dp)
-                                )
-                                Text(
-                                    String.format("%.2f", report.igst),
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    String.format("%.2f", report.cgst),
-                                    modifier = Modifier.width(100.dp)
-                                )
-                                Text(
-                                    String.format("%.2f", report.sgst),
-                                    modifier = Modifier.width(100.dp)
-                                )
-                            }
+                    } else {
+                        if (isWideScreen) {
+                            // Professional Table View for wide screens (matching Image 1)
+                            HsnReportProfessionalTable(data = filteredData)
+                        } else {
+                            // Mobile View - Original Table Design
+                            HsnReportMobileTable(data = filteredData)
                         }
                     }
                 }
 
                 is HsnReportViewModel.HsnUiState.Error -> {
-                    // Show error message
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = state.message, color = Color.Red)
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
                     }
                 }
-
+                
                 is HsnReportViewModel.HsnUiState.Empty -> {
-                    // Show empty state message
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No HSN reports found", color = Color.Gray)
                     }
                 }
-
-
             }
-
         }
-
-
     }
+
     // Date Picker Dialog
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
+        val initialDate = if (isFromDatePicker) fromDate else toDate
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
-                            if (isFromDatePicker) {
-                                fromDate = selectedDate
-                            } else {
-                                toDate = selectedDate
-                            }
-                        }
-                        showDatePicker = false
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                        if (isFromDatePicker) fromDate = selectedDate else toDate = selectedDate
                     }
-                ) {
-                    Text("OK")
-                }
+                    showDatePicker = false
+                }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
             }
         ) {
             DatePicker(state = datePickerState)
         }
     }
+}
+
+@Composable
+private fun DateBox(date: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .border(1.dp, Color.LightGray, RoundedCornerShape(4.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(date, fontSize = 13.sp)
+        Icon(Icons.Default.DateRange, null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+    }
+}
+
+@Composable
+private fun HsnReportProfessionalTable(data: List<com.warriortech.resb.model.HsnReport>) {
+    val scrollState = rememberScrollState()
+    val headerColor = Color(0xFF505F79) // Matching the dark gray-blue background from the image
+
+    Column(Modifier.fillMaxSize()) {
+        // Table Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState)
+                .background(headerColor)
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TableHeaderCell("HSN CODE", 100.dp)
+            TableHeaderCell("DESCRIPTION", 200.dp)
+            TableHeaderCell("UNIT", 80.dp)
+            TableHeaderCell("QTY", 80.dp)
+            TableHeaderCell("TOTAL", 100.dp)
+            TableHeaderCell("GST %", 80.dp)
+            TableHeaderCell("TAXABLE VALUE", 120.dp)
+            TableHeaderCell("CGST", 100.dp)
+            TableHeaderCell("SGST", 100.dp)
+            TableHeaderCell("IGST", 100.dp)
+        }
+
+        // Table Body
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(data) { report ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(scrollState)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TableCell(report.hsn_code, 100.dp)
+                    TableCell(report.item_cat_name, 200.dp)
+                    TableCell(report.unit_name, 80.dp)
+                    TableCell(report.qty.toString(), 80.dp, textAlign = TextAlign.Center)
+                    TableCell(String.format(Locale.US, "%.2f", report.total), 100.dp, textAlign = TextAlign.End)
+                    TableCell("N/A", 80.dp, textAlign = TextAlign.Center) 
+                    TableCell(String.format(Locale.US, "%.2f", report.taxable_value), 120.dp, textAlign = TextAlign.End)
+                    TableCell(String.format(Locale.US, "%.2f", report.cgst), 100.dp, textAlign = TextAlign.End)
+                    TableCell(String.format(Locale.US, "%.2f", report.sgst), 100.dp, textAlign = TextAlign.End)
+                    TableCell(String.format(Locale.US, "%.2f", report.igst), 100.dp, textAlign = TextAlign.End)
+                }
+                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HsnReportMobileTable(data: List<com.warriortech.resb.model.HsnReport>) {
+    val scrollState = rememberScrollState()
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+        stickyHeader {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .background(PrimaryGreen)
+                    .padding(8.dp)
+            ) {
+                TableHeaderCell("HSN", 100.dp)
+                TableHeaderCell("Description", 200.dp)
+                TableHeaderCell("UQC", 80.dp)
+                TableHeaderCell("Total Qty", 100.dp)
+                TableHeaderCell("Total Value", 120.dp)
+                TableHeaderCell("Taxable Value", 120.dp)
+                TableHeaderCell("IGST", 100.dp)
+                TableHeaderCell("CGST", 100.dp)
+                TableHeaderCell("SGST", 100.dp)
+            }
+        }
+        items(data) { report ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .background(if (data.indexOf(report) % 2 == 0) Color(0xFFF9F9F9) else Color.White)
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TableCell(report.hsn_code, 100.dp)
+                TableCell(report.item_cat_name, 200.dp)
+                TableCell(report.unit_name, 80.dp)
+                TableCell(report.qty.toString(), 100.dp)
+                TableCell(String.format(Locale.US, "%.2f", report.total), 120.dp)
+                TableCell(String.format(Locale.US, "%.2f", report.taxable_value), 120.dp)
+                TableCell(String.format(Locale.US, "%.2f", report.igst), 100.dp)
+                TableCell(String.format(Locale.US, "%.2f", report.cgst), 100.dp)
+                TableCell(String.format(Locale.US, "%.2f", report.sgst), 100.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TableHeaderCell(text: String, width: Dp) {
+    Text(
+        text = text,
+        modifier = Modifier.width(width).padding(horizontal = 8.dp),
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+@Composable
+private fun TableCell(
+    text: String,
+    width: Dp,
+    textAlign: TextAlign = TextAlign.Start,
+    fontWeight: FontWeight = FontWeight.Normal
+) {
+    Text(
+        text = text,
+        modifier = Modifier.width(width).padding(horizontal = 8.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = textAlign,
+        fontWeight = fontWeight
+    )
 }

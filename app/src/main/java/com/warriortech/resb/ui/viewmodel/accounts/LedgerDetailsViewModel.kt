@@ -106,10 +106,10 @@ class LedgerDetailsViewModel @Inject constructor(
                 _entryNo.value = entry["entry_no"] ?: ""
                 _ledgerList.value = ledgers
                 _voucher.value = vouch
-                _ledgerDetails.value = entries.map { it.member_id }.distinct()
+                _ledgerDetails.value = entries.map { it.member_id ?: "" }.filter { it.isNotEmpty() }.distinct()
                 val data = buildList {
                     add("ALL")
-                    addAll(ledgers.map { it.group.group_nature.g_nature_name }.distinct())
+                    addAll(ledgers.map { it.group.group_nature.g_nature_name ?: "" }.filter { it.isNotEmpty() }.distinct())
                 }
                 _categories.value = data
                 _ledgerDetailsState.value = LedgerDetailsUiState.Success(ledgers, groups)
@@ -131,11 +131,6 @@ class LedgerDetailsViewModel @Inject constructor(
     }
 
     fun addLedgerDetails(entry: List<TblLedgerDetailIdRequest>) {
-//        if (entry.amount_out == 0.0 && entry.amount_in == 0.0) {
-//            _transactionState.value = TransactionUiState.Error("Amount cannot be zero.")
-//            return
-//        }
-
         viewModelScope.launch {
             try {
                 _transactionState.value = TransactionUiState.Loading
@@ -191,7 +186,7 @@ class LedgerDetailsViewModel @Inject constructor(
                     _modifyState.value = ModifyUiState.Error("Failed to load data")
                 }
             } catch (e: Exception) {
-
+                _modifyState.value = ModifyUiState.Error(e.message ?: "An unexpected error occurred")
             }
         }
     }
