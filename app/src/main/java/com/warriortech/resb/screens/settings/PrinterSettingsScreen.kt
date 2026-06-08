@@ -129,16 +129,16 @@ fun PrinterSettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
-                                selected = printerType == "BLUETOOTH",
-                                onClick = { viewModel.savePrinterType("BLUETOOTH") }
+                                selected = printerType == "BT",
+                                onClick = { viewModel.savePrinterType("BT") }
                             )
                             Text(
-                                text = "BLUETOOTH",
-                                modifier = Modifier.clickable { viewModel.savePrinterType("BLUETOOTH") }
+                                text = "BT",
+                                modifier = Modifier.clickable { viewModel.savePrinterType("BT") }
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -147,8 +147,18 @@ fun PrinterSettingsScreen(
                                 onClick = { viewModel.savePrinterType("TCP") }
                             )
                             Text(
-                                text = "TCP (Network)",
+                                text = "TCP",
                                 modifier = Modifier.clickable { viewModel.savePrinterType("TCP") }
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = printerType == "InBuilt",
+                                onClick = { viewModel.savePrinterType("InBuilt") }
+                            )
+                            Text(
+                                text = "InBuilt",
+                                modifier = Modifier.clickable { viewModel.savePrinterType("InBuilt") }
                             )
                         }
                     }

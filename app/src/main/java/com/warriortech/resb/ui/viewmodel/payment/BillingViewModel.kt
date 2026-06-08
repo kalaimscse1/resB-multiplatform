@@ -1,6 +1,7 @@
 package com.warriortech.resb.ui.viewmodel.payment
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
@@ -530,7 +531,7 @@ class BillingViewModel @Inject constructor(
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun processPayment(voucherType: String) {
+    fun processPayment(voucherType: String,context: Context) {
         val currentState = _uiState.value
         val paymentMethod = currentState.selectedPaymentMethod
         val isTendered = sessionManager.getGeneralSetting()?.is_tendered == true
@@ -649,7 +650,7 @@ class BillingViewModel @Inject constructor(
                         )
                         val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
                         if (isReceipt) {
-                            printBill(billDetails, currentState, amount, paymentMethod)
+                            printBill(billDetails, currentState, amount, paymentMethod,context)
                         } else {
                             delay(2000) // Simulate network delay
                             val transactionId = UUID.randomUUID().toString()
@@ -693,39 +694,57 @@ class BillingViewModel @Inject constructor(
         bill: Bill,
         currentState: BillingPaymentUiState,
         amount: Double,
-        paymentMethod: PaymentMethod
+        paymentMethod: PaymentMethod,
+        context: Context
     ) {
         viewModelScope.launch {
             val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
             if (isReceipt) {
                 val ip = orderRepository.getIpAddress("COUNTER")
-
-                // First try printing with local template
-                billRepository.printBillWithLocalTemplate(bill, ip).collect { result ->
+                val printResponse = billRepository.printBill(bill, ip,context)
+                printResponse.collect { result ->
                     result.fold(
-                        onSuccess = {
+                        onSuccess = { message ->
                             handlePrintSuccess(currentState, amount, paymentMethod)
                         },
-                        onFailure = { localError ->
-                            Log.e("Print", "Local template print failed, falling back to server: ${localError.message}")
-                            // Fallback to server-side print if local fails
-                            val printResponse = billRepository.printBill(bill, ip)
-                            printResponse.collect { serverResult ->
-                                serverResult.fold(
-                                    onSuccess = {
-                                        handlePrintSuccess(currentState, amount, paymentMethod)
-                                    },
-                                    onFailure = { error ->
-                                        _uiState.update { it.copy(errorMessage = "Failed to print bill: ${error.message}") }
-                                    }
-                                )
-                            }
+                        onFailure = { error ->
+                            Timber.e(error, "Failed to print bill")
                         }
                     )
                 }
             } else {
                 handlePrintSuccess(currentState, amount, paymentMethod)
             }
+//            val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
+//            if (isReceipt) {
+//                val ip = orderRepository.getIpAddress("COUNTER")
+//
+//                // First try printing with local template
+//                billRepository.printBillWithLocalTemplate(bill, ip).collect { result ->
+//                    result.fold(
+//                        onSuccess = {
+//                            handlePrintSuccess(currentState, amount, paymentMethod)
+//                        },
+//                        onFailure = { localError ->
+//                            Log.e("Print", "Local template print failed, falling back to server: ${localError.message}")
+//                            // Fallback to server-side print if local fails
+//                            val printResponse = billRepository.printBill(bill, ip)
+//                            printResponse.collect { serverResult ->
+//                                serverResult.fold(
+//                                    onSuccess = {
+//                                        handlePrintSuccess(currentState, amount, paymentMethod)
+//                                    },
+//                                    onFailure = { error ->
+//                                        _uiState.update { it.copy(errorMessage = "Failed to print bill: ${error.message}") }
+//                                    }
+//                                )
+//                            }
+//                        }
+//                    )
+//                }
+//            } else {
+//                handlePrintSuccess(currentState, amount, paymentMethod)
+//            }
         }
     }
 

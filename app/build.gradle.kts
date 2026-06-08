@@ -137,7 +137,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.logging.interceptor)
     implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
-
+    implementation(fileTree("lib") { include("*.aar", "*.jar") })
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.livedata.ktx)

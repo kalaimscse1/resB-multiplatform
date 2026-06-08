@@ -2,9 +2,11 @@ package com.warriortech.resb.data.repository
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.annotation.RequiresPermission
+import androidx.compose.ui.platform.LocalContext
 import com.warriortech.resb.model.*
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.SessionManager
@@ -16,6 +18,8 @@ import com.warriortech.resb.util.getCurrentTimeModern
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import com.senraise.printer.SrPrinter
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 class BillRepository @Inject constructor(
     private val apiService: ApiService,
@@ -329,7 +333,7 @@ class BillRepository @Inject constructor(
 
     @SuppressLint("SupportAnnotationUsage", "SuspiciousIndentation")
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun printBill(bill: Bill, ipAddress: String): Flow<Result<String>> = flow {
+    fun printBill(bill: Bill, ipAddress: String,applicationContext: Context): Flow<Result<String>> = flow {
         try {
             val response = apiService.printReceipt(bill, sessionManager.getCompanyCode() ?: "")
             if (!response.isSuccessful) return@flow emit(Result.failure(Exception("Print failed")))
@@ -393,7 +397,7 @@ class BillRepository @Inject constructor(
                 ?: return@flow emit(Result.failure(Exception("Empty print data")))
             var msg = ""
             val printerType = sessionManager.getPrinterType()
-            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null) {
+            if (printerType == "BT" && sessionManager.getBluetoothPrinter() != null) {
                 printerHelper.printViaBluetoothMac(
                     data = bytes,
                     macAddress = sessionManager.getBluetoothPrinter().toString()
@@ -406,6 +410,10 @@ class BillRepository @Inject constructor(
             else if (printerType == "TCP") {
                 printerHelper.printViaTcp(ipAddress, data = bytes) { _, m -> msg = m }
 //                printerHelper.printViaTcp(ipAddress, data = byte) { _, m -> msg = m }
+            }
+            else if (printerType == "InBuilt"){
+
+                SrPrinter.getInstance(applicationContext).printEpson(bytes)
             }
             else
                 emit(Result.failure(Exception("Printer not configured")))
@@ -425,7 +433,7 @@ class BillRepository @Inject constructor(
                 ?: return@flow emit(Result.failure(Exception("Empty print data")))
             var msg = ""
             val printerType = sessionManager.getPrinterType()
-            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null) {
+            if (printerType == "BT" && sessionManager.getBluetoothPrinter() != null) {
                 printerHelper.printViaBluetoothMac(
                     data = bytes,
                     macAddress = sessionManager.getBluetoothPrinter().toString()
@@ -434,6 +442,10 @@ class BillRepository @Inject constructor(
             else if (printerType == "TCP") {
               val res =  apiService.getIpAddresss("COUNTER",sessionManager.getCompanyCode() ?: "").body()
                 printerHelper.printViaTcp(res?.printerIpAddress?:"", data = bytes) { _, m -> msg = m }
+            }
+            else if (printerType == "InBuilt"){
+
+                printerHelper.printViaInBuilt(bytes)
             }
             else
                 emit(Result.failure(Exception("Printer not configured")))

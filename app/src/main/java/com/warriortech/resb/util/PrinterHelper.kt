@@ -28,6 +28,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
+import com.senraise.printer.SrPrinter
 
 /**
  * Helper class for handling communication with physical printer hardware.
@@ -158,16 +159,23 @@ class PrinterHelper(
     private suspend fun sendDataToPrinter(target: String, mac: String?, ipAddress: String?, data: ByteArray): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                if (target == "BLUETOOTH") {
-                    if (mac != null) {
-                        var success = false
-                        printViaBluetoothMacSync(mac, data) { s, _ -> success = s }
-                        success 
-                    } else false
-                } else if (target == "TCP" && ipAddress != null) {
-                    printViaTcpSync(ipAddress, 9100, data)
-                } else {
-                    false
+                when (target.uppercase()) {
+                    "BT" -> {
+                        if (mac != null) {
+                            var success = false
+                            printViaBluetoothMacSync(mac, data) { s, _ -> success = s }
+                            success
+                        } else false
+                    }
+                    "TCP" -> {
+                        if (ipAddress != null) {
+                            printViaTcpSync(ipAddress, 9100, data)
+                        } else false
+                    }
+                    "INBUILT" -> {
+                        printViaInBuilt(data)
+                    }
+                    else -> false
                 }
             } catch (e: Exception) {
                 false
@@ -478,5 +486,14 @@ class PrinterHelper(
         connection?.bulkTransfer(endpoint, data, data.size, 1000)
         connection?.releaseInterface(usbInterface)
         connection?.close()
+    }
+
+   fun printViaInBuilt(data: ByteArray): Boolean {
+        return try {
+            SrPrinter.getInstance(context).printEpson(data)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

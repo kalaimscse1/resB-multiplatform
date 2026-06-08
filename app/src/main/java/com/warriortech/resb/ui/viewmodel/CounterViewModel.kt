@@ -1,6 +1,8 @@
 package com.warriortech.resb.ui.viewmodel
 
+import android.content.Context
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.BillRepository
@@ -248,7 +250,7 @@ class CounterViewModel @Inject constructor(
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun cashPrintBill(tenderedAmount: Double=0.0) {
+    fun cashPrintBill(tenderedAmount: Double=0.0,context: Context) {
         viewModelScope.launch {
             if (_selectedItems.value.isEmpty()) {
 
@@ -347,7 +349,7 @@ class CounterViewModel @Inject constructor(
                                         sessionManager.getGeneralSetting()?.is_receipt ?: false
 
                                     if (isReceipt) {
-                                        printBill(billDetails, amount, payment)
+                                        printBill(billDetails, amount, payment,context)
                                         loadMenuItems()
                                     } else {
                                         loadMenuItems()
@@ -372,12 +374,12 @@ class CounterViewModel @Inject constructor(
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun printBill(bill: Bill, amount: Double, paymentMethod: PaymentMethod) {
+    fun printBill(bill: Bill, amount: Double, paymentMethod: PaymentMethod,context: Context) {
         viewModelScope.launch {
             val isReceipt = sessionManager.getGeneralSetting()?.is_receipt ?: false
             if (isReceipt) {
                 val ip = orderRepository.getIpAddress("COUNTER")
-                val printResponse = billRepository.printBill(bill, ip)
+                val printResponse = billRepository.printBill(bill, ip, context)
                 printResponse.collect { result ->
                     result.fold(
                         onSuccess = { message ->

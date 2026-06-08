@@ -2,8 +2,10 @@ package com.warriortech.resb.data.repository
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.senraise.printer.SrPrinter
 import com.warriortech.resb.model.KOTRequest
 import com.warriortech.resb.model.OrderDetails
 import com.warriortech.resb.model.OrderItem
@@ -632,7 +634,7 @@ class OrderRepository @Inject constructor(
 
     @SuppressLint("SuspiciousIndentation")
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun printKOT(orderId: KOTRequest, ipAddress: String): Flow<Result<String>> =
+    fun printKOT(orderId: KOTRequest, ipAddress: String,applicationContext: Context): Flow<Result<String>> =
         flow  { 
             try {
                 val target = sessionManager.getPrinterType()
@@ -661,6 +663,9 @@ class OrderRepository @Inject constructor(
                                 ) { _, message ->
                                     mess = message
                                 }
+                            else if (printerType =="InBuilt"){
+                                SrPrinter.getInstance(applicationContext).printEpson(printResponse.bytes())
+                            }
                             else
                                 return@flow emit(Result.failure(Exception("Printer not configured")))
                             emit(Result.success(mess))

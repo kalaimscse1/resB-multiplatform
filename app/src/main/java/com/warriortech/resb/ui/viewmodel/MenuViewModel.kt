@@ -1,6 +1,7 @@
 package com.warriortech.resb.ui.viewmodel
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.MenuItemRepository
@@ -461,7 +462,7 @@ class MenuViewModel @Inject constructor(
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun placeOrder(tableId: Long, tableStatus1: String?, deliveryBoyId: Long?) {
+    fun placeOrder(tableId: Long, tableStatus1: String?, deliveryBoyId: Long?,context: Context) {
         viewModelScope.launch {
             val currentItems =
                 if (_isExistingOrderLoaded.value) _newSelectedCartItems.value else _selectedCartItems.value
@@ -511,7 +512,7 @@ class MenuViewModel @Inject constructor(
                             paperWidth = sessionManager.getPaperWidth(),
                             kottype = if (tableStatus1 != "TAKEAWAY" && tableStatus1 != "DELIVERY") "DINE-IN" else tableStatus1.toString()
                         )
-                        printKOT(kotRequest)
+                        printKOT(kotRequest,context)
                     },
                     onFailure = { error ->
                         _orderState.value =
@@ -523,7 +524,7 @@ class MenuViewModel @Inject constructor(
     }
 
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    private fun printKOT(kotRequest: KOTRequest) {
+    private fun printKOT(kotRequest: KOTRequest,context: Context) {
         viewModelScope.launch {
             val isKOTEnabled = sessionManager.getGeneralSetting()?.is_kot ?: false
             if (isKOTEnabled) {
@@ -531,7 +532,7 @@ class MenuViewModel @Inject constructor(
                 for ((category, items) in itemsByCategory) {
                     val kotForCategory = kotRequest.copy(items = items)
                     val ip = orderRepository.getIpAddress(category)
-                    orderRepository.printKOT(kotForCategory, ip).collect { result ->
+                    orderRepository.printKOT(kotForCategory, ip,context).collect { result ->
                         result.fold(
                             onSuccess = {
                                 _orderState.value = OrderUiState.Success(

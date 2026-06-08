@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="Resb.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-05-23T07:48:34.251909100Z">
+        <DropdownSelection timestamp="2026-05-28T10:59:36.437777Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Admin\.android\avd\Medium_Tablet.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=H10P436253F0004" />
             </handle>
           </Target>
         </DropdownSelection>

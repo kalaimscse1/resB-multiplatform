@@ -1,6 +1,7 @@
 package com.warriortech.resb.ui.viewmodel.report
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.warriortech.resb.data.repository.KotRepository
@@ -265,7 +266,7 @@ class KotViewModel @Inject constructor(
 
     }
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun reprint(): ApiResponse<Boolean> {
+    fun reprint(context: Context): ApiResponse<Boolean> {
         var data = false
         var msg = ""
         viewModelScope.launch @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT) {
@@ -301,7 +302,7 @@ class KotViewModel @Inject constructor(
                         kottype= _kot.value?.order_type?:""
                     )
                     val ip = orderRepository.getIpAddress(category)
-                    orderRepository.printKOT(kotForCategory, ip).collect { result ->
+                    orderRepository.printKOT(kotForCategory, ip,context).collect { result ->
                         result.fold(
                             onSuccess = {
                                 data = true
@@ -321,7 +322,7 @@ class KotViewModel @Inject constructor(
         return ApiResponse(data = data, message = msg, success = true)
     }
     @androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    fun modify(): ApiResponse<Boolean> {
+    fun modify(context: Context): ApiResponse<Boolean> {
         var data = false
         var msg = ""
         val orderItems = _billedItems.value.entries.map { (menuItem, quantity) ->
@@ -375,7 +376,7 @@ class KotViewModel @Inject constructor(
                                     kottype= _kot.value?.order_type?:""
                                 )
                                 val ip = orderRepository.getIpAddress(category)
-                                orderRepository.printKOT(kotForCategory, ip).collect { result ->
+                                orderRepository.printKOT(kotForCategory, ip,context).collect { result ->
                                     result.fold(
                                         onSuccess = {
                                             data = true

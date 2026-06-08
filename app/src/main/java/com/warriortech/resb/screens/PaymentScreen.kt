@@ -109,6 +109,7 @@ fun PaymentScreen(
 
     var showTenderDialog by remember { mutableStateOf(false) }
     var showUpiDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadCustomers()
@@ -221,7 +222,7 @@ fun PaymentScreen(
                         showUpiDialog = true
                     } else {
                         viewModel.updateAmountToPay(uiState.totalAmount)
-                        viewModel.processPayment(voucherType = voucherType ?: "BILL")
+                        viewModel.processPayment(voucherType = voucherType ?: "BILL",context)
                     }
                 },
                 customer = customers.find { it.customer_id == customer?.customer_id },
@@ -378,7 +379,7 @@ fun PaymentScreen(
                 showTenderDialog = false
                 viewModel.updateAmountReceived(received)
                 viewModel.updateAmountToPay(uiState.totalAmount)
-                viewModel.processPayment(voucherType = voucherType ?: "BILL")
+                viewModel.processPayment(voucherType = voucherType ?: "BILL",context)
             },
             onDismiss = { showTenderDialog = false }
         )

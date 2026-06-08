@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -80,7 +81,7 @@ fun ItemWiseBillScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-
+    val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
     var showBillDialog by remember { mutableStateOf(false) }
     var showTenderDialog by remember { mutableStateOf(false) }
@@ -185,7 +186,7 @@ fun ItemWiseBillScreen(
                                     } else {
                                         scope.launch {
                                             isProcessingCash = true
-                                            viewModel.cashPrintBill()
+                                            viewModel.cashPrintBill(context = context)
                                             success = true
                                             delay(1500)
                                             success = false
@@ -500,7 +501,7 @@ fun ItemWiseBillScreen(
                     showTenderDialog = false
                     scope.launch {
                         isProcessingCash = true
-                        viewModel.cashPrintBill(received) // Assuming VM can handle this or you might need a new method for tendered amount
+                        viewModel.cashPrintBill(received,context) // Assuming VM can handle this or you might need a new method for tendered amount
                         success = true
                         delay(1500)
                         success = false

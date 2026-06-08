@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -74,6 +75,7 @@ import java.util.Locale
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterial3Api::class)
+@androidx.annotation.RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
 @Composable
 fun KotModifyScreen(
     navController: NavHostController,
@@ -90,6 +92,7 @@ fun KotModifyScreen(
     var values by remember { mutableStateOf<PaddingValues>(PaddingValues(0.dp)) }
     var msg by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(orderMasterId, kotResponse) {
         when {
@@ -134,7 +137,7 @@ fun KotModifyScreen(
             ) {
                 Button(
                     onClick = {
-                        val res = viewModel.reprint()
+                        val res = viewModel.reprint(context)
                         if (res.data == true) {
                             success = true
                             msg = res.message
@@ -156,8 +159,8 @@ fun KotModifyScreen(
                 if (status?.order_status == "RUNNING") {
                     Button(
                         onClick = {
-                            scope.launch {
-                                val res = viewModel.modify()
+                            scope.launch  {
+                                val res = viewModel.modify(context)
                                 if (res.data == true) {
                                     success = true
                                     msg = res.message

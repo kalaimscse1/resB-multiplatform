@@ -248,7 +248,7 @@ fun PaidBillsScreen(
                                         navController.navigate("bill_edit/${bill.bill_no}")
                                     }
                                 },
-                                onPrint = { viewModel.printBill(it) }
+                                onPrint = { viewModel.printBill(it,context) }
                             )
                         } else {
                             // Card View for mobile screens
@@ -269,7 +269,7 @@ fun PaidBillsScreen(
                                             }
                                         },
                                         onDeleteClick = { billToDelete = bill; showDeleteDialog = true },
-                                        onPrintClick = { viewModel.printBill(it) },
+                                        onPrintClick = { viewModel.printBill(it,context) },
                                         onWhatsappClick = {  viewModel.sendBillViaWhatsApp(it, context) }
                                     )
                                 }

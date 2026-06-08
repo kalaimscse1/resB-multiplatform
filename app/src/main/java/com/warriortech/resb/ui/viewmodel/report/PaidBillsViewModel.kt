@@ -431,7 +431,7 @@ class PaidBillsViewModel @Inject constructor(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun printBill(billNo: String) {
+    fun printBill(billNo: String,context: Context) {
         viewModelScope.launch {
             try {
                 // Implement print logic here
@@ -491,7 +491,7 @@ class PaidBillsViewModel @Inject constructor(
                 )
 
                 val ip = orderRepository.getIpAddress("COUNTER")
-                val printResponse = billRepository.printBill(billDetails, ip)
+                val printResponse = billRepository.printBill(billDetails, ip,context)
                 printResponse.collect { result ->
                     result.fold(
                         onSuccess = { message ->

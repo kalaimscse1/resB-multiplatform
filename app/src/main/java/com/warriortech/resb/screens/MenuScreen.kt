@@ -38,6 +38,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -115,7 +116,7 @@ fun MenuScreen(
     var sucess by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var alert by remember { mutableStateOf(false) }
-    
+    val context = LocalContext.current
     var showQtyInputDialog by remember { mutableStateOf(false) }
 
     val effectiveStatus = remember(isTakeaway, tableStatusFromVM) {
@@ -163,7 +164,7 @@ fun MenuScreen(
                 effectiveStatus.toString()
             ) else viewModel.getOrderTotal(effectiveStatus.toString()),
             onConfirm = {
-                viewModel.placeOrder(tableId, effectiveStatus, 5)
+                viewModel.placeOrder(tableId, effectiveStatus, 5,context)
                 showConfirmDialog = false
             },
             onDismiss = { showConfirmDialog = false },
