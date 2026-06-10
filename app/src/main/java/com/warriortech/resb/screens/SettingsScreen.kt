@@ -123,6 +123,7 @@ fun SettingsMainScreen(
                 SettingsModule.Counter,
                 SettingsModule.Language,
                 SettingsModule.PrinterSetting,
+                SettingsModule.UsbPrinter,
                 SettingsModule.AddOn,
                 SettingsModule.ChangePassword,
 //            SettingsModule.Support,
@@ -154,6 +155,7 @@ fun SettingsMainScreen(
                 SettingsModule.KitchenCategory,
                 SettingsModule.VoucherType,
                 SettingsModule.Language,
+                SettingsModule.UsbPrinter,
                 SettingsModule.ChangePassword,
 //                SettingsModule.Support,
                 SettingsModule.ResetData,
@@ -278,6 +280,10 @@ fun SettingsModuleScreen(
 
         is SettingsModule.Print -> {
             navController.navigate("print_settings")
+        }
+
+        is SettingsModule.UsbPrinter -> {
+            navController.navigate("usb_printer_setting")
         }
 
         is SettingsModule.Tax -> {
@@ -435,6 +441,14 @@ sealed class SettingsModule(
         "Manage Print Customization",
         Icons.Default.Print,
         listOf("name", "phone", "email", "address")
+    )
+
+    object UsbPrinter : SettingsModule(
+        "usb_printer",
+        "USB Printer",
+        "Connect and configure USB thermal printers via OTG",
+        Icons.Default.Usb,
+        listOf("device")
     )
 
     object Staff : SettingsModule(

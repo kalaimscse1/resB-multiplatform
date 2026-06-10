@@ -160,7 +160,7 @@ class PrinterHelper(
         return withContext(Dispatchers.IO) {
             try {
                 when (target.uppercase()) {
-                    "BT" -> {
+                    "BT", "BLUETOOTH" -> {
                         if (mac != null) {
                             var success = false
                             printViaBluetoothMacSync(mac, data) { s, _ -> success = s }
@@ -172,7 +172,11 @@ class PrinterHelper(
                             printViaTcpSync(ipAddress, 9100, data)
                         } else false
                     }
-                    "INBUILT" -> {
+                    "USB" -> {
+                        // Auto-detect connected USB printer — no UsbDevice arg needed
+                        printViaUsbSync(context, data)
+                    }
+                    "INBUILT", "POS" -> {
                         printViaInBuilt(data)
                     }
                     else -> false
@@ -475,6 +479,9 @@ class PrinterHelper(
         }
     }
 
+    /**
+     * Print to a specific USB device (existing API — unchanged).
+     */
     @SuppressLint("ServiceCast")
     fun printViaUsb(context: Context, usbDevice: UsbDevice, data: ByteArray) {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -488,7 +495,76 @@ class PrinterHelper(
         connection?.close()
     }
 
-   fun printViaInBuilt(data: ByteArray): Boolean {
+    /**
+     * Auto-detect the first connected USB printer and send data.
+     * Called by repositories with (context, bytes) — no UsbDevice required.
+     * Returns true if data was sent successfully.
+     */
+    @SuppressLint("ServiceCast")
+    fun printViaUsb(context: Context, data: ByteArray): Boolean {
+        return printViaUsbSync(context, data)
+    }
+
+    /**
+     * Blocking USB auto-detect print. Finds the first device that has a bulk-OUT
+     * endpoint (standard for ESC/POS thermal printers) and sends the data.
+     */
+    @SuppressLint("ServiceCast")
+    private fun printViaUsbSync(context: Context, data: ByteArray): Boolean {
+        val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        val deviceList = usbManager.deviceList
+
+        if (deviceList.isEmpty()) return false
+
+        for ((_, device) in deviceList) {
+            for (i in 0 until device.interfaceCount) {
+                val usbInterface = device.getInterface(i)
+                // Look for a bulk-OUT endpoint (typical for thermal printers)
+                for (j in 0 until usbInterface.endpointCount) {
+                    val ep = usbInterface.getEndpoint(j)
+                    if (ep.type == android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK &&
+                        ep.direction == android.hardware.usb.UsbConstants.USB_DIR_OUT
+                    ) {
+                        if (!usbManager.hasPermission(device)) continue
+                        val connection = usbManager.openDevice(device) ?: continue
+                        return try {
+                            connection.claimInterface(usbInterface, true)
+                            val transferred = connection.bulkTransfer(ep, data, data.size, 3000)
+                            connection.releaseInterface(usbInterface)
+                            transferred >= 0
+                        } catch (_: Exception) {
+                            false
+                        } finally {
+                            connection.close()
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    /**
+     * Request USB permission for all connected devices that look like printers.
+     * Call this from the UI layer on startup or from the settings screen.
+     */
+    @SuppressLint("ServiceCast")
+    fun requestUsbPermissionsIfNeeded(context: Context) {
+        val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        val intent = android.app.PendingIntent.getBroadcast(
+            context,
+            0,
+            android.content.Intent("com.warriortech.resb.USB_PERMISSION"),
+            android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        for ((_, device) in usbManager.deviceList) {
+            if (!usbManager.hasPermission(device)) {
+                usbManager.requestPermission(device, intent)
+            }
+        }
+    }
+
+    fun printViaInBuilt(data: ByteArray): Boolean {
         return try {
             SrPrinter.getInstance(context).printEpson(data)
             true

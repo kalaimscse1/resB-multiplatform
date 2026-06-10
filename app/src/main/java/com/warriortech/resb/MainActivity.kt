@@ -386,6 +386,10 @@ fun AppNavigation(
         composable("print_settings") {
             PrintSettingsScreen(onBackPressed = { navController.popBackStack() })
         }
+
+        composable("usb_printer_setting") {
+            UsbPrinterSettingsScreen(onBackPressed = { navController.popBackStack() })
+        }
         composable("payment_screen/{amountToPayFromRoute}/{orderId}/{bill_no}/{customerId}/{voucherType}") { entry ->
             PaymentScreen(
                 navController = navController,
