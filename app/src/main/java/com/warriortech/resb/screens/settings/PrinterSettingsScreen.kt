@@ -153,14 +153,25 @@ fun PrinterSettingsScreen(
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
-                                selected = printerType == "InBuilt",
-                                onClick = { viewModel.savePrinterType("InBuilt") }
+                                selected = printerType == "POS",
+                                onClick = { viewModel.savePrinterType("POS") }
                             )
                             Text(
-                                text = "InBuilt",
-                                modifier = Modifier.clickable { viewModel.savePrinterType("InBuilt") }
+                                text = "POS",
+                                modifier = Modifier.clickable { viewModel.savePrinterType("POS") }
                             )
                         }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = printerType == "USB",
+                                onClick = { viewModel.savePrinterType("USB") }
+                            )
+                            Text(
+                                text = "USB",
+                                modifier = Modifier.clickable { viewModel.savePrinterType("USB") }
+                            )
+                        }
+
                     }
                 }
             }

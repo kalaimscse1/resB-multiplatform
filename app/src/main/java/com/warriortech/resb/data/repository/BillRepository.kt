@@ -411,9 +411,12 @@ class BillRepository @Inject constructor(
                 printerHelper.printViaTcp(ipAddress, data = bytes) { _, m -> msg = m }
 //                printerHelper.printViaTcp(ipAddress, data = byte) { _, m -> msg = m }
             }
-            else if (printerType == "InBuilt"){
+            else if (printerType == "POS"){
 
                 SrPrinter.getInstance(applicationContext).printEpson(bytes)
+            }
+            else if (printerType == "USB"){
+                printerHelper.printViaUsb(applicationContext,bytes)
             }
             else
                 emit(Result.failure(Exception("Printer not configured")))

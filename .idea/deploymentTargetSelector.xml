@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="Resb.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-05-28T10:59:36.437777Z">
+        <DropdownSelection timestamp="2026-06-10T12:37:28.557484200Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=H10P436253F0004" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=QOLRDY9P8LNNJVQK" />
             </handle>
           </Target>
         </DropdownSelection>

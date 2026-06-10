@@ -663,8 +663,10 @@ class OrderRepository @Inject constructor(
                                 ) { _, message ->
                                     mess = message
                                 }
-                            else if (printerType =="InBuilt"){
+                            else if (printerType =="POS"){
                                 SrPrinter.getInstance(applicationContext).printEpson(printResponse.bytes())
+                            }else if (printerType =="USB"){
+                                printerHelper.printViaUsb(applicationContext,printResponse.bytes())
                             }
                             else
                                 return@flow emit(Result.failure(Exception("Printer not configured")))
