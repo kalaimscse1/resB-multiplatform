@@ -665,8 +665,10 @@ class OrderRepository @Inject constructor(
                                 }
                             else if (printerType =="POS"){
                                 SrPrinter.getInstance(applicationContext).printEpson(printResponse.bytes())
-                            }else if (printerType =="USB"){
-                                printerHelper.printViaUsb(applicationContext,printResponse.bytes())
+                            } else if (printerType == "USB") {
+                                val usbSuccess = printerHelper.printViaUsb(applicationContext, printResponse.bytes())
+                                if (!usbSuccess) return@flow emit(Result.failure(Exception("USB print failed — check USB connection and grant permission in USB Printer settings")))
+                                mess = "✅ USB print successful"
                             }
                             else
                                 return@flow emit(Result.failure(Exception("Printer not configured")))

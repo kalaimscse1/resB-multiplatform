@@ -416,7 +416,9 @@ class BillRepository @Inject constructor(
                 SrPrinter.getInstance(applicationContext).printEpson(bytes)
             }
             else if (printerType == "USB"){
-                printerHelper.printViaUsb(applicationContext,bytes)
+                val usbSuccess = printerHelper.printViaUsb(applicationContext, bytes)
+                if (!usbSuccess) return@flow emit(Result.failure(Exception("USB print failed — check USB connection and grant permission in USB Printer settings")))
+                msg = "✅ USB print successful"
             }
             else
                 emit(Result.failure(Exception("Printer not configured")))

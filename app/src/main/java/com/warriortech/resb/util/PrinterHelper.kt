@@ -480,19 +480,37 @@ class PrinterHelper(
     }
 
     /**
-     * Print to a specific USB device (existing API — unchanged).
+     * Print to a specific USB device (existing API — scans for correct bulk-OUT endpoint).
      */
     @SuppressLint("ServiceCast")
     fun printViaUsb(context: Context, usbDevice: UsbDevice, data: ByteArray) {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
-        val usbInterface = usbDevice.getInterface(0)
-        val endpoint = usbInterface.getEndpoint(0)
-        val connection = usbManager.openDevice(usbDevice)
-
-        connection?.claimInterface(usbInterface, true)
-        connection?.bulkTransfer(endpoint, data, data.size, 1000)
-        connection?.releaseInterface(usbInterface)
-        connection?.close()
+        if (!usbManager.hasPermission(usbDevice)) {
+            requestUsbPermissionsIfNeeded(context)
+            return
+        }
+        for (i in 0 until usbDevice.interfaceCount) {
+            val usbInterface = usbDevice.getInterface(i)
+            for (j in 0 until usbInterface.endpointCount) {
+                val ep = usbInterface.getEndpoint(j)
+                if (ep.type == android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK &&
+                    ep.direction == android.hardware.usb.UsbConstants.USB_DIR_OUT
+                ) {
+                    val connection = usbManager.openDevice(usbDevice) ?: return
+                    var claimed = false
+                    try {
+                        connection.claimInterface(usbInterface, true)
+                        claimed = true
+                        connection.bulkTransfer(ep, data, data.size, 3000)
+                    } catch (_: Exception) {
+                    } finally {
+                        if (claimed) try { connection.releaseInterface(usbInterface) } catch (_: Exception) {}
+                        connection.close()
+                    }
+                    return
+                }
+            }
+        }
     }
 
     /**
@@ -508,6 +526,7 @@ class PrinterHelper(
     /**
      * Blocking USB auto-detect print. Finds the first device that has a bulk-OUT
      * endpoint (standard for ESC/POS thermal printers) and sends the data.
+     * If a printer-like device is found but has no permission, requests it automatically.
      */
     @SuppressLint("ServiceCast")
     private fun printViaUsbSync(context: Context, data: ByteArray): Boolean {
@@ -516,30 +535,39 @@ class PrinterHelper(
 
         if (deviceList.isEmpty()) return false
 
+        var foundPrinterWithoutPermission = false
         for ((_, device) in deviceList) {
             for (i in 0 until device.interfaceCount) {
                 val usbInterface = device.getInterface(i)
-                // Look for a bulk-OUT endpoint (typical for thermal printers)
                 for (j in 0 until usbInterface.endpointCount) {
                     val ep = usbInterface.getEndpoint(j)
                     if (ep.type == android.hardware.usb.UsbConstants.USB_ENDPOINT_XFER_BULK &&
                         ep.direction == android.hardware.usb.UsbConstants.USB_DIR_OUT
                     ) {
-                        if (!usbManager.hasPermission(device)) continue
+                        if (!usbManager.hasPermission(device)) {
+                            foundPrinterWithoutPermission = true
+                            continue
+                        }
                         val connection = usbManager.openDevice(device) ?: continue
+                        var claimed = false
                         return try {
                             connection.claimInterface(usbInterface, true)
+                            claimed = true
                             val transferred = connection.bulkTransfer(ep, data, data.size, 3000)
-                            connection.releaseInterface(usbInterface)
                             transferred >= 0
                         } catch (_: Exception) {
                             false
                         } finally {
+                            if (claimed) try { connection.releaseInterface(usbInterface) } catch (_: Exception) {}
                             connection.close()
                         }
                     }
                 }
             }
+        }
+
+        if (foundPrinterWithoutPermission) {
+            requestUsbPermissionsIfNeeded(context)
         }
         return false
     }
