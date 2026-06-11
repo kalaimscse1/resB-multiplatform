@@ -651,7 +651,7 @@ class OrderRepository @Inject constructor(
                         var mess = ""
                         if (printResponse != null) {
                             val printerType = sessionManager.getPrinterType()
-                            if (printerType == "BLUETOOTH" && sessionManager.getBluetoothPrinter() != null)
+                            if (printerType == "BT" && sessionManager.getBluetoothPrinter() != null)
                                 printerHelper.printViaBluetoothMac(
                                     data = printResponse.bytes(),
                                     macAddress =  sessionManager.getBluetoothPrinter().toString()
