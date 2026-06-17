@@ -151,7 +151,7 @@ fun UpiTypeItem(
     isGrid: Boolean = false
 ) {
     Card(
-        modifier = if (isGrid) Modifier.height(110.dp) else Modifier.fillMaxWidth(),
+        modifier = if (isGrid) Modifier.height(130.dp) else Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

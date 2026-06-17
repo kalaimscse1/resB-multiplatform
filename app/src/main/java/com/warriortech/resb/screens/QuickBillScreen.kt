@@ -88,7 +88,7 @@ fun QuickBillScreen(
         scope.launch {
             if (isOrderPlaced && orderDetailsResponse1.isNotEmpty()) {
 //                delay(2000)
-                navController.navigate("payment_screen/${uiState.totalAmount}/${uiState.orderMasterId}/${"--"}/${0L}/${" "}") {
+                navController.navigate("payment_screen/${uiState.totalAmount}/${orderId}/${"--"}/${0L}/${" "}") {
                     launchSingleTop = true
                     restoreState = true
                 }

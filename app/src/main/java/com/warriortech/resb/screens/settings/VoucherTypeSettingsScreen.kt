@@ -232,7 +232,7 @@ fun VoucherTypeCard(
     isGrid: Boolean = false
 ) {
     MobileOptimizedCard(
-        modifier = if (isGrid) Modifier.height(110.dp) else Modifier.fillMaxWidth()
+        modifier = if (isGrid) Modifier.height(130.dp) else Modifier.fillMaxWidth()
     ) {
         if (isGrid) {
             Column(
