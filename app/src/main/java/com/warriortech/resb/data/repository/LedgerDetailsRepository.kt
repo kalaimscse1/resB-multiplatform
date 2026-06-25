@@ -97,7 +97,7 @@ class LedgerDetailsRepository @Inject constructor(
 
     suspend fun getLedgerDetailsById(ledgerId:Long,fromDate: String,toDate: String) : List<TblLedgerDetailsIdResponse>{
         return try {
-            apiService.getByPartyId(
+            apiService.getByLedgerId(
                 ledgerId,
                 sessionManager.getCompanyCode()?:"",
                 fromDate,
