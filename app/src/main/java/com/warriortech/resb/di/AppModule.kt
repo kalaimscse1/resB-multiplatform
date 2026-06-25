@@ -145,7 +145,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideNotifocationHelper(@ApplicationContext context: Context): NotificationHelper {
+    fun provideNotificationHelper(@ApplicationContext context: Context): NotificationHelper {
         return NotificationHelper(context)
     }
 
