@@ -561,28 +561,30 @@ fun MenuScreen(
                 }
             }
 
-            // Right-side Numeric Column
-            Column(
-                modifier = Modifier
-                    .width(64.dp)
-                    .fillMaxHeight()
-                    .border(1.dp, Color.LightGray),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Top)
-            ) {
-                Spacer(modifier = Modifier.height(4.dp))
-                listOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "").forEach { key ->
-                    KeypadButton(text = key) {
-                        activeCartItem?.let { cartKey ->
-                            when (key) {
-                                "." -> showQtyInputDialog = true
-                                "0" -> {
-                                    viewModel.updateItemQuantity(cartKey, 0)
+            // Right-side Numeric Column — hidden when counter-style (+/-) mode is active
+            if (qtyChangeSetting) {
+                Column(
+                    modifier = Modifier
+                        .width(64.dp)
+                        .fillMaxHeight()
+                        .border(1.dp, Color.LightGray),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Top)
+                ) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    listOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "").forEach { key ->
+                        KeypadButton(text = key) {
+                            activeCartItem?.let { cartKey ->
+                                when (key) {
+                                    "." -> showQtyInputDialog = true
+                                    "0" -> {
+                                        viewModel.updateItemQuantity(cartKey, 0)
+                                    }
+                                    in "1".."9" -> {
+                                        viewModel.updateItemQuantity(cartKey, key.toInt())
+                                    }
+                                    else -> {}
                                 }
-                                in "1".."9" -> {
-                                    viewModel.updateItemQuantity(cartKey, key.toInt())
-                                }
-                                else -> {}
                             }
                         }
                     }
