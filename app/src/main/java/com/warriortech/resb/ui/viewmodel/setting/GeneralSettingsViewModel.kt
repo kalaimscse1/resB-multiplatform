@@ -22,6 +22,14 @@ class GeneralSettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private val _qtyChangeSetting = MutableStateFlow(sessionManager.getQtyChangeSetting())
+    val qtyChangeSetting: StateFlow<Boolean> = _qtyChangeSetting.asStateFlow()
+
+    fun setQtyChangeSetting(enabled: Boolean) {
+        sessionManager.saveQtyChangeSetting(enabled)
+        _qtyChangeSetting.value = enabled
+    }
+
     sealed class UiState {
         object Loading : UiState()
         data class Success(val generalSettings: List<GeneralSettings>) : UiState()

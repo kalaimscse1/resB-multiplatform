@@ -38,6 +38,8 @@ fun GeneralSettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val qtyChangeSetting by viewModel.qtyChangeSetting.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         viewModel.loadSettings()
     }
@@ -73,6 +75,37 @@ fun GeneralSettingsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Menu Qty Change Style",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = if (qtyChangeSetting) "Tap-to-select with keypad" else "Inline +/- buttons",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = qtyChangeSetting,
+                        onCheckedChange = { viewModel.setQtyChangeSetting(it) }
+                    )
+                }
+            }
+
             when (val state = uiState) {
                 is GeneralSettingsViewModel.UiState.Loading -> {
                     Box(

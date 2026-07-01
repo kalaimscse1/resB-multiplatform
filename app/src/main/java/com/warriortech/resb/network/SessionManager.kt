@@ -36,6 +36,7 @@ class SessionManager @Inject constructor(
         private const val KEY_PAPER_WIDTH = "paper_width" // 58 or 80
         private const val KEY_BASE_URL = "base_url"
         private const val DEFAULT_BASE_URL = "http://72.61.172.248:5050/api/"
+        private const val KEY_QTY_CHANGE_SETTING = "qty_change_setting"
     }
 
     private lateinit var prefs: SharedPreferences
@@ -266,6 +267,16 @@ class SessionManager @Inject constructor(
     /**
      * Save base URL
      */
+    fun saveQtyChangeSetting(enabled: Boolean) {
+        checkInitialization()
+        prefs.edit { putBoolean(KEY_QTY_CHANGE_SETTING, enabled) }
+    }
+
+    fun getQtyChangeSetting(): Boolean {
+        checkInitialization()
+        return prefs.getBoolean(KEY_QTY_CHANGE_SETTING, true)
+    }
+
     fun saveBaseUrl(url: String) {
         checkInitialization()
         prefs.edit { putString(KEY_BASE_URL, url) }

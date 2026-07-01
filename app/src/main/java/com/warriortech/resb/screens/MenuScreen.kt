@@ -60,6 +60,11 @@ import com.warriortech.resb.ui.theme.BluePrimary
 import com.warriortech.resb.util.AnimatedSnackbarDemo
 import com.warriortech.resb.util.CurrencySettings
 import com.warriortech.resb.util.SuccessDialog
+import com.warriortech.resb.util.getDeviceInfo
+import com.warriortech.resb.ui.theme.ErrorRed
+import com.warriortech.resb.ui.theme.DarkGreen
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 
 private val DeepBlue = PrimaryGreen
@@ -118,6 +123,7 @@ fun MenuScreen(
     var alert by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var showQtyInputDialog by remember { mutableStateOf(false) }
+    val qtyChangeSetting = remember { sessionManager.getQtyChangeSetting() }
 
     val effectiveStatus = remember(isTakeaway, tableStatusFromVM) {
         when (isTakeaway) {
@@ -501,29 +507,45 @@ fun MenuScreen(
                                 filteredMenuItems,
                                 key = { _, item -> item.menu_item_id }
                             ) { _, menuItem ->
-                                MenuItemCard(
-                                    menuItem = menuItem,
-                                    qtyWithoutModifiers = if (isExistingOrderLoaded) newSelectedWithoutModifiers[menuItem.menu_item_id] ?: 0 else selectedWithoutModifiers[menuItem.menu_item_id] ?: 0,
-                                    qtyWithModifiers = if (isExistingOrderLoaded) newSelectedWithModifiers[menuItem.menu_item_id] ?: 0 else selectedWithModifiers[menuItem.menu_item_id] ?: 0,
-                                    existingQuantity = if (isExistingOrderLoaded) selectedItems[menuItem] ?: 0 else 0,
-                                    modifiers = selectedModifiers[menuItem.menu_item_id] ?: emptyList(),
-                                    onAddItem = {
-                                        viewModel.addItemToOrder(menuItem)
-                                    },
-                                    onRemoveItem = {
-                                        viewModel.removeItemFromOrder(menuItem)
-                                    },
-                                    tableStatus = effectiveStatus.toString(),
-                                    isExistingOrder = isExistingOrderLoaded,
-                                    onModifierClick = { viewModel.showModifierDialog(menuItem) },
-                                    isSelected = activeCartItem?.menuItem == menuItem,
-                                    onSelect = { 
-                                        viewModel.setActiveItem(menuItem)
-                                    },
-                                    backgroundColor = Color.White,
-                                    contentColor = if (activeCartItem?.menuItem == menuItem) DeepBlue.copy(alpha = 0.1f) else Color.White,
-                                    textColor = DeepBlue
-                                )
+                                if (qtyChangeSetting) {
+                                    MenuItemCard(
+                                        menuItem = menuItem,
+                                        qtyWithoutModifiers = if (isExistingOrderLoaded) newSelectedWithoutModifiers[menuItem.menu_item_id] ?: 0 else selectedWithoutModifiers[menuItem.menu_item_id] ?: 0,
+                                        qtyWithModifiers = if (isExistingOrderLoaded) newSelectedWithModifiers[menuItem.menu_item_id] ?: 0 else selectedWithModifiers[menuItem.menu_item_id] ?: 0,
+                                        existingQuantity = if (isExistingOrderLoaded) selectedItems[menuItem] ?: 0 else 0,
+                                        modifiers = selectedModifiers[menuItem.menu_item_id] ?: emptyList(),
+                                        onAddItem = {
+                                            viewModel.addItemToOrder(menuItem)
+                                        },
+                                        onRemoveItem = {
+                                            viewModel.removeItemFromOrder(menuItem)
+                                        },
+                                        tableStatus = effectiveStatus.toString(),
+                                        isExistingOrder = isExistingOrderLoaded,
+                                        onModifierClick = { viewModel.showModifierDialog(menuItem) },
+                                        isSelected = activeCartItem?.menuItem == menuItem,
+                                        onSelect = {
+                                            viewModel.setActiveItem(menuItem)
+                                        },
+                                        backgroundColor = Color.White,
+                                        contentColor = if (activeCartItem?.menuItem == menuItem) DeepBlue.copy(alpha = 0.1f) else Color.White,
+                                        textColor = DeepBlue
+                                    )
+                                } else {
+                                    val totalQty = (if (isExistingOrderLoaded) newSelectedWithoutModifiers[menuItem.menu_item_id] ?: 0 else selectedWithoutModifiers[menuItem.menu_item_id] ?: 0) +
+                                        (if (isExistingOrderLoaded) newSelectedWithModifiers[menuItem.menu_item_id] ?: 0 else selectedWithModifiers[menuItem.menu_item_id] ?: 0)
+                                    MenuCounterStyleCard(
+                                        menuItem = menuItem,
+                                        quantity = totalQty,
+                                        tableStatus = effectiveStatus.toString(),
+                                        onAddItem = { viewModel.addItemToOrder(menuItem) },
+                                        onRemoveItem = { viewModel.removeItemFromOrder(menuItem) },
+                                        onModifierClick = { viewModel.showModifierDialog(menuItem) },
+                                        backgroundColor = Color.White,
+                                        contentColor = Color.White,
+                                        textColor = DeepBlue
+                                    )
+                                }
                             }
                         }
                     }
@@ -1047,4 +1069,174 @@ fun BillAlertDialog(
             }
         }
     )
+}
+
+@Composable
+fun MenuCounterStyleCard(
+    menuItem: TblMenuItemResponse,
+    quantity: Int,
+    tableStatus: String,
+    onAddItem: () -> Unit,
+    onRemoveItem: () -> Unit,
+    onModifierClick: () -> Unit,
+    backgroundColor: Color,
+    contentColor: Color,
+    textColor: Color
+) {
+    val deviceInfo = getDeviceInfo()
+    val cornerRadius = if (deviceInfo.isTablet) 24.dp else 20.dp
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(2.dp, backgroundColor, RoundedCornerShape(cornerRadius)),
+        shape = RoundedCornerShape(cornerRadius),
+        colors = CardDefaults.cardColors(containerColor = contentColor)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = menuItem.menu_item_name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = textColor,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (menuItem.is_available == "YES") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = when (tableStatus) {
+                                "AC" -> CurrencySettings.format(menuItem.ac_rate)
+                                "TAKEAWAY", "DELIVERY" -> CurrencySettings.format(menuItem.parcel_rate)
+                                else -> CurrencySettings.format(menuItem.rate)
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
+                        )
+                        Spacer(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .border(1.dp, ErrorRed, RoundedCornerShape(4.dp))
+                                .pointerInput(Unit) { detectTapGestures { onRemoveItem() } },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Text(
+                                "-",
+                                color = ErrorRed,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.padding(horizontal = 2.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    RoundedCornerShape(4.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Text(
+                                text = quantity.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                        }
+                        Spacer(modifier = Modifier.padding(horizontal = 2.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .border(1.dp, DarkGreen, RoundedCornerShape(4.dp))
+                                .pointerInput(Unit) { detectTapGestures { onAddItem() } },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Text(
+                                "+",
+                                color = DarkGreen,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .border(1.dp, BluePrimary, RoundedCornerShape(4.dp))
+                                .pointerInput(Unit) { detectTapGestures(onTap = { onModifierClick() }) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Text(
+                                "A",
+                                color = DarkGreen,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else {
+                    androidx.compose.material3.Text(
+                        text = "Not Available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            AnimatedVisibility(visible = quantity > 0) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ModernDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = "$quantity × ${CurrencySettings.format(
+                                when (tableStatus) {
+                                    "AC" -> menuItem.ac_rate
+                                    "TAKEAWAY", "DELIVERY" -> menuItem.parcel_rate
+                                    else -> menuItem.rate
+                                }
+                            )}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = textColor
+                        )
+                        androidx.compose.material3.Text(
+                            text = CurrencySettings.format(
+                                quantity * when (tableStatus) {
+                                    "AC" -> menuItem.ac_rate
+                                    "TAKEAWAY", "DELIVERY" -> menuItem.parcel_rate
+                                    else -> menuItem.rate
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
