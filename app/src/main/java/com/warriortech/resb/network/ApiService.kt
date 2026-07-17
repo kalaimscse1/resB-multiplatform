@@ -597,6 +597,21 @@ interface ApiService {
     ): Response<RestaurantProfile>
 
     /**
+     * Branch Management
+     */
+
+    @POST("branch/create")
+    suspend fun createBranch(
+        @Body branch: TblBranchRequest,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<TblBranchResponse>
+
+    @GET("branch/getBranchCode")
+    suspend fun getBranchCode(
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<Map<String, String>>
+
+    /**
      * GeneralSettings Management
      */
 

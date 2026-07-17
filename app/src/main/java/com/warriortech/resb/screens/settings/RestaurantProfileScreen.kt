@@ -7,7 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,6 +39,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.warriortech.resb.R
 import com.warriortech.resb.model.RestaurantProfile
+import com.warriortech.resb.model.TblBranchRequest
 import com.warriortech.resb.network.ApiService
 import com.warriortech.resb.network.RetrofitClient
 import com.warriortech.resb.network.SessionManager
@@ -58,12 +64,34 @@ fun RestaurantProfileScreen(
     navController: NavHostController
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val branchState by viewModel.branchState.collectAsStateWithLifecycle()
+    val suggestedBranchCode by viewModel.suggestedBranchCode.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    var showAddBranchDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadProfile()
     }
+
+    // React to branch creation result
+    LaunchedEffect(branchState) {
+        when (val state = branchState) {
+            is RestaurantProfileViewModel.BranchState.Success -> {
+                Toast.makeText(context, "Branch created successfully", Toast.LENGTH_SHORT).show()
+                showAddBranchDialog = false
+                viewModel.resetBranchState()
+            }
+            is RestaurantProfileViewModel.BranchState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                viewModel.resetBranchState()
+            }
+            else -> {}
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -78,6 +106,18 @@ fun RestaurantProfileScreen(
                         Icon(
                             Icons.Default.ArrowBack,
                             contentDescription = stringResource(R.string.back),
+                            tint = SurfaceLight
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        viewModel.fetchBranchCode()
+                        showAddBranchDialog = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Branch",
                             tint = SurfaceLight
                         )
                     }
@@ -122,7 +162,6 @@ fun RestaurantProfileScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
-
                     }
                 }
 
@@ -131,9 +170,7 @@ fun RestaurantProfileScreen(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
-
                     ) {
-
                         Text(
                             text = "Error: ${state.message}",
                             color = MaterialTheme.colorScheme.error
@@ -147,9 +184,337 @@ fun RestaurantProfileScreen(
                     }
                 }
             }
+        }
 
+        if (showAddBranchDialog) {
+            AddBranchDialog(
+                suggestedBranchCode = suggestedBranchCode,
+                companyMasterCode = sessionManager.getCompanyCode() ?: "",
+                isLoading = branchState is RestaurantProfileViewModel.BranchState.Loading,
+                onDismiss = {
+                    showAddBranchDialog = false
+                    viewModel.resetBranchState()
+                },
+                onConfirm = { branchRequest ->
+                    viewModel.createBranch(branchRequest)
+                }
+            )
         }
     }
+}
+
+@Composable
+fun AddBranchDialog(
+    suggestedBranchCode: String,
+    companyMasterCode: String,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (TblBranchRequest) -> Unit
+) {
+    var branchCode by remember(suggestedBranchCode) { mutableStateOf(suggestedBranchCode) }
+    var companyName by remember { mutableStateOf("") }
+    var ownerName by remember { mutableStateOf("") }
+    var address1 by remember { mutableStateOf("") }
+    var address2 by remember { mutableStateOf("") }
+    var place by remember { mutableStateOf("") }
+    var pincode by remember { mutableStateOf("") }
+    var contactNo by remember { mutableStateOf("") }
+    var mailId by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf("") }
+    var year by remember { mutableStateOf("") }
+    var databaseName by remember { mutableStateOf("") }
+    var orderPlan by remember { mutableStateOf("") }
+    var installDate by remember { mutableStateOf("") }
+    var subscriptionDays by remember { mutableStateOf("") }
+    var expiryDate by remember { mutableStateOf("") }
+
+    // Validation errors
+    var branchCodeError by remember { mutableStateOf("") }
+    var companyNameError by remember { mutableStateOf("") }
+    var ownerNameError by remember { mutableStateOf("") }
+    var address1Error by remember { mutableStateOf("") }
+    var placeError by remember { mutableStateOf("") }
+    var pincodeError by remember { mutableStateOf("") }
+    var contactNoError by remember { mutableStateOf("") }
+    var mailIdError by remember { mutableStateOf("") }
+    var countryError by remember { mutableStateOf("") }
+    var stateError by remember { mutableStateOf("") }
+    var yearError by remember { mutableStateOf("") }
+    var databaseNameError by remember { mutableStateOf("") }
+    var orderPlanError by remember { mutableStateOf("") }
+    var installDateError by remember { mutableStateOf("") }
+    var subscriptionDaysError by remember { mutableStateOf("") }
+    var expiryDateError by remember { mutableStateOf("") }
+
+    fun validate(): Boolean {
+        var valid = true
+        branchCodeError = if (branchCode.isBlank()) { valid = false; "Branch code is required" } else ""
+        companyNameError = if (companyName.isBlank()) { valid = false; "Company name is required" } else ""
+        ownerNameError = if (ownerName.isBlank()) { valid = false; "Owner name is required" } else ""
+        address1Error = if (address1.isBlank()) { valid = false; "Address line 1 is required" } else ""
+        placeError = if (place.isBlank()) { valid = false; "Place is required" } else ""
+        pincodeError = if (pincode.isBlank()) { valid = false; "Pincode is required" } else ""
+        contactNoError = if (contactNo.isBlank() || contactNo.length < 10) { valid = false; "Valid contact number required" } else ""
+        mailIdError = if (mailId.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(mailId).matches()) { valid = false; "Valid email is required" } else ""
+        countryError = if (country.isBlank()) { valid = false; "Country is required" } else ""
+        stateError = if (state.isBlank()) { valid = false; "State is required" } else ""
+        yearError = if (year.isBlank()) { valid = false; "Year is required" } else ""
+        databaseNameError = if (databaseName.isBlank()) { valid = false; "Database name is required" } else ""
+        orderPlanError = if (orderPlan.isBlank()) { valid = false; "Order plan is required" } else ""
+        installDateError = if (installDate.isBlank()) { valid = false; "Install date is required" } else ""
+        subscriptionDaysError = if (subscriptionDays.isBlank() || subscriptionDays.toLongOrNull() == null) { valid = false; "Subscription days must be a number" } else ""
+        expiryDateError = if (expiryDate.isBlank()) { valid = false; "Expiry date is required" } else ""
+        return valid
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!isLoading) onDismiss() },
+        title = { Text("Add Branch", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Branch Code
+                OutlinedTextField(
+                    value = branchCode,
+                    onValueChange = { branchCode = it },
+                    label = { Text("Branch Code *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = branchCodeError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (branchCodeError.isNotEmpty()) Text(branchCodeError, color = Color.Red, fontSize = 12.sp)
+
+                // Company Name
+                OutlinedTextField(
+                    value = companyName,
+                    onValueChange = { companyName = it },
+                    label = { Text("Company Name *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = companyNameError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (companyNameError.isNotEmpty()) Text(companyNameError, color = Color.Red, fontSize = 12.sp)
+
+                // Owner Name
+                OutlinedTextField(
+                    value = ownerName,
+                    onValueChange = { ownerName = it },
+                    label = { Text("Owner Name *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = ownerNameError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (ownerNameError.isNotEmpty()) Text(ownerNameError, color = Color.Red, fontSize = 12.sp)
+
+                // Address Line 1
+                OutlinedTextField(
+                    value = address1,
+                    onValueChange = { address1 = it },
+                    label = { Text("Address Line 1 *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = address1Error.isNotEmpty(),
+                    singleLine = true
+                )
+                if (address1Error.isNotEmpty()) Text(address1Error, color = Color.Red, fontSize = 12.sp)
+
+                // Address Line 2
+                OutlinedTextField(
+                    value = address2,
+                    onValueChange = { address2 = it },
+                    label = { Text("Address Line 2") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Place
+                OutlinedTextField(
+                    value = place,
+                    onValueChange = { place = it },
+                    label = { Text("Place *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = placeError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (placeError.isNotEmpty()) Text(placeError, color = Color.Red, fontSize = 12.sp)
+
+                // Pincode
+                OutlinedTextField(
+                    value = pincode,
+                    onValueChange = { pincode = it },
+                    label = { Text("Pincode *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = pincodeError.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                if (pincodeError.isNotEmpty()) Text(pincodeError, color = Color.Red, fontSize = 12.sp)
+
+                // Contact No
+                OutlinedTextField(
+                    value = contactNo,
+                    onValueChange = { contactNo = it },
+                    label = { Text("Contact No *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = contactNoError.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true
+                )
+                if (contactNoError.isNotEmpty()) Text(contactNoError, color = Color.Red, fontSize = 12.sp)
+
+                // Mail ID
+                OutlinedTextField(
+                    value = mailId,
+                    onValueChange = { mailId = it },
+                    label = { Text("Email *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = mailIdError.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true
+                )
+                if (mailIdError.isNotEmpty()) Text(mailIdError, color = Color.Red, fontSize = 12.sp)
+
+                // Country
+                OutlinedTextField(
+                    value = country,
+                    onValueChange = { country = it },
+                    label = { Text("Country *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = countryError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (countryError.isNotEmpty()) Text(countryError, color = Color.Red, fontSize = 12.sp)
+
+                // State
+                OutlinedTextField(
+                    value = state,
+                    onValueChange = { state = it },
+                    label = { Text("State *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = stateError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (stateError.isNotEmpty()) Text(stateError, color = Color.Red, fontSize = 12.sp)
+
+                // Year
+                OutlinedTextField(
+                    value = year,
+                    onValueChange = { year = it },
+                    label = { Text("Year *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = yearError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (yearError.isNotEmpty()) Text(yearError, color = Color.Red, fontSize = 12.sp)
+
+                // Database Name
+                OutlinedTextField(
+                    value = databaseName,
+                    onValueChange = { databaseName = it },
+                    label = { Text("Database Name *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = databaseNameError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (databaseNameError.isNotEmpty()) Text(databaseNameError, color = Color.Red, fontSize = 12.sp)
+
+                // Order Plan
+                OutlinedTextField(
+                    value = orderPlan,
+                    onValueChange = { orderPlan = it },
+                    label = { Text("Order Plan *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = orderPlanError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (orderPlanError.isNotEmpty()) Text(orderPlanError, color = Color.Red, fontSize = 12.sp)
+
+                // Install Date
+                OutlinedTextField(
+                    value = installDate,
+                    onValueChange = { installDate = it },
+                    label = { Text("Install Date * (YYYY-MM-DD)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = installDateError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (installDateError.isNotEmpty()) Text(installDateError, color = Color.Red, fontSize = 12.sp)
+
+                // Subscription Days
+                OutlinedTextField(
+                    value = subscriptionDays,
+                    onValueChange = { subscriptionDays = it },
+                    label = { Text("Subscription Days *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = subscriptionDaysError.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                if (subscriptionDaysError.isNotEmpty()) Text(subscriptionDaysError, color = Color.Red, fontSize = 12.sp)
+
+                // Expiry Date
+                OutlinedTextField(
+                    value = expiryDate,
+                    onValueChange = { expiryDate = it },
+                    label = { Text("Expiry Date * (YYYY-MM-DD)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = expiryDateError.isNotEmpty(),
+                    singleLine = true
+                )
+                if (expiryDateError.isNotEmpty()) Text(expiryDateError, color = Color.Red, fontSize = 12.sp)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (validate()) {
+                        onConfirm(
+                            TblBranchRequest(
+                                branch_code = branchCode.trim(),
+                                companyMasterCode = companyMasterCode,
+                                company_name = companyName.trim(),
+                                owner_name = ownerName.trim(),
+                                address1 = address1.trim(),
+                                address2 = address2.trim(),
+                                place = place.trim(),
+                                pincode = pincode.trim(),
+                                contact_no = contactNo.trim(),
+                                mail_id = mailId.trim(),
+                                country = country.trim(),
+                                state = state.trim(),
+                                year = year.trim(),
+                                database_name = databaseName.trim(),
+                                order_plan = orderPlan.trim(),
+                                install_date = installDate.trim(),
+                                subscription_days = subscriptionDays.toLong(),
+                                expiry_date = expiryDate.trim()
+                            )
+                        )
+                    }
+                },
+                enabled = !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Create Branch")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { if (!isLoading) onDismiss() }) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
