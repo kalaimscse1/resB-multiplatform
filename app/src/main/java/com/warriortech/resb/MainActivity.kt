@@ -800,7 +800,7 @@ fun DrawerContent(
     var selectedBranchCode by remember { mutableStateOf(sessionManager.getCompanyCode() ?: "") }
 
     LaunchedEffect(Unit) {
-        if (role == "RESBADMIN") {
+        if (role == "RESBADMIN" || role == "ADMIN") {
             // Persist the original master code once so branch switches don't lose it
             if (sessionManager.getCompanyMasterCode() == null) {
                 sessionManager.saveCompanyMasterCode(sessionManager.getCompanyCode() ?: "")
@@ -808,7 +808,7 @@ fun DrawerContent(
             val masterCode = sessionManager.getCompanyMasterCode() ?: sessionManager.getCompanyCode() ?: ""
             val tenantId = sessionManager.getCompanyCode() ?: ""
             try {
-                val response = apiService.getBranches(masterCode, tenantId)
+                val response = apiService.getBranches(masterCode, "KTS-COMPANY_MASTER")
                 if (response.isSuccessful) {
                     branches = response.body() ?: emptyList()
                 }
@@ -883,7 +883,7 @@ fun DrawerContent(
                 }
 
                 // Branch switcher: visible only for RESBADMIN when drawer is expanded and branches loaded
-                if (role == "RESBADMIN" && !isCollapsed && branches.isNotEmpty()) {
+                if (role == "RESBADMIN" || role == "ADMIN" && !isCollapsed && branches.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     ExposedDropdownMenuBox(
                         expanded = branchDropdownExpanded,
