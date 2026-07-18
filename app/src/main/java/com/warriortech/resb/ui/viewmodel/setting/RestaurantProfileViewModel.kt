@@ -81,9 +81,12 @@ class RestaurantProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val tenantId = sessionManager.getCompanyCode() ?: ""
-                val response = apiService.getBranchCode(tenantId)
+                val response = apiService.getBranchCode("KTS-COMPANY_MASTER")
                 if (response.isSuccessful) {
-                    _suggestedBranchCode.value = response.body()?.get("branch_code") ?: ""
+                    val branchCode = response.body()!!
+                    branchCode.let {
+                        _suggestedBranchCode.value = it["branch_code"] ?: ""
+                    }
                 }
             } catch (e: Exception) {
                 // Non-critical; leave blank so user can type manually
@@ -96,7 +99,7 @@ class RestaurantProfileViewModel @Inject constructor(
             _branchState.value = BranchState.Loading
             try {
                 val tenantId = sessionManager.getCompanyCode() ?: ""
-                val response = apiService.createBranch(branch, tenantId)
+                val response = apiService.createBranch(branch, "KTS-COMPANY_MASTER")
                 if (response.isSuccessful && response.body() != null) {
                     _branchState.value = BranchState.Success(response.body()!!)
                 } else {

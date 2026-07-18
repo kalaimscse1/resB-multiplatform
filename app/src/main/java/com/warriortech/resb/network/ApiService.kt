@@ -600,16 +600,22 @@ interface ApiService {
      * Branch Management
      */
 
-    @POST("branch/create")
+    @POST("branches/create")
     suspend fun createBranch(
         @Body branch: TblBranchRequest,
         @Header("X-Tenant-ID") tenantId: String
     ): Response<TblBranchResponse>
 
-    @GET("branch/getBranchCode")
+    @GET("branches/getBranchCode")
     suspend fun getBranchCode(
         @Header("X-Tenant-ID") tenantId: String
     ): Response<Map<String, String>>
+
+    @GET("branches/getByCompanyMasterCode/{companyMasterCode}")
+    suspend fun getBranches(
+        @Path("companyMasterCode") companyMasterCode: String,
+        @Header("X-Tenant-ID") tenantId: String
+    ): Response<List<TblBranchResponse>>
 
     /**
      * GeneralSettings Management
