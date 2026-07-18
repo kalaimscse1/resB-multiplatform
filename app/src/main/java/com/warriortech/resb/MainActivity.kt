@@ -801,12 +801,14 @@ fun DrawerContent(
 
     LaunchedEffect(Unit) {
         if (role == "RESBADMIN" || role == "ADMIN") {
-            // Persist the original master code once so branch switches don't lose it
+            // Persist the original master code and company name once so branch switches don't lose them
             if (sessionManager.getCompanyMasterCode() == null) {
                 sessionManager.saveCompanyMasterCode(sessionManager.getCompanyCode() ?: "")
+                sessionManager.saveMainCompanyName(
+                    sessionManager.getRestaurantProfile()?.company_name ?: companyName
+                )
             }
             val masterCode = sessionManager.getCompanyMasterCode() ?: sessionManager.getCompanyCode() ?: ""
-            val tenantId = sessionManager.getCompanyCode() ?: ""
             try {
                 val response = apiService.getBranches(masterCode, "KTS-COMPANY_MASTER")
                 if (response.isSuccessful) {
@@ -882,8 +884,21 @@ fun DrawerContent(
                     }
                 }
 
-                // Branch switcher: visible only for RESBADMIN when drawer is expanded and branches loaded
-                if (role == "RESBADMIN" || role == "ADMIN" && !isCollapsed && branches.isNotEmpty()) {
+                // Branch switcher: visible only for RESBADMIN/ADMIN when drawer is expanded and branches loaded
+                if ((role == "RESBADMIN" || role == "ADMIN") && !isCollapsed && branches.isNotEmpty()) {
+                    val masterCode = sessionManager.getCompanyMasterCode() ?: ""
+                    val mainCompanyName = sessionManager.getMainCompanyName() ?: companyName
+
+                    // Build the full list: main company first, then any branches whose code differs
+                    val displayBranches = buildList {
+                        add(Pair(masterCode, mainCompanyName))
+                        branches.forEach { branch ->
+                            if (branch.branch_code != masterCode) {
+                                add(Pair(branch.branch_code, branch.company_name))
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(4.dp))
                     ExposedDropdownMenuBox(
                         expanded = branchDropdownExpanded,
@@ -892,8 +907,8 @@ fun DrawerContent(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     ) {
-                        val displayName = branches.find { it.branch_code == selectedBranchCode }
-                            ?.company_name ?: companyName
+                        val displayName = displayBranches
+                            .find { it.first == selectedBranchCode }?.second ?: mainCompanyName
                         OutlinedTextField(
                             value = displayName,
                             onValueChange = {},
@@ -910,19 +925,19 @@ fun DrawerContent(
                             expanded = branchDropdownExpanded,
                             onDismissRequest = { branchDropdownExpanded = false }
                         ) {
-                            branches.forEach { branch ->
+                            displayBranches.forEach { (code, name) ->
                                 DropdownMenuItem(
-                                    text = { Text(branch.company_name) },
+                                    text = { Text(name) },
                                     onClick = {
                                         branchDropdownExpanded = false
-                                        if (branch.branch_code != selectedBranchCode) {
-                                            selectedBranchCode = branch.branch_code
-                                            sessionManager.saveCompanyCode(branch.branch_code)
+                                        if (code != selectedBranchCode) {
+                                            selectedBranchCode = code
+                                            sessionManager.saveCompanyCode(code)
                                             // Navigate to dashboard; onDestinationClicked also closes the drawer
                                             onDestinationClicked("dashboard")
                                         }
                                     },
-                                    leadingIcon = if (branch.branch_code == selectedBranchCode) {
+                                    leadingIcon = if (code == selectedBranchCode) {
                                         { Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryGreen) }
                                     } else null
                                 )

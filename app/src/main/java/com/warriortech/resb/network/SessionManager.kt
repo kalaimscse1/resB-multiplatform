@@ -27,6 +27,7 @@ class SessionManager @Inject constructor(
         private const val KEY_USER = "user"
         private const val KEY_COMPANY_CODE = "company_code"
         private const val KEY_COMPANY_MASTER_CODE = "company_master_code"
+        private const val KEY_MAIN_COMPANY_NAME = "main_company_name"
         private const val KEY_LAST_SYNC = "last_sync_timestamp"
         private const val KEY_GENERAL_SETTING = "general_setting"
         private const val DECIMAL = "decimal_places"
@@ -248,6 +249,23 @@ class SessionManager @Inject constructor(
     fun getCompanyMasterCode(): String? {
         checkInitialization()
         return prefs.getString(KEY_COMPANY_MASTER_CODE, null)
+    }
+
+    /**
+     * Save the display name of the main (master) company.
+     * Captured once at first drawer open; never overwritten by branch switches.
+     */
+    fun saveMainCompanyName(name: String) {
+        checkInitialization()
+        prefs.edit { putString(KEY_MAIN_COMPANY_NAME, name) }
+    }
+
+    /**
+     * Get the saved main company name.
+     */
+    fun getMainCompanyName(): String? {
+        checkInitialization()
+        return prefs.getString(KEY_MAIN_COMPANY_NAME, null)
     }
 
     /**
