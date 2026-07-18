@@ -26,6 +26,7 @@ class SessionManager @Inject constructor(
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USER = "user"
         private const val KEY_COMPANY_CODE = "company_code"
+        private const val KEY_COMPANY_MASTER_CODE = "company_master_code"
         private const val KEY_LAST_SYNC = "last_sync_timestamp"
         private const val KEY_GENERAL_SETTING = "general_setting"
         private const val DECIMAL = "decimal_places"
@@ -230,6 +231,23 @@ class SessionManager @Inject constructor(
     fun getCompanyCode(): String? {
         checkInitialization()
         return prefs.getString(KEY_COMPANY_CODE, null)
+    }
+
+    /**
+     * Save company master code (the root/parent company code used for branch lookups).
+     * Set once when the RESBADMIN first opens the drawer; never overwritten by branch switches.
+     */
+    fun saveCompanyMasterCode(masterCode: String) {
+        checkInitialization()
+        prefs.edit { putString(KEY_COMPANY_MASTER_CODE, masterCode) }
+    }
+
+    /**
+     * Get company master code
+     */
+    fun getCompanyMasterCode(): String? {
+        checkInitialization()
+        return prefs.getString(KEY_COMPANY_MASTER_CODE, null)
     }
 
     /**

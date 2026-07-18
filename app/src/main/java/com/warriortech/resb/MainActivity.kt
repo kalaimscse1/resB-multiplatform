@@ -779,6 +779,7 @@ enum class ExpandedMenu {
     NONE, ORDERS, BILLING, MASTERS, REPORTS, GSTREPORTS, ACCOUNTSENTRY, ACCOUNTSREPORT
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawerContent(
     isCollapsed: Boolean,
@@ -792,6 +793,28 @@ fun DrawerContent(
     val role = sessionManager.getUser()?.role ?: ""
     val imageUrl = "${RetrofitClient.currentBaseUrl}logo/getLogo/${sessionManager.getCompanyCode()}"
     val companyName = sessionManager.getRestaurantProfile()?.company_name ?: "Resb"
+
+    // Branch switcher state (RESBADMIN only)
+    var branches by remember { mutableStateOf<List<TblBranchResponse>>(emptyList()) }
+    var branchDropdownExpanded by remember { mutableStateOf(false) }
+    var selectedBranchCode by remember { mutableStateOf(sessionManager.getCompanyCode() ?: "") }
+
+    LaunchedEffect(Unit) {
+        if (role == "RESBADMIN") {
+            // Persist the original master code once so branch switches don't lose it
+            if (sessionManager.getCompanyMasterCode() == null) {
+                sessionManager.saveCompanyMasterCode(sessionManager.getCompanyCode() ?: "")
+            }
+            val masterCode = sessionManager.getCompanyMasterCode() ?: sessionManager.getCompanyCode() ?: ""
+            val tenantId = sessionManager.getCompanyCode() ?: ""
+            try {
+                val response = apiService.getBranches(masterCode, tenantId)
+                if (response.isSuccessful) {
+                    branches = response.body() ?: emptyList()
+                }
+            } catch (_: Exception) { }
+        }
+    }
 
     val (expandedMenu, setExpandedMenu) = remember { mutableStateOf(ExpandedMenu.NONE) }
 
@@ -857,6 +880,56 @@ fun DrawerContent(
                             }
                         }
                     }
+                }
+
+                // Branch switcher: visible only for RESBADMIN when drawer is expanded and branches loaded
+                if (role == "RESBADMIN" && !isCollapsed && branches.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = branchDropdownExpanded,
+                        onExpandedChange = { branchDropdownExpanded = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        val displayName = branches.find { it.branch_code == selectedBranchCode }
+                            ?.company_name ?: companyName
+                        OutlinedTextField(
+                            value = displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Branch") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = branchDropdownExpanded)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = branchDropdownExpanded,
+                            onDismissRequest = { branchDropdownExpanded = false }
+                        ) {
+                            branches.forEach { branch ->
+                                DropdownMenuItem(
+                                    text = { Text(branch.company_name) },
+                                    onClick = {
+                                        branchDropdownExpanded = false
+                                        if (branch.branch_code != selectedBranchCode) {
+                                            selectedBranchCode = branch.branch_code
+                                            sessionManager.saveCompanyCode(branch.branch_code)
+                                            // Navigate to dashboard; onDestinationClicked also closes the drawer
+                                            onDestinationClicked("dashboard")
+                                        }
+                                    },
+                                    leadingIcon = if (branch.branch_code == selectedBranchCode) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryGreen) }
+                                    } else null
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
 
                 ModernDivider()
