@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
  */
 object RetrofitClient {
     // Fixed cloud server URL for company master operations
-    const val defaultBaseUrl: String = "http://72.61.172.248:5050/api/"
+    const val defaultBaseUrl: String = "http://72.61.172.248:5055/api/"
 
     private var retrofit: Retrofit? = null
     private var masterRetrofit: Retrofit? = null
